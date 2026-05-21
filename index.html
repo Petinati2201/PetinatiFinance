@@ -6,7 +6,7 @@
     <title>Finanças Petinati</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         /* ─── TOKENS ─── */
@@ -3646,22 +3646,22 @@
     const SUPABASE_URL = 'https://ssadvppxdmpmvbtmxoal.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzYWR2cHB4ZG1wbXZidG14b2FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODc0MDAsImV4cCI6MjA5NDk2MzQwMH0.QyBUXc2TLskoEy0J3ynq4h8BevqJa4qpZD4rWoKuOHI';
     
-    let supabase;
+    let sbClient;
     
     // Aguarda o SDK Supabase carregar (com retry)
     function initSupabase() {
-        if (typeof window.supabase === 'undefined') {
+        if (typeof window.supabase === 'undefined' || typeof window.supabase.createClient !== 'function') {
             console.log('⏳ Aguardando SDK Supabase...');
-            setTimeout(initSupabase, 100); // Tenta novamente em 100ms
+            setTimeout(initSupabase, 200);
             return;
         }
         
         console.log('✅ SDK Supabase carregado');
-        if (!window.supabaseClient) {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            window.supabaseClient = supabase;
+        if (!window._sbClient) {
+            sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            window._sbClient = sbClient;
         } else {
-            supabase = window.supabaseClient;
+            sbClient = window._sbClient;
         }
         
         initLogin();
@@ -3696,7 +3696,7 @@
             errorEl.textContent = '';
 
             try {
-                const { data, error } = await supabase.auth.signInWithPassword({
+                const { data, error } = await sbClient.auth.signInWithPassword({
                     email: email,
                     password: password
                 });
@@ -3725,7 +3725,7 @@
         );
 
         // Verifica se já está autenticado (ex: refresh da página)
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        sbClient.auth.getSession().then(({ data: { session } }) => {
             if (session) {
                 loadAllDataFromSupabase().then(() => {
                     screen.classList.add('hidden');
@@ -3739,7 +3739,7 @@
     async function loadAllDataFromSupabase() {
         try {
             // Realizado YTD
-            const { data: realizado, error: errReal } = await supabase
+            const { data: realizado, error: errReal } = await sbClient
                 .from('realizado_ytd')
                 .select('*')
                 .order('data', { ascending: true });
@@ -3761,7 +3761,7 @@
             }
 
             // Projeção YTG
-            const { data: projecao, error: errProj } = await supabase
+            const { data: projecao, error: errProj } = await sbClient
                 .from('projecao_ytg')
                 .select('*')
                 .order('data_inicio', { ascending: true });
@@ -3783,7 +3783,7 @@
             }
 
             // Remuneração
-            const { data: remuneracao, error: errRem } = await supabase
+            const { data: remuneracao, error: errRem } = await sbClient
                 .from('remuneracao')
                 .select('*')
                 .order('mes', { ascending: true });
@@ -3816,7 +3816,7 @@
             }
 
             // Movimentações RV
-            const { data: movimentacoes, error: errMov } = await supabase
+            const { data: movimentacoes, error: errMov } = await sbClient
                 .from('movimentacoes_rv')
                 .select('*')
                 .order('data_ref', { ascending: true });
@@ -3838,7 +3838,7 @@
             }
 
             // Investimentos
-            const { data: investimentos, error: errInv } = await supabase
+            const { data: investimentos, error: errInv } = await sbClient
                 .from('investimentos')
                 .select('*')
                 .order('data_ref', { ascending: true });
