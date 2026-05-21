@@ -3648,8 +3648,15 @@
     
     let supabase;
     
-    // Inicializa Supabase quando o SDK carregar
-    window.addEventListener('load', function() {
+    // Aguarda o SDK Supabase carregar (com retry)
+    function initSupabase() {
+        if (typeof window.supabase === 'undefined') {
+            console.log('⏳ Aguardando SDK Supabase...');
+            setTimeout(initSupabase, 100); // Tenta novamente em 100ms
+            return;
+        }
+        
+        console.log('✅ SDK Supabase carregado');
         if (!window.supabaseClient) {
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             window.supabaseClient = supabase;
@@ -3658,7 +3665,14 @@
         }
         
         initLogin();
-    });
+    }
+    
+    // Inicia quando a página carregar
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initSupabase);
+    } else {
+        initSupabase();
+    }
 
     /* ── LOGIN ── */
     function initLogin() {
