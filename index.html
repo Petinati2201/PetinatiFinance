@@ -3749,18 +3749,19 @@
             
             if (errReal) throw errReal;
             if (realizado) {
-                realizadoData = realizado.map(row => ({
-                    tipo: row.tipo,
-                    data: row.data,
-                    dataComp: row.data_competencia,
-                    lancamento: row.lancamento,
-                    valor: row.valor_brl,
-                    origem: row.origem_da_compra,
-                    evento: row.evento,
-                    grupo: row.grupo,
-                    sub1: row.subgrupo_1,
-                    sub2: row.subgrupo_2
-                }));
+                // Remapeia para o formato que processRealizado() espera (chaves do CSV original)
+                processRealizado(realizado.map(row => ({
+                    'TIPO':             row.tipo,
+                    'DATA':             row.data,
+                    'DATA COMPETENCIA': row.data_competencia,
+                    'LANÇAMENTO':       row.lancamento,
+                    'VALOR BRL':        String(row.valor_brl),
+                    'ORIGEM DA COMPRA': row.origem_da_compra,
+                    'EVENTO':           row.evento,
+                    'GRUPO':            row.grupo,
+                    'SUBGRUPO 1':       row.subgrupo_1,
+                    'SUBGRUPO 2':       row.subgrupo_2
+                })));
             }
 
             // Projeção YTG
@@ -3771,18 +3772,18 @@
             
             if (errProj) throw errProj;
             if (projecao) {
-                projecaoData = projecao.map(row => ({
-                    tipo: row.tipo,
-                    lancamento: row.lancamento,
-                    origem: row.origem_da_compra,
-                    evento: row.evento,
-                    valor: row.valor_brl,
-                    dataIni: row.data_inicio,
-                    dataFim: row.data_fim,
-                    grupo: row.grupo,
-                    sub1: row.subgrupo_1,
-                    sub2: row.subgrupo_2
-                }));
+                processProjecao(projecao.map(row => ({
+                    'TIPO':             row.tipo,
+                    'LANÇAMENTO':       row.lancamento,
+                    'ORIGEM DA COMPRA': row.origem_da_compra,
+                    'EVENTO':           row.evento,
+                    'VALOR BRL':        String(row.valor_brl),
+                    'DATA INICIO':      row.data_inicio,
+                    'DATA FIM':         row.data_fim,
+                    'GRUPO':            row.grupo,
+                    'SUBGRUPO 1':       row.subgrupo_1,
+                    'SUBGRUPO 2':       row.subgrupo_2
+                })));
             }
 
             // Remuneração
@@ -3793,29 +3794,29 @@
             
             if (errRem) throw errRem;
             if (remuneracao) {
-                remuneracaoData = remuneracao.map(row => ({
-                    mes: row.mes,
-                    folha: row.folha,
-                    ferias: row.ferias,
-                    decimoTerceiro: row.decimo_terceiro,
-                    plr: row.plr,
-                    inss: row.inss,
-                    irrf: row.irrf,
-                    restaurante: row.restaurante,
-                    valeAlimentacao: row.vale_alimentacao,
-                    seguroVida: row.seguro_vida,
-                    sulAmerica: row.sul_america,
-                    odontologico: row.odontologico,
-                    mensalidadeCoop: row.mensalidade_coop,
-                    emprestimoCoop: row.emprestimo_coop,
-                    multasTransito: row.multas_transito,
-                    cafeLanche: row.cafe_lanche,
-                    feriasAbonoImp: row.ferias_abono_imp,
-                    descAdiant: row.desc_adiant,
-                    bruto: row.bruto,
-                    descontos: row.descontos,
-                    liquido: row.liquido
-                }));
+                processRemuneracao(remuneracao.map(row => ({
+                    'MES':                row.mes,
+                    'FOLHA':              String(row.folha || 0),
+                    'FERIAS':             String(row.ferias || 0),
+                    'DECIMO_TERCEIRO':    String(row.decimo_terceiro || 0),
+                    'PLR':                String(row.plr || 0),
+                    'INSS':               String(row.inss || 0),
+                    'IRRF':               String(row.irrf || 0),
+                    'RESTAURANTE':        String(row.restaurante || 0),
+                    'VALE_ALIMENTACAO':   String(row.vale_alimentacao || 0),
+                    'SEGURO_VIDA':        String(row.seguro_vida || 0),
+                    'SUL_AMERICA':        String(row.sul_america || 0),
+                    'ODONTOLOGICO':       String(row.odontologico || 0),
+                    'MENSALIDADE_COOP':   String(row.mensalidade_coop || 0),
+                    'EMPRESTIMO_COOP':    String(row.emprestimo_coop || 0),
+                    'MULTAS_TRANSITO':    String(row.multas_transito || 0),
+                    'CAFE_LANCHE':        String(row.cafe_lanche || 0),
+                    'FERIAS_ABONO_IMP':   String(row.ferias_abono_imp || 0),
+                    'DESC_ADIANT':        String(row.desc_adiant || 0),
+                    'BRUTO':              String(row.bruto || 0),
+                    'DESCONTOS':          String(row.descontos || 0),
+                    'LIQUIDO':            String(row.liquido || 0)
+                })));
             }
 
             // Movimentações RV
@@ -3826,18 +3827,18 @@
             
             if (errMov) throw errMov;
             if (movimentacoes) {
-                movimentacoesData = movimentacoes.map(row => ({
-                    data: row.data_ref,
-                    codigo: row.codigo,
-                    tipo: row.tipo,
-                    operacao: row.operacao,
-                    qtd: row.quantidade,
-                    precoUSD: row.preco_unitario_usd,
-                    investidoUSD: row.investido_usd,
-                    ptax: row.ptax,
-                    precoBRL: row.preco_unitario_brl,
-                    investidoBRL: row.investido_brl
-                }));
+                processMovimentacoes(movimentacoes.map(row => ({
+                    'DATA REF':             row.data_ref,
+                    'CODIGO':               row.codigo,
+                    'TIPO':                 row.tipo,
+                    'OPERAÇÃO':             row.operacao,
+                    'QUANTIADE':            String(row.quantidade || 0),
+                    'PREÇO UNITARIO USD':   String(row.preco_unitario_usd || 0),
+                    'INVESTIDO USD':        String(row.investido_usd || 0),
+                    'PTAX':                 String(row.ptax || 0),
+                    'PREÇO UNITÁRIO BRL':   String(row.preco_unitario_brl || 0),
+                    'INVESTIDO BRL':        String(row.investido_brl || 0)
+                })));
             }
 
             // Investimentos
@@ -3848,29 +3849,18 @@
             
             if (errInv) throw errInv;
             if (investimentos) {
-                investimentosData = investimentos.map(row => {
-                    // Parse data_ref para extrair ano e mês
-                    const dateMatch = row.data_ref.match(/(\d{4})-(\d{2})-(\d{2})/);
-                    if (!dateMatch) return null;
-                    const y = parseInt(dateMatch[1]);
-                    const m = parseInt(dateMatch[2]);
-                    
-                    return {
-                        _codigo: row.codigo,
-                        _tipo: row.tipo_investimento || 'NÃO CLASSIFICADO',
-                        _y: y,
-                        _m: m,
-                        _k: `${y}-${String(m).padStart(2,'0')}`,
-                        _investBRL: row.valor_investido_brl || 0,
-                        _investUSD: row.valor_investido_usd || 0,
-                        _brutoBRL: row.valor_bruto_brl || 0,
-                        _brutoUSD: row.valor_bruto_usd || 0,
-                        _rendBRL: row.rendimento_total_brl || 0,
-                        _rendUSD: row.rendimento_total_usd || 0,
-                        _aporte: row.aporte_mes || 0
-                    };
-                }).filter(r => r !== null);
-                updateFilters();
+                processInvestimentos(investimentos.map(row => ({
+                    'DATA REF':              row.data_ref,
+                    'CODIGO':                row.codigo,
+                    'TIPO INVESTIMENTO':     row.tipo_investimento,
+                    'VALOR INVESTIDO USD':   String(row.valor_investido_usd || 0),
+                    'VALOR INVESTIDO BRL':   String(row.valor_investido_brl || 0),
+                    'VALOR BRUTO USD':       String(row.valor_bruto_usd || 0),
+                    'VALOR BRUTO BRL':       String(row.valor_bruto_brl || 0),
+                    'RENDIMENTO TOTAL USD':  String(row.rendimento_total_usd || 0),
+                    'RENDIMENTO TOTAL BRL':  String(row.rendimento_total_brl || 0),
+                    'APORTE MES':            String(row.aporte_mes || 0)
+                })));
             }
 
             // Trigger renderAll após carregar todos os dados
