@@ -3647,20 +3647,21 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzYWR2cHB4ZG1wbXZidG14b2FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODc0MDAsImV4cCI6MjA5NDk2MzQwMH0.QyBUXc2TLskoEy0J3ynq4h8BevqJa4qpZD4rWoKuOHI';
     
     let supabase;
-
-    // Aguarda o SDK do Supabase carregar antes de inicializar
-    document.addEventListener('DOMContentLoaded', function() {
-        // Garante que só inicializa uma vez
+    
+    // Inicializa Supabase quando o SDK carregar
+    window.addEventListener('load', function() {
         if (!window.supabaseClient) {
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             window.supabaseClient = supabase;
         } else {
             supabase = window.supabaseClient;
         }
+        
+        initLogin();
     });
 
     /* ── LOGIN ── */
-    (function() {
+    function initLogin() {
         const screen = document.getElementById('loginScreen');
         const btnLogin = document.getElementById('loginBtn');
         const errorEl = document.getElementById('loginError');
@@ -3718,7 +3719,7 @@
                 });
             }
         });
-    })();
+    }
 
     /* ── LOAD DATA FROM SUPABASE ── */
     async function loadAllDataFromSupabase() {
