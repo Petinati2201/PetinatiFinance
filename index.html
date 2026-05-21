@@ -7,6 +7,12 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Fallback: se o jsdelivr foi bloqueado, tenta unpkg
+        if (typeof supabase === 'undefined') {
+            document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');
+        }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         /* ─── TOKENS ─── */
@@ -3646,32 +3652,29 @@
     const SUPABASE_URL = 'https://ssadvppxdmpmvbtmxoal.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzYWR2cHB4ZG1wbXZidG14b2FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODc0MDAsImV4cCI6MjA5NDk2MzQwMH0.QyBUXc2TLskoEy0J3ynq4h8BevqJa4qpZD4rWoKuOHI';
     
+    // O SDK expõe uma global "supabase" com { createClient }.
+    // Usamos a abordagem oficial: desestruturar e criar o client.
     let sbClient;
     
-    // Aguarda o SDK Supabase carregar (com retry)
     function initSupabase() {
-        if (typeof window.supabase === 'undefined' || typeof window.supabase.createClient !== 'function') {
+        // Checa se a global "supabase" existe (pode ser window.supabase ou apenas supabase)
+        const sdk = window.supabase || (typeof supabase !== 'undefined' ? supabase : null);
+        if (!sdk || typeof sdk.createClient !== 'function') {
             console.log('⏳ Aguardando SDK Supabase...');
             setTimeout(initSupabase, 200);
             return;
         }
         
         console.log('✅ SDK Supabase carregado');
-        if (!window._sbClient) {
-            sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            window._sbClient = sbClient;
-        } else {
-            sbClient = window._sbClient;
-        }
-        
+        sbClient = sdk.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         initLogin();
     }
     
-    // Inicia quando a página carregar
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initSupabase);
-    } else {
+    // Inicia assim que possível
+    if (document.readyState === 'complete') {
         initSupabase();
+    } else {
+        window.addEventListener('load', initSupabase);
     }
 
     /* ── LOGIN ── */
