@@ -6,7 +6,7 @@
     <title>Finanças Petinati</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         /* ─── TOKENS ─── */
@@ -3646,14 +3646,18 @@
     const SUPABASE_URL = 'https://ssadvppxdmpmvbtmxoal.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzYWR2cHB4ZG1wbXZidG14b2FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODc0MDAsImV4cCI6MjA5NDk2MzQwMH0.QyBUXc2TLskoEy0J3ynq4h8BevqJa4qpZD4rWoKuOHI';
     
-    // Garante que só inicializa uma vez
     let supabase;
-    if (!window.supabaseClient) {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        window.supabaseClient = supabase;
-    } else {
-        supabase = window.supabaseClient;
-    }
+
+    // Aguarda o SDK do Supabase carregar antes de inicializar
+    document.addEventListener('DOMContentLoaded', function() {
+        // Garante que só inicializa uma vez
+        if (!window.supabaseClient) {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            window.supabaseClient = supabase;
+        } else {
+            supabase = window.supabaseClient;
+        }
+    });
 
     /* ── LOGIN ── */
     (function() {
