@@ -6,6 +6,7 @@
     <title>Finanças Petinati</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         /* ─── TOKENS ─── */
@@ -663,6 +664,97 @@
         .data-table tbody tr { border-bottom:1px solid var(--line); transition:background .15s; }
         .data-table tbody tr:last-child { border-bottom:none; }
         .data-table tbody tr:hover { background:var(--line); }
+
+        /* ── LOGIN SCREEN ── */
+        #loginScreen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity .4s ease;
+        }
+        #loginScreen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .login-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 48px 40px;
+            width: 100%;
+            max-width: 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+        .login-brand {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .login-brand span:first-child {
+            font-size: 10px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .login-brand span:last-child {
+            font-family: 'Instrument Serif', serif;
+            font-size: 26px;
+            color: var(--text);
+        }
+        .login-fields {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .login-fields label {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 11px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .login-fields input {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            color: var(--text);
+            outline: none;
+            transition: border-color .2s;
+        }
+        .login-fields input:focus {
+            border-color: var(--accent2);
+        }
+        .login-btn {
+            background: var(--text);
+            color: var(--bg);
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: .04em;
+            cursor: pointer;
+            transition: opacity .2s;
+        }
+        .login-btn:hover { opacity: .82; }
+        .login-error {
+            font-size: 12px;
+            color: #C0392B;
+            text-align: center;
+            min-height: 16px;
+        }
         .data-table td { padding:.68rem 1rem; vertical-align:middle; }
         .data-table td.muted { color:var(--muted); font-size:12px; }
         .data-table td:last-child { text-align:right; font-weight:600; }
@@ -685,6 +777,28 @@
 </head>
 
 <body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+    <div class="login-card">
+        <div class="login-brand">
+            <span>Gestão financeira</span>
+            <span>Petinati.</span>
+        </div>
+        <div class="login-fields">
+            <label>
+                Email
+                <input type="email" id="loginUser" placeholder="seu@email.com" autocomplete="username" />
+            </label>
+            <label>
+                Senha
+                <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" />
+            </label>
+        </div>
+        <p class="login-error" id="loginError"></p>
+        <button class="login-btn" id="loginBtn">Entrar</button>
+    </div>
+</div>
 
 <!-- MOBILE MENU BTN -->
 <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Abrir menu">
@@ -3526,6 +3640,218 @@
                 }
             }
         });
+    }
+
+    /* ── SUPABASE SETUP ── */
+    const SUPABASE_URL = 'https://ssadvppxdmpmvbtmxoal.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzYWR2cHB4ZG1wbXZidG14b2FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzODc0MDAsImV4cCI6MjA5NDk2MzQwMH0.QyBUXc2TLskoEy0J3ynq4h8BevqJa4qpZD4rWoKuOHI';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    /* ── LOGIN ── */
+    (function() {
+        const screen = document.getElementById('loginScreen');
+        const btnLogin = document.getElementById('loginBtn');
+        const errorEl = document.getElementById('loginError');
+        const userInput = document.getElementById('loginUser');
+        const passInput = document.getElementById('loginPass');
+
+        async function attempt() {
+            const email = userInput.value.trim();
+            const password = passInput.value;
+            
+            if (!email || !password) {
+                errorEl.textContent = 'Preencha email e senha.';
+                return;
+            }
+
+            btnLogin.disabled = true;
+            btnLogin.textContent = 'Entrando...';
+            errorEl.textContent = '';
+
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) throw error;
+
+                // Login bem-sucedido - carrega dados e remove tela
+                await loadAllDataFromSupabase();
+                screen.classList.add('hidden');
+                setTimeout(() => screen.remove(), 450);
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                errorEl.textContent = 'Email ou senha incorretos.';
+                passInput.value = '';
+                passInput.focus();
+            } finally {
+                btnLogin.disabled = false;
+                btnLogin.textContent = 'Entrar';
+            }
+        }
+
+        btnLogin.addEventListener('click', attempt);
+        [userInput, passInput].forEach(el =>
+            el.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); })
+        );
+
+        // Verifica se já está autenticado (ex: refresh da página)
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                loadAllDataFromSupabase().then(() => {
+                    screen.classList.add('hidden');
+                    setTimeout(() => screen.remove(), 450);
+                });
+            }
+        });
+    })();
+
+    /* ── LOAD DATA FROM SUPABASE ── */
+    async function loadAllDataFromSupabase() {
+        try {
+            // Realizado YTD
+            const { data: realizado, error: errReal } = await supabase
+                .from('realizado_ytd')
+                .select('*')
+                .order('data', { ascending: true });
+            
+            if (errReal) throw errReal;
+            if (realizado) {
+                realizadoData = realizado.map(row => ({
+                    tipo: row.tipo,
+                    data: row.data,
+                    dataComp: row.data_competencia,
+                    lancamento: row.lancamento,
+                    valor: row.valor_brl,
+                    origem: row.origem_da_compra,
+                    evento: row.evento,
+                    grupo: row.grupo,
+                    sub1: row.subgrupo_1,
+                    sub2: row.subgrupo_2
+                }));
+            }
+
+            // Projeção YTG
+            const { data: projecao, error: errProj } = await supabase
+                .from('projecao_ytg')
+                .select('*')
+                .order('data_inicio', { ascending: true });
+            
+            if (errProj) throw errProj;
+            if (projecao) {
+                projecaoData = projecao.map(row => ({
+                    tipo: row.tipo,
+                    lancamento: row.lancamento,
+                    origem: row.origem_da_compra,
+                    evento: row.evento,
+                    valor: row.valor_brl,
+                    dataIni: row.data_inicio,
+                    dataFim: row.data_fim,
+                    grupo: row.grupo,
+                    sub1: row.subgrupo_1,
+                    sub2: row.subgrupo_2
+                }));
+            }
+
+            // Remuneração
+            const { data: remuneracao, error: errRem } = await supabase
+                .from('remuneracao')
+                .select('*')
+                .order('mes', { ascending: true });
+            
+            if (errRem) throw errRem;
+            if (remuneracao) {
+                remuneracaoData = remuneracao.map(row => ({
+                    mes: row.mes,
+                    folha: row.folha,
+                    ferias: row.ferias,
+                    decimoTerceiro: row.decimo_terceiro,
+                    plr: row.plr,
+                    inss: row.inss,
+                    irrf: row.irrf,
+                    restaurante: row.restaurante,
+                    valeAlimentacao: row.vale_alimentacao,
+                    seguroVida: row.seguro_vida,
+                    sulAmerica: row.sul_america,
+                    odontologico: row.odontologico,
+                    mensalidadeCoop: row.mensalidade_coop,
+                    emprestimoCoop: row.emprestimo_coop,
+                    multasTransito: row.multas_transito,
+                    cafeLanche: row.cafe_lanche,
+                    feriasAbonoImp: row.ferias_abono_imp,
+                    descAdiant: row.desc_adiant,
+                    bruto: row.bruto,
+                    descontos: row.descontos,
+                    liquido: row.liquido
+                }));
+            }
+
+            // Movimentações RV
+            const { data: movimentacoes, error: errMov } = await supabase
+                .from('movimentacoes_rv')
+                .select('*')
+                .order('data_ref', { ascending: true });
+            
+            if (errMov) throw errMov;
+            if (movimentacoes) {
+                movimentacoesData = movimentacoes.map(row => ({
+                    data: row.data_ref,
+                    codigo: row.codigo,
+                    tipo: row.tipo,
+                    operacao: row.operacao,
+                    qtd: row.quantidade,
+                    precoUSD: row.preco_unitario_usd,
+                    investidoUSD: row.investido_usd,
+                    ptax: row.ptax,
+                    precoBRL: row.preco_unitario_brl,
+                    investidoBRL: row.investido_brl
+                }));
+            }
+
+            // Investimentos
+            const { data: investimentos, error: errInv } = await supabase
+                .from('investimentos')
+                .select('*')
+                .order('data_ref', { ascending: true });
+            
+            if (errInv) throw errInv;
+            if (investimentos) {
+                investimentosData = investimentos.map(row => {
+                    // Parse data_ref para extrair ano e mês
+                    const dateMatch = row.data_ref.match(/(\d{4})-(\d{2})-(\d{2})/);
+                    if (!dateMatch) return null;
+                    const y = parseInt(dateMatch[1]);
+                    const m = parseInt(dateMatch[2]);
+                    
+                    return {
+                        _codigo: row.codigo,
+                        _tipo: row.tipo_investimento || 'NÃO CLASSIFICADO',
+                        _y: y,
+                        _m: m,
+                        _k: `${y}-${String(m).padStart(2,'0')}`,
+                        _investBRL: row.valor_investido_brl || 0,
+                        _investUSD: row.valor_investido_usd || 0,
+                        _brutoBRL: row.valor_bruto_brl || 0,
+                        _brutoUSD: row.valor_bruto_usd || 0,
+                        _rendBRL: row.rendimento_total_brl || 0,
+                        _rendUSD: row.rendimento_total_usd || 0,
+                        _aporte: row.aporte_mes || 0
+                    };
+                }).filter(r => r !== null);
+                updateFilters();
+            }
+
+            // Trigger renderAll após carregar todos os dados
+            renderAll();
+            
+            console.log('✅ Dados carregados do Supabase');
+            
+        } catch (error) {
+            console.error('❌ Erro ao carregar dados:', error);
+            alert('Erro ao carregar dados do servidor. Verifique o console.');
+        }
     }
 </script>
 </body>
