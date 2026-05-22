@@ -3751,28 +3751,36 @@
     async function loadAllDataFromSupabase() {
         console.log('🚀 Iniciando loadAllDataFromSupabase...');
         try {
-            // Realizado YTD (limit alto para pegar todas as linhas, default do Supabase é 1000)
-            const { data: realizado, error: errReal } = await sbClient
-                .from('realizado_ytd')
-                .select('*')
-                .order('data', { ascending: true })
-                .limit(10000);
-            
-            console.log('📥 realizado_ytd:', realizado ? realizado.length + ' rows' : 'null', 'error:', errReal);
-            if (errReal) throw errReal;
-            if (realizado) {
+            // Realizado YTD — paginação para ultrapassar o limite de 1000 do Supabase
+            let allRealizado = [];
+            let from = 0;
+            const PAGE = 1000;
+            while (true) {
+                const { data: batch, error: errBatch } = await sbClient
+                    .from('realizado_ytd')
+                    .select('*')
+                    .order('data', { ascending: true })
+                    .range(from, from + PAGE - 1);
+                if (errBatch) throw errBatch;
+                if (!batch || batch.length === 0) break;
+                allRealizado = allRealizado.concat(batch);
+                if (batch.length < PAGE) break; // última página
+                from += PAGE;
+            }
+            console.log('📥 realizado_ytd:', allRealizado.length, 'rows (paginado)');
+            if (allRealizado.length > 0) {
                 // Remapeia para o formato que processRealizado() espera (chaves do CSV original)
-                processRealizado(realizado.map(row => ({
-                    'TIPO':             row.tipo,
-                    'DATA':             row.data,
-                    'DATA COMPETENCIA': row.data_competencia,
-                    'LANÇAMENTO':       row.lancamento,
-                    'VALOR BRL':        String(row.valor_brl),
-                    'ORIGEM DA COMPRA': row.origem_da_compra,
-                    'EVENTO':           row.evento,
-                    'GRUPO':            row.grupo,
-                    'SUBGRUPO 1':       row.subgrupo_1,
-                    'SUBGRUPO 2':       row.subgrupo_2
+                processRealizado(allRealizado.map(row => ({
+                    'TIPO':             row.tipo || '',
+                    'DATA':             row.data || '',
+                    'DATA COMPETENCIA': row.data_competencia || '',
+                    'LANÇAMENTO':       row.lancamento || '',
+                    'VALOR BRL':        String(row.valor_brl || 0),
+                    'ORIGEM DA COMPRA': row.origem_da_compra || '',
+                    'EVENTO':           row.evento || '',
+                    'GRUPO':            row.grupo || '',
+                    'SUBGRUPO 1':       row.subgrupo_1 || '',
+                    'SUBGRUPO 2':       row.subgrupo_2 || ''
                 })));
             }
 
