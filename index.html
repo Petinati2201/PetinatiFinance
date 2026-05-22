@@ -3878,6 +3878,21 @@
             }
 
             // Trigger renderAll após carregar todos os dados
+            // DEBUG: mostrar estado completo dos dados carregados
+            console.log('📊 DADOS CARREGADOS:');
+            console.log('  realizadoData:', realizadoData.length, 'linhas');
+            console.log('  projecaoData:', projecaoData.length, 'linhas');
+            console.log('  remuneracaoData:', remuneracaoData.length, 'linhas');
+            console.log('  investimentosData:', investimentosData.length, 'linhas');
+            console.log('  movimentacoesData:', movimentacoesData.length, 'linhas');
+            if (realizadoData.length > 0) {
+                console.log('  Primeiro registro realizado:', JSON.stringify(realizadoData[0]));
+                console.log('  Campos do primeiro registro:', Object.keys(realizadoData[0]));
+                // Totais por mês
+                const byMonth = {};
+                realizadoData.forEach(r => { byMonth[r._k] = (byMonth[r._k] || 0) + r._v; });
+                console.log('  Totais por mês:', byMonth);
+            }
             renderAll();
             
             console.log('✅ Dados carregados do Supabase');
