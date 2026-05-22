@@ -644,6 +644,65 @@
         .mb3 { margin-bottom:2rem; }
 
         /* ── TABLE ── */
+        /* ── INPUT INVESTIMENTOS ── */
+        .inv-input-toolbar {
+            display:flex; align-items:center; gap:.75rem;
+            flex-wrap:wrap; margin-bottom:1.2rem;
+        }
+        .inv-input-toolbar select,
+        .inv-input-toolbar button {
+            font-family:'Inter',sans-serif; font-size:13px;
+            border-radius:8px; padding:.5rem 1rem;
+            border:1px solid var(--border); background:var(--surface);
+            color:var(--text); cursor:pointer; transition:all .2s;
+        }
+        .inv-input-toolbar button:hover { border-color:var(--accent2); }
+        .inv-input-toolbar button.primary {
+            background:#059669; color:#fff; border-color:#059669; font-weight:600;
+        }
+        .inv-input-toolbar button.primary:hover { background:#047857; }
+        .inv-input-toolbar button.primary:disabled {
+            opacity:.5; cursor:not-allowed;
+        }
+        .inv-input-toolbar .spacer { flex:1; }
+        .inv-input-status {
+            font-size:12px; color:var(--muted); min-height:1.4em;
+        }
+        .inv-input-status.ok { color:#059669; }
+        .inv-input-status.err { color:#DC2626; }
+
+        .inv-edit-table { width:100%; border-collapse:collapse; font-size:13px; }
+        .inv-edit-table thead tr { border-bottom:1px solid var(--border); }
+        .inv-edit-table th {
+            text-align:left; padding:.6rem .6rem;
+            font-size:11px; font-weight:600; text-transform:uppercase;
+            letter-spacing:.06em; color:var(--muted);
+        }
+        .inv-edit-table tbody tr { border-bottom:1px solid var(--line); transition:background .15s; }
+        .inv-edit-table tbody tr:hover { background:var(--line); }
+        .inv-edit-table td { padding:.45rem .6rem; vertical-align:middle; }
+        .inv-edit-table td input {
+            width:100%; font-family:'Inter',sans-serif; font-size:13px;
+            border:1px solid transparent; border-radius:6px;
+            padding:.35rem .5rem; background:transparent;
+            color:var(--text); transition:all .15s;
+        }
+        .inv-edit-table td input:focus {
+            outline:none; border-color:var(--accent2);
+            background:var(--surface);
+        }
+        .inv-edit-table td input.changed {
+            background:rgba(5,150,105,.06);
+            border-color:rgba(5,150,105,.3);
+        }
+        .inv-edit-table td.row-actions { text-align:center; white-space:nowrap; }
+        .inv-edit-table td.row-actions button {
+            background:none; border:none; color:var(--muted);
+            cursor:pointer; padding:.2rem .4rem; border-radius:4px;
+            font-size:14px; transition:color .15s, background .15s;
+        }
+        .inv-edit-table td.row-actions button:hover { color:#DC2626; background:rgba(220,38,38,.08); }
+
         .data-table { width:100%; border-collapse:collapse; font-size:13px; }
 
         /* Detalhamento colapsável */
@@ -864,10 +923,9 @@
         <div class="sb-nav-group">
             <div class="sb-section-title">Dados</div>
             <nav class="sb-nav">
-                <div class="sb-link" data-view="uploads" onclick="switchView('uploads')">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-                    <span class="sb-link-label">Uploads</span>
-                    <span class="sb-upload-badge pending" id="uploadBadge">0/5</span>
+                <div class="sb-link" data-view="inputinv" onclick="switchView('inputinv')">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <span class="sb-link-label">Input Investimentos</span>
                 </div>
             </nav>
         </div>
@@ -899,90 +957,46 @@
     <main class="main">
 
     <!-- VIEW: UPLOADS -->
-    <div id="view-uploads" class="view">
+    <div id="view-inputinv" class="view">
         <div class="view-header">
             <div>
-                <h1 class="view-title">Uploads</h1>
-                <div class="view-subtitle">Arraste todos os CSVs de uma vez — o dashboard identifica cada um automaticamente</div>
+                <h1 class="view-title">Input Investimentos</h1>
+                <div class="view-subtitle">Duplique o mês anterior, edite valores e salve no Supabase</div>
             </div>
         </div>
 
-        <!-- Unified drop zone -->
-        <label class="upload-dropzone" id="mainDropzone">
-            <div class="dz-icon">
-                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-            </div>
-            <div class="dz-title">Solte seus CSVs aqui</div>
-            <div class="dz-subtitle">ou <b>clique para selecionar</b> — aceita múltiplos arquivos</div>
-            <div class="dz-feedback" id="dzFeedback"></div>
-            <input type="file" id="mainFileInput" accept=".csv" multiple/>
-        </label>
+        <div class="inv-input-toolbar">
+            <label style="font-size:12px;color:var(--muted);font-weight:500">Mês de referência:</label>
+            <select id="inputInvMonth"></select>
+            <button id="btnDuplicateMonth">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:4px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                Duplicar para próximo mês
+            </button>
+            <div class="spacer"></div>
+            <button id="btnAddRow">+ Adicionar ativo</button>
+            <button id="btnSaveInv" class="primary" disabled>Salvar alterações</button>
+        </div>
+        <div class="inv-input-status" id="inputInvStatus"></div>
 
-        <!-- Compact status cards -->
-        <div class="upload-grid">
-            <div class="upload-card" data-upload="real">
-                <div class="uc-icon r">R$</div>
-                <div class="uc-title-wrap">
-                    <div class="uc-title">Realizado YTD</div>
-                    <div class="uc-desc">Lançamentos realizados</div>
-                </div>
-                <div class="uc-status-row" id="statusReal">
-                    <span class="uc-dot pending"></span>
-                    <span class="uc-status-text">Pendente</span>
-                    <span class="uc-rows"></span>
-                </div>
-            </div>
-
-            <div class="upload-card" data-upload="proj">
-                <div class="uc-icon p">∑</div>
-                <div class="uc-title-wrap">
-                    <div class="uc-title">Projeção YTG</div>
-                    <div class="uc-desc">Despesas futuras e recorrentes</div>
-                </div>
-                <div class="uc-status-row" id="statusProj">
-                    <span class="uc-dot pending"></span>
-                    <span class="uc-status-text">Pendente</span>
-                    <span class="uc-rows"></span>
-                </div>
-            </div>
-
-            <div class="upload-card" data-upload="rem">
-                <div class="uc-icon s">$</div>
-                <div class="uc-title-wrap">
-                    <div class="uc-title">Remuneração</div>
-                    <div class="uc-desc">Holerites mensais</div>
-                </div>
-                <div class="uc-status-row" id="statusRem">
-                    <span class="uc-dot pending"></span>
-                    <span class="uc-status-text">Pendente</span>
-                    <span class="uc-rows"></span>
-                </div>
-            </div>
-
-            <div class="upload-card" data-upload="inv">
-                <div class="uc-icon i">₿</div>
-                <div class="uc-title-wrap">
-                    <div class="uc-title">Investimentos</div>
-                    <div class="uc-desc">Posições mensais da carteira</div>
-                </div>
-                <div class="uc-status-row" id="statusInv">
-                    <span class="uc-dot pending"></span>
-                    <span class="uc-status-text">Pendente</span>
-                    <span class="uc-rows"></span>
-                </div>
-            </div>
-
-            <div class="upload-card" data-upload="mov">
-                <div class="uc-icon m">%</div>
-                <div class="uc-title-wrap">
-                    <div class="uc-title">Movimentações RV</div>
-                    <div class="uc-desc">Compras e vendas para IR</div>
-                </div>
-                <div class="uc-status-row" id="statusMov">
-                    <span class="uc-dot pending"></span>
-                    <span class="uc-status-text">Pendente</span>
-                    <span class="uc-rows"></span>
-                </div>
+        <div class="card mb3">
+            <div style="overflow-x:auto">
+                <table class="inv-edit-table">
+                    <thead>
+                        <tr>
+                            <th style="width:150px">Código</th>
+                            <th style="width:140px">Tipo Investimento</th>
+                            <th>Invest. USD</th>
+                            <th>Invest. BRL</th>
+                            <th>Bruto USD</th>
+                            <th>Bruto BRL</th>
+                            <th>Rend. Total USD</th>
+                            <th>Rend. Total BRL</th>
+                            <th>Aporte Mês</th>
+                            <th style="width:50px"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="inputInvBody"></tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -1066,14 +1080,14 @@
 
         <div class="kpi-grid kpi-grid-2 mb2">
             <div class="kpi-cell c-amber">
-                <span class="kpi-label">% da Renda Comprometida</span>
+                <span class="kpi-label">% da Renda em Parcelas</span>
                 <span id="kpiFinanced" class="kpi-value">0%</span>
-                <span class="kpi-sub">Percentual do mês tomado por parcelas passadas ou financiamentos.</span>
+                <span class="kpi-sub">Percentual do mês tomado por parcelas (exclui financiamentos).</span>
             </div>
             <div class="kpi-cell c-indigo">
-                <span class="kpi-label">Total Financiado / Parcelado</span>
+                <span class="kpi-label">Total Parcelado</span>
                 <span id="kpiFinancedVal" class="kpi-value">R$ 0,00</span>
-                <span class="kpi-sub">Soma absoluta que o seu "eu do passado" deixou para hoje.</span>
+                <span class="kpi-sub">Soma absoluta de parcelas que o seu "eu do passado" deixou para hoje.</span>
             </div>
         </div>
 
@@ -1119,7 +1133,7 @@
             <div class="kpi-cell c-blue">
                 <span class="kpi-label">Despesa Total</span>
                 <span id="kpiDespesa" class="kpi-value">R$ 0,00</span>
-                <span class="kpi-sub">Realizado + projeção do mês.</span>
+                <span class="kpi-sub">Total de despesas no mês.</span>
             </div>
             <div class="kpi-cell c-indigo">
                 <span class="kpi-label">Saldo do Mês</span>
@@ -1174,7 +1188,7 @@
             <div style="font-family:'Instrument Serif',serif;font-size:1.4rem;margin-bottom:.5rem">Detalhamento indisponível</div>
             <div class="card-sub" style="margin-bottom:0">
                 Esta aba requer o CSV de Remuneração expandido (com colunas Folha, Férias, 13º, PLR, INSS, IRRF etc.).<br>
-                Faça upload da versão completa em <b>Uploads</b>.
+                Dados ainda não carregados do servidor.
             </div>
         </div>
 
@@ -1282,7 +1296,7 @@
         <div id="invNoData" class="card mb2" style="display:none;text-align:center;padding:2.5rem">
             <div style="font-family:'Instrument Serif',serif;font-size:1.4rem;margin-bottom:.5rem">Dados indisponíveis</div>
             <div class="card-sub" style="margin-bottom:0">
-                Faça upload do CSV de Investimentos em <b>Uploads</b> para ver esta análise.
+                Dados de Investimentos ainda não carregados do servidor.
             </div>
         </div>
 
@@ -1380,7 +1394,7 @@
         <div id="irNoData" class="card mb2" style="display:none;text-align:center;padding:2.5rem">
             <div style="font-family:'Instrument Serif',serif;font-size:1.4rem;margin-bottom:.5rem">Dados indisponíveis</div>
             <div class="card-sub" style="margin-bottom:0">
-                Faça upload do arquivo de Movimentações RV em <b>Uploads</b> para ver esta análise.
+                Dados de Movimentações RV ainda não carregados do servidor.
             </div>
         </div>
 
@@ -1599,46 +1613,6 @@
         return parseFloat(s) || 0;
     }
 
-    /* file input — single unified input handles all CSVs */
-    document.getElementById('mainFileInput').addEventListener('change', function() {
-        for (const file of this.files) handleFile(file);
-        this.value = ''; // allow re-selecting same files
-    });
-
-    function updateUploadStatus() {
-        const setStatus = (elId, uploadKey, loaded, rows) => {
-            const row = document.getElementById(elId);
-            if (!row) return;
-            const dot = row.querySelector('.uc-dot');
-            const txt = row.querySelector('.uc-status-text');
-            const rowsEl = row.querySelector('.uc-rows');
-            const card = document.querySelector('.upload-card[data-upload="' + uploadKey + '"]');
-            if (loaded) {
-                dot.classList.remove('pending'); dot.classList.add('ok');
-                txt.textContent = 'Carregado';
-                rowsEl.textContent = `${rows.toLocaleString('pt-BR')} linha${rows === 1 ? '' : 's'}`;
-                if (card) card.classList.add('loaded');
-            } else {
-                dot.classList.remove('ok'); dot.classList.add('pending');
-                txt.textContent = 'Pendente';
-                rowsEl.textContent = '';
-                if (card) card.classList.remove('loaded');
-            }
-        };
-        setStatus('statusReal', 'real', realizadoData.length > 0, realizadoData.length);
-        setStatus('statusProj', 'proj', projecaoData.length > 0, projecaoData.length);
-        setStatus('statusRem',  'rem',  remuneracaoData.length > 0, remuneracaoData.length);
-        setStatus('statusInv',  'inv',  investimentosData.length > 0, investimentosData.length);
-        setStatus('statusMov',  'mov',  movimentacoesData.length > 0, movimentacoesData.length);
-
-        // Badge da sidebar
-        const loaded = [realizadoData, projecaoData, remuneracaoData, investimentosData, movimentacoesData].filter(a => a.length > 0).length;
-        const badge = document.getElementById('uploadBadge');
-        badge.textContent = `${loaded}/5`;
-        badge.classList.toggle('ok', loaded === 5);
-        badge.classList.toggle('pending', loaded < 5);
-    }
-
     // ────────── CROSS-FILTER HELPERS ──────────
     // Alterna um valor no filtro da view atual para um campo
     function toggleFilter(view, field, value) {
@@ -1708,7 +1682,7 @@
         // Tabela de detalhamento só aparece nas views de análise (exceto holerite/investimentos/ir, que têm tabelas próprias)
         const detalhamento = document.getElementById('detalhamentoWrap');
         if (detalhamento) {
-            detalhamento.style.display = (viewName === 'uploads' || viewName === 'holerite' || viewName === 'investimentos' || viewName === 'ir') ? 'none' : 'block';
+            detalhamento.style.display = (viewName === 'inputinv' || viewName === 'holerite' || viewName === 'investimentos' || viewName === 'ir') ? 'none' : 'block';
         }
         // Em mobile, fecha a sidebar ao navegar
         if (window.innerWidth <= 860) {
@@ -1742,7 +1716,6 @@
     if (window.innerWidth <= 860) {
         document.getElementById('app').classList.add('collapsed');
     }
-    updateUploadStatus();
 
     /* ───── CSV AUTO-DETECTION ───── */
     const csvTypeLabels = {
@@ -1763,13 +1736,6 @@
         return null;
     }
 
-    function showDzFeedback(msg, type) {
-        const el = document.getElementById('dzFeedback');
-        el.textContent = msg;
-        el.className = 'dz-feedback ' + (type || '');
-        if (type) setTimeout(() => { el.textContent = ''; el.className = 'dz-feedback'; }, 3500);
-    }
-
     function handleFile(fileOrEvent, forcedType) {
         const file = fileOrEvent instanceof File ? fileOrEvent : fileOrEvent.target.files[0];
         if (!file) return;
@@ -1778,70 +1744,16 @@
             transformHeader: h => h.trim().toUpperCase(),
             complete: res => {
                 const type = forcedType || detectCsvType(res.meta.fields);
-                if (!type) {
-                    showDzFeedback('⚠ "' + file.name + '" não reconhecido — verifique o formato', 'err');
-                    return;
-                }
+                if (!type) return;
                 if (type === 'real') processRealizado(res.data);
                 else if (type === 'proj') processProjecao(res.data);
                 else if (type === 'rem') processRemuneracao(res.data);
                 else if (type === 'inv') processInvestimentos(res.data);
                 else if (type === 'mov') processMovimentacoes(res.data);
-                showDzFeedback('✓ ' + file.name + ' → ' + csvTypeLabels[type], 'ok');
-                /* highlight the matching status card briefly */
-                const card = document.querySelector('.upload-card[data-upload="' + type + '"]');
-                if (card) { card.classList.add('loaded'); }
                 renderAll();
             }
         });
     }
-
-    /* ───── UNIFIED DRAG & DROP ───── */
-    const dropzone = document.getElementById('mainDropzone');
-
-    // Prevent browser from opening file if dropped outside zone
-    ['dragover', 'drop'].forEach(evt => {
-        document.addEventListener(evt, e => {
-            if (!e.target.closest('.upload-dropzone')) {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'none';
-            }
-        });
-    });
-
-    dropzone.addEventListener('dragenter', e => {
-        e.preventDefault();
-        dropzone.classList.remove('dragover', 'drag-reject');
-        const item = e.dataTransfer.items[0];
-        const isCsv = item && (item.type === 'text/csv' || item.type === 'application/vnd.ms-excel' || item.kind === 'file');
-        dropzone.classList.add(isCsv ? 'dragover' : 'drag-reject');
-    });
-
-    dropzone.addEventListener('dragover', e => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'copy';
-    });
-
-    dropzone.addEventListener('dragleave', e => {
-        if (!dropzone.contains(e.relatedTarget)) {
-            dropzone.classList.remove('dragover', 'drag-reject');
-        }
-    });
-
-    dropzone.addEventListener('drop', e => {
-        e.preventDefault();
-        dropzone.classList.remove('dragover', 'drag-reject');
-        const files = [...e.dataTransfer.files];
-        const csvFiles = files.filter(f => f.name.toLowerCase().endsWith('.csv'));
-        if (csvFiles.length === 0) {
-            showDzFeedback('Apenas arquivos .csv são aceitos', 'err');
-            return;
-        }
-        if (csvFiles.length < files.length) {
-            showDzFeedback('Alguns arquivos ignorados (não são .csv)', 'err');
-        }
-        csvFiles.forEach(f => handleFile(f));
-    });
 
     function parseBRDate(str) {
         if (!str) return null;
@@ -2118,7 +2030,6 @@
     }
 
     function updateFilters() {
-        updateUploadStatus();
         // Também considera datas do CSV de investimentos e do xlsx de movimentações no range de anos
         const allYears=[...new Set([
             ...realizadoData, ...projecaoData, ...remuneracaoData, ...investimentosData,
@@ -2184,8 +2095,12 @@
     function renderAll() {
         // Atualiza visibilidade dos chips de reset antes de renderizar
         updateResetChips();
-        // View de uploads não renderiza charts/tabelas
-        if (currentView === 'uploads') return;
+        // View de input investimentos: carrega tabela editável
+        if (currentView === 'inputinv') {
+            populateInputInvMonths();
+            loadInputInvMonth();
+            return;
+        }
         // View de investimentos roda sem depender dos filtros de ano/mês
         if (currentView === 'investimentos') {
             renderInvestimentos();
@@ -2262,7 +2177,7 @@
         if (currentView==='origem') {
             const financedData=filteredReal.filter(r=>{
                 const orig=String(r['ORIGEM DA COMPRA']||'').toUpperCase();
-                return orig.includes('PARCELA')||orig.includes('FINANCIAMENTO')||orig.includes('CARTÃO');
+                return orig.includes('PARCELA');
             });
             const financedVal=financedData.reduce((a,b)=>a+b._v,0);
             const percFinanced=sumR>0?(financedVal/sumR)*100:0;
@@ -2530,7 +2445,7 @@
 
         const financedData=filteredReal.filter(r=>{
             const orig=String(r['ORIGEM DA COMPRA']||'').toUpperCase();
-            return orig.includes('PARCELA')||orig.includes('FINANCIAMENTO')||orig.includes('CARTÃO');
+            return orig.includes('PARCELA');
         });
         const financedVal=financedData.reduce((a,b)=>a+b._v,0);
         const percFinanced=sumR>0?(financedVal/sumR)*100:0;
@@ -3576,7 +3491,7 @@
         } else {
             unrealEl.innerText = '—';
             unrealEl.style.color = 'var(--muted)';
-            unrealSubEl.innerText = 'Faça upload de Investimentos';
+            unrealSubEl.innerText = 'Dados de Investimentos indisponíveis';
         }
 
         // Histórico completo
@@ -3656,6 +3571,318 @@
             }
         });
     }
+
+    /* ── INPUT INVESTIMENTOS ── */
+    let inputInvOriginal = []; // snapshot para detectar mudanças
+    let inputInvRows = [];     // estado editável atual
+
+    function inputInvSetStatus(msg, type) {
+        const el = document.getElementById('inputInvStatus');
+        el.textContent = msg;
+        el.className = 'inv-input-status' + (type ? ' ' + type : '');
+    }
+
+    function populateInputInvMonths() {
+        const sel = document.getElementById('inputInvMonth');
+        if (!sel) return;
+        const keys = [...new Set(investimentosData.map(r => r._k))].sort();
+        sel.innerHTML = '';
+        keys.forEach(k => {
+            const o = document.createElement('option');
+            o.value = k;
+            const [y, m] = k.split('-');
+            o.textContent = `${m}/${y}`;
+            sel.appendChild(o);
+        });
+        // Seleciona o último mês por padrão
+        if (keys.length) sel.value = keys[keys.length - 1];
+    }
+
+    function loadInputInvMonth() {
+        const sel = document.getElementById('inputInvMonth');
+        if (!sel || !sel.value) return;
+        const key = sel.value;
+        const rows = investimentosData
+            .filter(r => r._k === key)
+            .map(r => ({
+                codigo: r._codigo,
+                tipo: r._tipo,
+                investUSD: r._investUSD,
+                investBRL: r._investBRL,
+                brutoUSD: r._brutoUSD,
+                brutoBRL: r._brutoBRL,
+                rendUSD: r._rendUSD,
+                rendBRL: r._rendBRL,
+                aporte: r._aporte,
+                _isNew: false
+            }));
+        inputInvRows = JSON.parse(JSON.stringify(rows));
+        inputInvOriginal = JSON.parse(JSON.stringify(rows));
+        renderInputInvTable();
+        document.getElementById('btnSaveInv').disabled = true;
+        inputInvSetStatus('');
+    }
+
+    function fmtInputNum(v) {
+        if (v === 0 || v === null || v === undefined) return '0';
+        return String(v).replace('.', ',');
+    }
+
+    function parseInputNum(s) {
+        if (!s) return 0;
+        return parseFloat(String(s).replace(/\./g, '').replace(',', '.')) || 0;
+    }
+
+    function renderInputInvTable() {
+        const tbody = document.getElementById('inputInvBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        inputInvRows.forEach((row, i) => {
+            const tr = document.createElement('tr');
+            const fields = [
+                { key: 'codigo', val: row.codigo, type: 'text' },
+                { key: 'tipo', val: row.tipo, type: 'text' },
+                { key: 'investUSD', val: fmtInputNum(row.investUSD), type: 'num' },
+                { key: 'investBRL', val: fmtInputNum(row.investBRL), type: 'num' },
+                { key: 'brutoUSD', val: fmtInputNum(row.brutoUSD), type: 'num' },
+                { key: 'brutoBRL', val: fmtInputNum(row.brutoBRL), type: 'num' },
+                { key: 'rendUSD', val: fmtInputNum(row.rendUSD), type: 'num' },
+                { key: 'rendBRL', val: fmtInputNum(row.rendBRL), type: 'num' },
+                { key: 'aporte', val: fmtInputNum(row.aporte), type: 'num' },
+            ];
+            fields.forEach(f => {
+                const td = document.createElement('td');
+                const inp = document.createElement('input');
+                inp.type = 'text';
+                inp.value = f.val;
+                inp.dataset.row = i;
+                inp.dataset.key = f.key;
+                if (f.type === 'num') inp.style.textAlign = 'right';
+                inp.addEventListener('input', onInputInvChange);
+                td.appendChild(inp);
+                tr.appendChild(td);
+            });
+            // delete button
+            const tdDel = document.createElement('td');
+            tdDel.className = 'row-actions';
+            const btn = document.createElement('button');
+            btn.textContent = '✕';
+            btn.title = 'Remover ativo';
+            btn.addEventListener('click', () => {
+                inputInvRows.splice(i, 1);
+                renderInputInvTable();
+                checkInputInvDirty();
+            });
+            tdDel.appendChild(btn);
+            tr.appendChild(tdDel);
+            tbody.appendChild(tr);
+        });
+    }
+
+    function onInputInvChange(e) {
+        const i = +e.target.dataset.row;
+        const key = e.target.dataset.key;
+        const raw = e.target.value;
+        if (['codigo', 'tipo'].includes(key)) {
+            inputInvRows[i][key] = raw;
+        } else {
+            inputInvRows[i][key] = parseInputNum(raw);
+        }
+        // highlight changed
+        const orig = inputInvOriginal[i];
+        if (orig) {
+            const origVal = ['codigo', 'tipo'].includes(key) ? orig[key] : fmtInputNum(orig[key]);
+            e.target.classList.toggle('changed', raw !== origVal);
+        } else {
+            e.target.classList.add('changed');
+        }
+        checkInputInvDirty();
+    }
+
+    function checkInputInvDirty() {
+        const dirty = JSON.stringify(inputInvRows) !== JSON.stringify(inputInvOriginal);
+        document.getElementById('btnSaveInv').disabled = !dirty;
+    }
+
+    async function duplicateToNextMonth() {
+        const sel = document.getElementById('inputInvMonth');
+        if (!sel || !sel.value) return;
+        const [y, m] = sel.value.split('-').map(Number);
+        let ny = y, nm = m + 1;
+        if (nm > 12) { nm = 1; ny++; }
+        const nextKey = `${ny}-${String(nm).padStart(2, '0')}`;
+
+        // Checa se já existe dados nesse mês
+        const existing = investimentosData.filter(r => r._k === nextKey);
+        if (existing.length > 0) {
+            if (!confirm(`Já existem ${existing.length} registros em ${String(nm).padStart(2,'0')}/${ny}. Deseja sobrescrever?`)) return;
+        }
+
+        // Copia do mês atual
+        const currentRows = investimentosData.filter(r => r._k === sel.value);
+        if (currentRows.length === 0) {
+            inputInvSetStatus('Nenhum dado no mês selecionado para duplicar.', 'err');
+            return;
+        }
+
+        inputInvSetStatus('Duplicando para ' + String(nm).padStart(2,'0') + '/' + ny + '...', '');
+        const dataRef = `${ny}-${String(nm).padStart(2,'0')}-01`;
+
+        try {
+            // Se já existe, deleta antes
+            if (existing.length > 0) {
+                const { error: delErr } = await sbClient
+                    .from('investimentos')
+                    .delete()
+                    .eq('data_ref', dataRef);
+                if (delErr) throw delErr;
+            }
+
+            const inserts = currentRows.map(r => ({
+                data_ref: dataRef,
+                codigo: r._codigo,
+                tipo_investimento: r._tipo,
+                valor_investido_usd: r._investUSD,
+                valor_investido_brl: r._investBRL,
+                valor_bruto_usd: r._brutoUSD,
+                valor_bruto_brl: r._brutoBRL,
+                rendimento_total_usd: r._rendUSD,
+                rendimento_total_brl: r._rendBRL,
+                aporte_mes: r._aporte
+            }));
+
+            const { error: insErr } = await sbClient
+                .from('investimentos')
+                .insert(inserts);
+            if (insErr) throw insErr;
+
+            inputInvSetStatus('✓ Duplicado com sucesso para ' + String(nm).padStart(2,'0') + '/' + ny, 'ok');
+
+            // Recarrega dados de investimentos
+            await reloadInvestimentosFromSupabase();
+            populateInputInvMonths();
+            sel.value = nextKey;
+            loadInputInvMonth();
+
+        } catch (err) {
+            console.error('Erro ao duplicar mês:', err);
+            inputInvSetStatus('Erro: ' + (err.message || err), 'err');
+        }
+    }
+
+    async function saveInputInvChanges() {
+        const sel = document.getElementById('inputInvMonth');
+        if (!sel || !sel.value) return;
+        const key = sel.value;
+        const [y, m] = key.split('-');
+        const dataRef = `${y}-${m}-01`;
+
+        const btn = document.getElementById('btnSaveInv');
+        btn.disabled = true;
+        btn.textContent = 'Salvando...';
+        inputInvSetStatus('Salvando alterações...', '');
+
+        try {
+            // Deleta tudo do mês e reinsere
+            const { error: delErr } = await sbClient
+                .from('investimentos')
+                .delete()
+                .eq('data_ref', dataRef);
+            if (delErr) throw delErr;
+
+            if (inputInvRows.length > 0) {
+                const inserts = inputInvRows.filter(r => r.codigo.trim()).map(r => ({
+                    data_ref: dataRef,
+                    codigo: r.codigo.trim(),
+                    tipo_investimento: r.tipo.trim(),
+                    valor_investido_usd: r.investUSD,
+                    valor_investido_brl: r.investBRL,
+                    valor_bruto_usd: r.brutoUSD,
+                    valor_bruto_brl: r.brutoBRL,
+                    rendimento_total_usd: r.rendUSD,
+                    rendimento_total_brl: r.rendBRL,
+                    aporte_mes: r.aporte
+                }));
+
+                if (inserts.length > 0) {
+                    const { error: insErr } = await sbClient
+                        .from('investimentos')
+                        .insert(inserts);
+                    if (insErr) throw insErr;
+                }
+            }
+
+            inputInvSetStatus('✓ Salvo com sucesso!', 'ok');
+
+            // Recarrega dados
+            await reloadInvestimentosFromSupabase();
+            populateInputInvMonths();
+            sel.value = key;
+            loadInputInvMonth();
+
+            // Re-render gráficos se necessário
+            if (currentView === 'investimentos') renderInvestimentos();
+
+        } catch (err) {
+            console.error('Erro ao salvar:', err);
+            inputInvSetStatus('Erro: ' + (err.message || err), 'err');
+        } finally {
+            btn.textContent = 'Salvar alterações';
+            checkInputInvDirty();
+        }
+    }
+
+    async function reloadInvestimentosFromSupabase() {
+        const { data: investimentos, error } = await sbClient
+            .from('investimentos')
+            .select('*')
+            .order('data_ref', { ascending: true })
+            .limit(10000);
+        if (error) throw error;
+        if (investimentos) {
+            processInvestimentos(investimentos.map(row => {
+                let dataFormatted = '';
+                if (row.data_ref) {
+                    const parts = row.data_ref.split('-');
+                    if (parts.length === 3) {
+                        dataFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    }
+                }
+                return {
+                    'DATA REF':              dataFormatted,
+                    'CODIGO':                row.codigo || '',
+                    'TIPO INVESTIMENTO':     row.tipo_investimento || '',
+                    'VALOR INVESTIDO USD':   String(row.valor_investido_usd || 0),
+                    'VALOR INVESTIDO BRL':   String(row.valor_investido_brl || 0),
+                    'VALOR BRUTO USD':       String(row.valor_bruto_usd || 0),
+                    'VALOR BRUTO BRL':       String(row.valor_bruto_brl || 0),
+                    'RENDIMENTO TOTAL USD':  String(row.rendimento_total_usd || 0),
+                    'RENDIMENTO TOTAL BRL':  String(row.rendimento_total_brl || 0),
+                    'APORTE MES':            String(row.aporte_mes || 0)
+                };
+            }));
+        }
+    }
+
+    function addInputInvRow() {
+        inputInvRows.push({
+            codigo: '', tipo: '', investUSD: 0, investBRL: 0,
+            brutoUSD: 0, brutoBRL: 0, rendUSD: 0, rendBRL: 0,
+            aporte: 0, _isNew: true
+        });
+        renderInputInvTable();
+        checkInputInvDirty();
+        // Foca no primeiro campo da nova linha
+        const tbody = document.getElementById('inputInvBody');
+        const lastRow = tbody.lastElementChild;
+        if (lastRow) lastRow.querySelector('input').focus();
+    }
+
+    // Event listeners (delegados para sobreviver a re-renders)
+    document.getElementById('inputInvMonth')?.addEventListener('change', loadInputInvMonth);
+    document.getElementById('btnDuplicateMonth')?.addEventListener('click', duplicateToNextMonth);
+    document.getElementById('btnSaveInv')?.addEventListener('click', saveInputInvChanges);
+    document.getElementById('btnAddRow')?.addEventListener('click', addInputInvRow);
 
     /* ── SUPABASE SETUP ── */
     const SUPABASE_URL = 'https://ssadvppxdmpmvbtmxoal.supabase.co';
@@ -3749,7 +3976,6 @@
 
     /* ── LOAD DATA FROM SUPABASE ── */
     async function loadAllDataFromSupabase() {
-        console.log('🚀 Iniciando loadAllDataFromSupabase...');
         try {
             // Realizado YTD — paginação para ultrapassar o limite de 1000 do Supabase
             let allRealizado = [];
@@ -3767,7 +3993,6 @@
                 if (batch.length < PAGE) break; // última página
                 from += PAGE;
             }
-            console.log('📥 realizado_ytd:', allRealizado.length, 'rows (paginado)');
             if (allRealizado.length > 0) {
                 // Remapeia para o formato que processRealizado() espera (chaves do CSV original)
                 processRealizado(allRealizado.map(row => ({
@@ -3791,7 +4016,6 @@
                 .order('data_inicio', { ascending: true })
                 .limit(10000);
             
-            console.log('📥 projecao_ytg:', projecao ? projecao.length + ' rows' : 'null', 'error:', errProj);
             if (errProj) throw errProj;
             if (projecao) {
                 processProjecao(projecao.map(row => ({
@@ -3815,7 +4039,6 @@
                 .order('mes', { ascending: true })
                 .limit(10000);
             
-            console.log('📥 remuneracao:', remuneracao ? remuneracao.length + ' rows' : 'null', 'error:', errRem);
             if (errRem) throw errRem;
             if (remuneracao) {
                 processRemuneracao(remuneracao.map(row => {
@@ -3860,7 +4083,6 @@
                 .order('data_ref', { ascending: true })
                 .limit(10000);
             
-            console.log('📥 movimentacoes_rv:', movimentacoes ? movimentacoes.length + ' rows' : 'null', 'error:', errMov);
             if (errMov) throw errMov;
             if (movimentacoes) {
                 processMovimentacoes(movimentacoes.map(row => ({
@@ -3884,7 +4106,6 @@
                 .order('data_ref', { ascending: true })
                 .limit(10000);
             
-            console.log('📥 investimentos:', investimentos ? investimentos.length + ' rows' : 'null', 'error:', errInv);
             if (errInv) throw errInv;
             if (investimentos) {
                 processInvestimentos(investimentos.map(row => {
@@ -3913,20 +4134,6 @@
 
             // Trigger renderAll após carregar todos os dados
             // DEBUG: mostrar estado completo dos dados carregados
-            console.log('📊 DADOS CARREGADOS:');
-            console.log('  realizadoData:', realizadoData.length, 'linhas');
-            console.log('  projecaoData:', projecaoData.length, 'linhas');
-            console.log('  remuneracaoData:', remuneracaoData.length, 'linhas');
-            console.log('  investimentosData:', investimentosData.length, 'linhas');
-            console.log('  movimentacoesData:', movimentacoesData.length, 'linhas');
-            if (realizadoData.length > 0) {
-                console.log('  Primeiro registro realizado:', JSON.stringify(realizadoData[0]));
-                console.log('  Campos do primeiro registro:', Object.keys(realizadoData[0]));
-                // Totais por mês
-                const byMonth = {};
-                realizadoData.forEach(r => { byMonth[r._k] = (byMonth[r._k] || 0) + r._v; });
-                console.log('  Totais por mês:', byMonth);
-            }
             renderAll();
             
             console.log('✅ Dados carregados do Supabase');
