@@ -3749,6 +3749,7 @@
 
     /* ── LOAD DATA FROM SUPABASE ── */
     async function loadAllDataFromSupabase() {
+        console.log('🚀 Iniciando loadAllDataFromSupabase...');
         try {
             // Realizado YTD (limit alto para pegar todas as linhas, default do Supabase é 1000)
             const { data: realizado, error: errReal } = await sbClient
@@ -3757,6 +3758,7 @@
                 .order('data', { ascending: true })
                 .limit(10000);
             
+            console.log('📥 realizado_ytd:', realizado ? realizado.length + ' rows' : 'null', 'error:', errReal);
             if (errReal) throw errReal;
             if (realizado) {
                 // Remapeia para o formato que processRealizado() espera (chaves do CSV original)
@@ -3781,6 +3783,7 @@
                 .order('data_inicio', { ascending: true })
                 .limit(10000);
             
+            console.log('📥 projecao_ytg:', projecao ? projecao.length + ' rows' : 'null', 'error:', errProj);
             if (errProj) throw errProj;
             if (projecao) {
                 processProjecao(projecao.map(row => ({
@@ -3804,6 +3807,7 @@
                 .order('mes', { ascending: true })
                 .limit(10000);
             
+            console.log('📥 remuneracao:', remuneracao ? remuneracao.length + ' rows' : 'null', 'error:', errRem);
             if (errRem) throw errRem;
             if (remuneracao) {
                 processRemuneracao(remuneracao.map(row => ({
@@ -3838,6 +3842,7 @@
                 .order('data_ref', { ascending: true })
                 .limit(10000);
             
+            console.log('📥 movimentacoes_rv:', movimentacoes ? movimentacoes.length + ' rows' : 'null', 'error:', errMov);
             if (errMov) throw errMov;
             if (movimentacoes) {
                 processMovimentacoes(movimentacoes.map(row => ({
@@ -3861,6 +3866,7 @@
                 .order('data_ref', { ascending: true })
                 .limit(10000);
             
+            console.log('📥 investimentos:', investimentos ? investimentos.length + ' rows' : 'null', 'error:', errInv);
             if (errInv) throw errInv;
             if (investimentos) {
                 processInvestimentos(investimentos.map(row => ({
