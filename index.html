@@ -2201,7 +2201,7 @@
         if (!year) return;
 
         const key=`${year}-${String(month).padStart(2,'0')}`;
-        if (!month || month < 1 || month > 12) { console.warn('⚠ Mês inválido:', month); return; }
+        if (!month || month < 1 || month > 12) return;
         const allReal=realizadoData.filter(r=>r._k===key);
         const allProj=projecaoData.filter(r=>r._k===key);
         const allCombined=[...allReal,...allProj];
@@ -3750,11 +3750,12 @@
     /* ── LOAD DATA FROM SUPABASE ── */
     async function loadAllDataFromSupabase() {
         try {
-            // Realizado YTD
+            // Realizado YTD (limit alto para pegar todas as linhas, default do Supabase é 1000)
             const { data: realizado, error: errReal } = await sbClient
                 .from('realizado_ytd')
                 .select('*')
-                .order('data', { ascending: true });
+                .order('data', { ascending: true })
+                .limit(10000);
             
             if (errReal) throw errReal;
             if (realizado) {
@@ -3777,7 +3778,8 @@
             const { data: projecao, error: errProj } = await sbClient
                 .from('projecao_ytg')
                 .select('*')
-                .order('data_inicio', { ascending: true });
+                .order('data_inicio', { ascending: true })
+                .limit(10000);
             
             if (errProj) throw errProj;
             if (projecao) {
@@ -3799,7 +3801,8 @@
             const { data: remuneracao, error: errRem } = await sbClient
                 .from('remuneracao')
                 .select('*')
-                .order('mes', { ascending: true });
+                .order('mes', { ascending: true })
+                .limit(10000);
             
             if (errRem) throw errRem;
             if (remuneracao) {
@@ -3832,7 +3835,8 @@
             const { data: movimentacoes, error: errMov } = await sbClient
                 .from('movimentacoes_rv')
                 .select('*')
-                .order('data_ref', { ascending: true });
+                .order('data_ref', { ascending: true })
+                .limit(10000);
             
             if (errMov) throw errMov;
             if (movimentacoes) {
@@ -3854,7 +3858,8 @@
             const { data: investimentos, error: errInv } = await sbClient
                 .from('investimentos')
                 .select('*')
-                .order('data_ref', { ascending: true });
+                .order('data_ref', { ascending: true })
+                .limit(10000);
             
             if (errInv) throw errInv;
             if (investimentos) {
