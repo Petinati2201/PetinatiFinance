@@ -2128,9 +2128,10 @@
         const lastY=ySelect.value;
         ySelect.innerHTML=allYears.map(y=>`<option value="${y}">${y}</option>`).join('');
         if (lastY && allYears.includes(Number(lastY))) ySelect.value=lastY;
-        if (mSelect.innerHTML==='') {
+        if (mSelect.options.length === 0) {
             mSelect.innerHTML=monthNames.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');
-            mSelect.value=new Date().getMonth()+1;
+            const currentMonth = new Date().getMonth()+1;
+            mSelect.value = String(currentMonth);
         }
     }
 
@@ -2200,13 +2201,9 @@
         if (!year) return;
 
         const key=`${year}-${String(month).padStart(2,'0')}`;
+        if (!month || month < 1 || month > 12) { console.warn('⚠ Mês inválido:', month); return; }
         const allReal=realizadoData.filter(r=>r._k===key);
         const allProj=projecaoData.filter(r=>r._k===key);
-        console.log('🔍 renderAll:', {year, month, key, realCount: allReal.length, projCount: allProj.length, totalRealizadoData: realizadoData.length});
-        if (realizadoData.length > 0) {
-            const keys = [...new Set(realizadoData.map(r => r._k))].sort();
-            console.log('🔍 Keys disponíveis:', keys);
-        }
         const allCombined=[...allReal,...allProj];
 
         // APLICAÇÃO DE FILTROS (cross-filter)
