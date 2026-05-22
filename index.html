@@ -3818,29 +3818,39 @@
             console.log('📥 remuneracao:', remuneracao ? remuneracao.length + ' rows' : 'null', 'error:', errRem);
             if (errRem) throw errRem;
             if (remuneracao) {
-                processRemuneracao(remuneracao.map(row => ({
-                    'MES':                row.mes,
-                    'FOLHA':              String(row.folha || 0),
-                    'FERIAS':             String(row.ferias || 0),
-                    'DECIMO_TERCEIRO':    String(row.decimo_terceiro || 0),
-                    'PLR':                String(row.plr || 0),
-                    'INSS':               String(row.inss || 0),
-                    'IRRF':               String(row.irrf || 0),
-                    'RESTAURANTE':        String(row.restaurante || 0),
-                    'VALE_ALIMENTACAO':   String(row.vale_alimentacao || 0),
-                    'SEGURO_VIDA':        String(row.seguro_vida || 0),
-                    'SUL_AMERICA':        String(row.sul_america || 0),
-                    'ODONTOLOGICO':       String(row.odontologico || 0),
-                    'MENSALIDADE_COOP':   String(row.mensalidade_coop || 0),
-                    'EMPRESTIMO_COOP':    String(row.emprestimo_coop || 0),
-                    'MULTAS_TRANSITO':    String(row.multas_transito || 0),
-                    'CAFE_LANCHE':        String(row.cafe_lanche || 0),
-                    'FERIAS_ABONO_IMP':   String(row.ferias_abono_imp || 0),
-                    'DESC_ADIANT':        String(row.desc_adiant || 0),
-                    'BRUTO':              String(row.bruto || 0),
-                    'DESCONTOS':          String(row.descontos || 0),
-                    'LIQUIDO':            String(row.liquido || 0)
-                })));
+                processRemuneracao(remuneracao.map(row => {
+                    // Converter mes de "2025-01-01" para "01/2025"
+                    let mesFormatted = '';
+                    if (row.mes) {
+                        const parts = row.mes.split('-');
+                        if (parts.length >= 2) {
+                            mesFormatted = `${parts[1]}/${parts[0]}`; // MM/YYYY
+                        }
+                    }
+                    return {
+                        'MES':                mesFormatted,
+                        'FOLHA':              String(row.folha || 0),
+                        'FERIAS':             String(row.ferias || 0),
+                        'DECIMO_TERCEIRO':    String(row.decimo_terceiro || 0),
+                        'PLR':                String(row.plr || 0),
+                        'INSS':               String(row.inss || 0),
+                        'IRRF':               String(row.irrf || 0),
+                        'RESTAURANTE':        String(row.restaurante || 0),
+                        'VALE_ALIMENTACAO':   String(row.vale_alimentacao || 0),
+                        'SEGURO_VIDA':        String(row.seguro_vida || 0),
+                        'SUL_AMERICA':        String(row.sul_america || 0),
+                        'ODONTOLOGICO':       String(row.odontologico || 0),
+                        'MENSALIDADE_COOP':   String(row.mensalidade_coop || 0),
+                        'EMPRESTIMO_COOP':    String(row.emprestimo_coop || 0),
+                        'MULTAS_TRANSITO':    String(row.multas_transito || 0),
+                        'CAFE_LANCHE':        String(row.cafe_lanche || 0),
+                        'FERIAS_ABONO_IMP':   String(row.ferias_abono_imp || 0),
+                        'DESC_ADIANT':        String(row.desc_adiant || 0),
+                        'BRUTO':              String(row.bruto || 0),
+                        'DESCONTOS':          String(row.descontos || 0),
+                        'LIQUIDO':            String(row.liquido || 0)
+                    };
+                }));
             }
 
             // Movimentações RV
@@ -3877,18 +3887,28 @@
             console.log('📥 investimentos:', investimentos ? investimentos.length + ' rows' : 'null', 'error:', errInv);
             if (errInv) throw errInv;
             if (investimentos) {
-                processInvestimentos(investimentos.map(row => ({
-                    'DATA REF':              row.data_ref,
-                    'CODIGO':                row.codigo,
-                    'TIPO INVESTIMENTO':     row.tipo_investimento,
-                    'VALOR INVESTIDO USD':   String(row.valor_investido_usd || 0),
-                    'VALOR INVESTIDO BRL':   String(row.valor_investido_brl || 0),
-                    'VALOR BRUTO USD':       String(row.valor_bruto_usd || 0),
-                    'VALOR BRUTO BRL':       String(row.valor_bruto_brl || 0),
-                    'RENDIMENTO TOTAL USD':  String(row.rendimento_total_usd || 0),
-                    'RENDIMENTO TOTAL BRL':  String(row.rendimento_total_brl || 0),
-                    'APORTE MES':            String(row.aporte_mes || 0)
-                })));
+                processInvestimentos(investimentos.map(row => {
+                    // Converter data_ref de "2025-06-01" para "01/06/2025"
+                    let dataFormatted = '';
+                    if (row.data_ref) {
+                        const parts = row.data_ref.split('-');
+                        if (parts.length === 3) {
+                            dataFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`; // DD/MM/YYYY
+                        }
+                    }
+                    return {
+                        'DATA REF':              dataFormatted,
+                        'CODIGO':                row.codigo || '',
+                        'TIPO INVESTIMENTO':     row.tipo_investimento || '',
+                        'VALOR INVESTIDO USD':   String(row.valor_investido_usd || 0),
+                        'VALOR INVESTIDO BRL':   String(row.valor_investido_brl || 0),
+                        'VALOR BRUTO USD':       String(row.valor_bruto_usd || 0),
+                        'VALOR BRUTO BRL':       String(row.valor_bruto_brl || 0),
+                        'RENDIMENTO TOTAL USD':  String(row.rendimento_total_usd || 0),
+                        'RENDIMENTO TOTAL BRL':  String(row.rendimento_total_brl || 0),
+                        'APORTE MES':            String(row.aporte_mes || 0)
+                    };
+                }));
             }
 
             // Trigger renderAll após carregar todos os dados
