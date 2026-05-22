@@ -1851,21 +1851,6 @@
     }
 
     function processRealizado(data) {
-        // DEBUG: ver os primeiros registros e o que parseNumber retorna
-        if (data.length > 0) {
-            console.log('🔍 DEBUG processRealizado - primeiro registro raw:', JSON.stringify(data[0]));
-            console.log('🔍 DEBUG VALOR BRL raw:', data[0]['VALOR BRL'], '→ typeof:', typeof data[0]['VALOR BRL'], '→ parseNumber:', parseNumber(data[0]['VALOR BRL']));
-            // Calcular total Jan 2026 para conferir
-            const jan = data.filter(r => {
-                const raw = r['DATA COMPETENCIA'] || r['DATA'];
-                return raw && raw.includes('2026-01');
-            });
-            const janTotal = jan.reduce((sum, r) => sum + parseNumber(r['VALOR BRL']), 0);
-            console.log('🔍 DEBUG Jan 2026:', jan.length, 'linhas, total:', janTotal);
-            if (jan.length > 0) {
-                console.log('🔍 DEBUG Jan 2026 primeiros 3 valores:', jan.slice(0,3).map(r => ({ raw: r['VALOR BRL'], parsed: parseNumber(r['VALOR BRL']) })));
-            }
-        }
         const allRows = data.map(r => {
             const dataRaw = r['DATA COMPETENCIA'] || r['DATA'];
             const d = parseBRDate(dataRaw);
@@ -2217,6 +2202,11 @@
         const key=`${year}-${String(month).padStart(2,'0')}`;
         const allReal=realizadoData.filter(r=>r._k===key);
         const allProj=projecaoData.filter(r=>r._k===key);
+        console.log('🔍 renderAll:', {year, month, key, realCount: allReal.length, projCount: allProj.length, totalRealizadoData: realizadoData.length});
+        if (realizadoData.length > 0) {
+            const keys = [...new Set(realizadoData.map(r => r._k))].sort();
+            console.log('🔍 Keys disponíveis:', keys);
+        }
         const allCombined=[...allReal,...allProj];
 
         // APLICAÇÃO DE FILTROS (cross-filter)
