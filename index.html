@@ -644,65 +644,6 @@
         .mb3 { margin-bottom:2rem; }
 
         /* ── TABLE ── */
-        /* ── INPUT INVESTIMENTOS ── */
-        .inv-input-toolbar {
-            display:flex; align-items:center; gap:.75rem;
-            flex-wrap:wrap; margin-bottom:1.2rem;
-        }
-        .inv-input-toolbar select,
-        .inv-input-toolbar button {
-            font-family:'Inter',sans-serif; font-size:13px;
-            border-radius:8px; padding:.5rem 1rem;
-            border:1px solid var(--border); background:var(--surface);
-            color:var(--text); cursor:pointer; transition:all .2s;
-        }
-        .inv-input-toolbar button:hover { border-color:var(--accent2); }
-        .inv-input-toolbar button.primary {
-            background:#059669; color:#fff; border-color:#059669; font-weight:600;
-        }
-        .inv-input-toolbar button.primary:hover { background:#047857; }
-        .inv-input-toolbar button.primary:disabled {
-            opacity:.5; cursor:not-allowed;
-        }
-        .inv-input-toolbar .spacer { flex:1; }
-        .inv-input-status {
-            font-size:12px; color:var(--muted); min-height:1.4em;
-        }
-        .inv-input-status.ok { color:#059669; }
-        .inv-input-status.err { color:#DC2626; }
-
-        .inv-edit-table { width:100%; border-collapse:collapse; font-size:13px; }
-        .inv-edit-table thead tr { border-bottom:1px solid var(--border); }
-        .inv-edit-table th {
-            text-align:left; padding:.6rem .6rem;
-            font-size:11px; font-weight:600; text-transform:uppercase;
-            letter-spacing:.06em; color:var(--muted);
-        }
-        .inv-edit-table tbody tr { border-bottom:1px solid var(--line); transition:background .15s; }
-        .inv-edit-table tbody tr:hover { background:var(--line); }
-        .inv-edit-table td { padding:.45rem .6rem; vertical-align:middle; }
-        .inv-edit-table td input {
-            width:100%; font-family:'Inter',sans-serif; font-size:13px;
-            border:1px solid transparent; border-radius:6px;
-            padding:.35rem .5rem; background:transparent;
-            color:var(--text); transition:all .15s;
-        }
-        .inv-edit-table td input:focus {
-            outline:none; border-color:var(--accent2);
-            background:var(--surface);
-        }
-        .inv-edit-table td input.changed {
-            background:rgba(5,150,105,.06);
-            border-color:rgba(5,150,105,.3);
-        }
-        .inv-edit-table td.row-actions { text-align:center; white-space:nowrap; }
-        .inv-edit-table td.row-actions button {
-            background:none; border:none; color:var(--muted);
-            cursor:pointer; padding:.2rem .4rem; border-radius:4px;
-            font-size:14px; transition:color .15s, background .15s;
-        }
-        .inv-edit-table td.row-actions button:hover { color:#DC2626; background:rgba(220,38,38,.08); }
-
         .data-table { width:100%; border-collapse:collapse; font-size:13px; }
 
         /* Detalhamento colapsável */
@@ -923,9 +864,10 @@
         <div class="sb-nav-group">
             <div class="sb-section-title">Dados</div>
             <nav class="sb-nav">
-                <div class="sb-link" data-view="inputinv" onclick="switchView('inputinv')">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    <span class="sb-link-label">Input Investimentos</span>
+                <div class="sb-link" data-view="uploads" onclick="switchView('uploads')">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                    <span class="sb-link-label">Uploads</span>
+                    <span class="sb-upload-badge pending" id="uploadBadge">0/5</span>
                 </div>
             </nav>
         </div>
@@ -957,46 +899,90 @@
     <main class="main">
 
     <!-- VIEW: UPLOADS -->
-    <div id="view-inputinv" class="view">
+    <div id="view-uploads" class="view">
         <div class="view-header">
             <div>
-                <h1 class="view-title">Input Investimentos</h1>
-                <div class="view-subtitle">Duplique o mês anterior, edite valores e salve no Supabase</div>
+                <h1 class="view-title">Uploads</h1>
+                <div class="view-subtitle">Arraste todos os CSVs de uma vez — o dashboard identifica cada um automaticamente</div>
             </div>
         </div>
 
-        <div class="inv-input-toolbar">
-            <label style="font-size:12px;color:var(--muted);font-weight:500">Mês de referência:</label>
-            <select id="inputInvMonth"></select>
-            <button id="btnDuplicateMonth">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:4px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                Duplicar para próximo mês
-            </button>
-            <div class="spacer"></div>
-            <button id="btnAddRow">+ Adicionar ativo</button>
-            <button id="btnSaveInv" class="primary" disabled>Salvar alterações</button>
-        </div>
-        <div class="inv-input-status" id="inputInvStatus"></div>
+        <!-- Unified drop zone -->
+        <label class="upload-dropzone" id="mainDropzone">
+            <div class="dz-icon">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            </div>
+            <div class="dz-title">Solte seus CSVs aqui</div>
+            <div class="dz-subtitle">ou <b>clique para selecionar</b> — aceita múltiplos arquivos</div>
+            <div class="dz-feedback" id="dzFeedback"></div>
+            <input type="file" id="mainFileInput" accept=".csv" multiple/>
+        </label>
 
-        <div class="card mb3">
-            <div style="overflow-x:auto">
-                <table class="inv-edit-table">
-                    <thead>
-                        <tr>
-                            <th style="width:150px">Código</th>
-                            <th style="width:140px">Tipo Investimento</th>
-                            <th>Invest. USD</th>
-                            <th>Invest. BRL</th>
-                            <th>Bruto USD</th>
-                            <th>Bruto BRL</th>
-                            <th>Rend. Total USD</th>
-                            <th>Rend. Total BRL</th>
-                            <th>Aporte Mês</th>
-                            <th style="width:50px"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="inputInvBody"></tbody>
-                </table>
+        <!-- Compact status cards -->
+        <div class="upload-grid">
+            <div class="upload-card" data-upload="real">
+                <div class="uc-icon r">R$</div>
+                <div class="uc-title-wrap">
+                    <div class="uc-title">Realizado YTD</div>
+                    <div class="uc-desc">Lançamentos realizados</div>
+                </div>
+                <div class="uc-status-row" id="statusReal">
+                    <span class="uc-dot pending"></span>
+                    <span class="uc-status-text">Pendente</span>
+                    <span class="uc-rows"></span>
+                </div>
+            </div>
+
+            <div class="upload-card" data-upload="proj">
+                <div class="uc-icon p">∑</div>
+                <div class="uc-title-wrap">
+                    <div class="uc-title">Projeção YTG</div>
+                    <div class="uc-desc">Despesas futuras e recorrentes</div>
+                </div>
+                <div class="uc-status-row" id="statusProj">
+                    <span class="uc-dot pending"></span>
+                    <span class="uc-status-text">Pendente</span>
+                    <span class="uc-rows"></span>
+                </div>
+            </div>
+
+            <div class="upload-card" data-upload="rem">
+                <div class="uc-icon s">$</div>
+                <div class="uc-title-wrap">
+                    <div class="uc-title">Remuneração</div>
+                    <div class="uc-desc">Holerites mensais</div>
+                </div>
+                <div class="uc-status-row" id="statusRem">
+                    <span class="uc-dot pending"></span>
+                    <span class="uc-status-text">Pendente</span>
+                    <span class="uc-rows"></span>
+                </div>
+            </div>
+
+            <div class="upload-card" data-upload="inv">
+                <div class="uc-icon i">₿</div>
+                <div class="uc-title-wrap">
+                    <div class="uc-title">Investimentos</div>
+                    <div class="uc-desc">Posições mensais da carteira</div>
+                </div>
+                <div class="uc-status-row" id="statusInv">
+                    <span class="uc-dot pending"></span>
+                    <span class="uc-status-text">Pendente</span>
+                    <span class="uc-rows"></span>
+                </div>
+            </div>
+
+            <div class="upload-card" data-upload="mov">
+                <div class="uc-icon m">%</div>
+                <div class="uc-title-wrap">
+                    <div class="uc-title">Movimentações RV</div>
+                    <div class="uc-desc">Compras e vendas para IR</div>
+                </div>
+                <div class="uc-status-row" id="statusMov">
+                    <span class="uc-dot pending"></span>
+                    <span class="uc-status-text">Pendente</span>
+                    <span class="uc-rows"></span>
+                </div>
             </div>
         </div>
     </div>
@@ -1080,14 +1066,14 @@
 
         <div class="kpi-grid kpi-grid-2 mb2">
             <div class="kpi-cell c-amber">
-                <span class="kpi-label">% da Renda em Parcelas</span>
+                <span class="kpi-label">% da Renda Comprometida</span>
                 <span id="kpiFinanced" class="kpi-value">0%</span>
-                <span class="kpi-sub">Percentual do mês tomado por parcelas (exclui financiamentos).</span>
+                <span class="kpi-sub">Percentual do mês tomado por parcelas de compras passadas.</span>
             </div>
             <div class="kpi-cell c-indigo">
                 <span class="kpi-label">Total Parcelado</span>
                 <span id="kpiFinancedVal" class="kpi-value">R$ 0,00</span>
-                <span class="kpi-sub">Soma absoluta de parcelas que o seu "eu do passado" deixou para hoje.</span>
+                <span class="kpi-sub">Soma absoluta em parcelas que o seu "eu do passado" deixou para hoje.</span>
             </div>
         </div>
 
@@ -1133,7 +1119,7 @@
             <div class="kpi-cell c-blue">
                 <span class="kpi-label">Despesa Total</span>
                 <span id="kpiDespesa" class="kpi-value">R$ 0,00</span>
-                <span class="kpi-sub">Total de despesas no mês.</span>
+                <span class="kpi-sub">Realizado + projeção do mês.</span>
             </div>
             <div class="kpi-cell c-indigo">
                 <span class="kpi-label">Saldo do Mês</span>
@@ -1188,7 +1174,7 @@
             <div style="font-family:'Instrument Serif',serif;font-size:1.4rem;margin-bottom:.5rem">Detalhamento indisponível</div>
             <div class="card-sub" style="margin-bottom:0">
                 Esta aba requer o CSV de Remuneração expandido (com colunas Folha, Férias, 13º, PLR, INSS, IRRF etc.).<br>
-                Dados ainda não carregados do servidor.
+                Faça upload da versão completa em <b>Uploads</b>.
             </div>
         </div>
 
@@ -1296,7 +1282,7 @@
         <div id="invNoData" class="card mb2" style="display:none;text-align:center;padding:2.5rem">
             <div style="font-family:'Instrument Serif',serif;font-size:1.4rem;margin-bottom:.5rem">Dados indisponíveis</div>
             <div class="card-sub" style="margin-bottom:0">
-                Dados de Investimentos ainda não carregados do servidor.
+                Faça upload do CSV de Investimentos em <b>Uploads</b> para ver esta análise.
             </div>
         </div>
 
@@ -1332,7 +1318,7 @@
             <div class="section-label">Evolução mensal</div>
             <div class="card mb2">
                 <div class="card-title">Investido + Rendimento Acumulado</div>
-                <div class="card-sub">Barras empilhadas mês a mês — base = investido, topo = rendimento</div>
+                <div class="card-sub">Barras empilhadas mês a mês — base = investido (líquido de dividendos), topo = rendimento</div>
                 <div style="height:380px"><canvas id="invStackChart"></canvas></div>
             </div>
 
@@ -1394,7 +1380,7 @@
         <div id="irNoData" class="card mb2" style="display:none;text-align:center;padding:2.5rem">
             <div style="font-family:'Instrument Serif',serif;font-size:1.4rem;margin-bottom:.5rem">Dados indisponíveis</div>
             <div class="card-sub" style="margin-bottom:0">
-                Dados de Movimentações RV ainda não carregados do servidor.
+                Faça upload do arquivo de Movimentações RV em <b>Uploads</b> para ver esta análise.
             </div>
         </div>
 
@@ -1566,6 +1552,9 @@
     let remuneracaoData = [];
     let investimentosData = [];
     let movimentacoesData = [];
+    let dolarData = {};        // { '2025-01': 6.04, ... } — PTAX BRL/USD por mês
+    let dolarFallback = 5.0;   // usado se um mês não tiver cotação
+    let rendBaseData = {};     // { 'KO': 24, 'HGLG11': 1256, ... } — rendimento acumulado pré-2025 (moeda nativa)
     let currentCcy = 'BRL';
     let currentIrCcy = 'BRL';
     let currentIrAsset = null;
@@ -1611,6 +1600,210 @@
             }
         }
         return parseFloat(s) || 0;
+    }
+
+    /* ════════════════ CONVERSÃO DE MOEDA (BRL ⇄ USD) ════════════════
+       O dashboard inteiro pode ser visto em BRL (padrão) ou USD.
+       A conversão usa a PTAX do MÊS de cada transação (tabela dolar_mensal).
+       Valores nativos em BRL: dividir pela PTAX do mês → USD.
+       Valores nativos em USD: multiplicar pela PTAX do mês → BRL.
+    ============================================================ */
+
+    // Retorna a PTAX (BRL por 1 USD) de um mês "YYYY-MM". Fallback se ausente.
+    function ptaxOfMonth(key) {
+        if (key && dolarData[key] != null && dolarData[key] > 0) return dolarData[key];
+        // tenta o mês mais recente disponível anterior à chave
+        const keys = Object.keys(dolarData).sort();
+        if (!keys.length) return dolarFallback;
+        let best = null;
+        for (const k of keys) { if (k <= key) best = k; else break; }
+        return best ? dolarData[best] : dolarData[keys[0]];
+    }
+
+    // Converte um valor de uma moeda nativa para a moeda de exibição,
+    // usando a PTAX do mês informado (key = "YYYY-MM").
+    // displayCcy opcional — default usa currentCcy (toggle global).
+    function convert(value, nativeCcy, key, displayCcy) {
+        if (value == null || isNaN(value)) return 0;
+        const disp = displayCcy || currentCcy;
+        if (disp === nativeCcy) return value;
+        const ptax = ptaxOfMonth(key);
+        if (disp === 'USD') {
+            return nativeCcy === 'BRL' ? value / ptax : value;
+        } else {
+            return nativeCcy === 'USD' ? value * ptax : value;
+        }
+    }
+
+    // Formata um valor já convertido. displayCcy opcional (default currentCcy).
+    function fmtCcy(value, opts, displayCcy) {
+        const disp = displayCcy || currentCcy;
+        const isBRL = disp === 'BRL';
+        const locale = isBRL ? 'pt-BR' : 'en-US';
+        const o = Object.assign({ style:'currency', currency: disp }, opts || {});
+        return (value || 0).toLocaleString(locale, o);
+    }
+
+    // Versão compacta "R$ 12k" / "$ 12k" na moeda corrente.
+    function fmtCcyK(value) {
+        const sym = currentCcy === 'BRL' ? 'R$' : 'US$';
+        return `${sym} ${(value/1000).toFixed(Math.abs(value) >= 10000 ? 0 : 1)}k`;
+    }
+
+    /* ════════════════ CÁLCULO DE INVESTIMENTOS (portado do sandbox) ════════════════
+       A nova tabela investimentos guarda apenas: data_ref, codigo, tipo, moeda,
+       qtde, preco_unit, valor_bruto, div_jcp. Os valores derivados são CALCULADOS:
+         • valor bruto    = qtde × preco_unit (ou o valor_bruto armazenado, se houver)
+         • rend. do mês    = (bruto atual − bruto anterior) − aporte + div_jcp
+                             (1º mês usa preço médio de compra das movimentações como base)
+         • rend. total     = rend. mês + rend. total do mês anterior (encadeado)
+         • valor investido = aporte do mês + investido do mês anterior
+         • aporte do mês   = derivado das movimentações (compras) daquele mês
+       Todos os valores ficam na MOEDA NATIVA do ativo; a conversão p/ exibição é feita
+       na hora de renderizar via convert().
+    ============================================================ */
+
+    // chave do mês anterior: "2025-03" → "2025-02"
+    function prevMonthKey(key) {
+        const [y, m] = key.split('-').map(Number);
+        const d = new Date(y, m - 2, 1);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    // valor bruto do registro (qtde × preço, ou bruto armazenado se preço/qtde ausentes)
+    // valor bruto do registro. PRIORIZA o valor_bruto armazenado (vem correto do CSV);
+    // só calcula qtde × preço como fallback quando o bruto está ausente. Isso evita
+    // erros quando o preço unitário tem separador de milhar mal-interpretado (ex: imóveis).
+    function invBruto(row) {
+        if (row._bruto && row._bruto > 0) return row._bruto;
+        if (row._qtde && row._preco) return row._qtde * row._preco;
+        return 0;
+    }
+
+    // aporte do mês = soma das compras (montante na moeda nativa) das movimentações
+    // do mesmo código no mesmo mês. Vendas reduzem o aporte.
+    function aporteDoMes(codigo, key) {
+        let total = 0;
+        for (const m of movimentacoesData) {
+            if (m._codigo !== codigo) continue;
+            if (m._k !== key) continue;
+            total += m._op === 'COMPRA' ? m._montante : -m._montante;
+        }
+        return total;
+    }
+
+    // rendimento do mês (moeda nativa)
+    function invRendMes(row) {
+        const pk = prevMonthKey(row._k);
+        const prev = investimentosData.find(r => r._k === pk && r._codigo === row._codigo);
+        const brutoAtual = invBruto(row);
+        const aporte = aporteDoMes(row._codigo, row._k);
+        if (!prev) {
+            // 1º mês registrado: rendimento = div/jcp + rendimento base histórico (pré-2025).
+            // O rendBaseData contém o rendimento acumulado até dez/2024, na moeda nativa.
+            // Se não houver base, conta só div/jcp (ativo começou na série, sem histórico).
+            const base = rendBaseData[row._codigo] || 0;
+            return base + (row._divJcp || 0);
+        }
+        return (brutoAtual - invBruto(prev)) - aporte + (row._divJcp || 0);
+    }
+
+    // rendimento total acumulado (moeda nativa)
+    function invRendTotal(row, _seen) {
+        // proteção contra loop (encadeamento defensivo)
+        _seen = _seen || new Set();
+        const id = row._k + '|' + row._codigo;
+        if (_seen.has(id)) return 0;
+        _seen.add(id);
+        const pk = prevMonthKey(row._k);
+        const prev = investimentosData.find(r => r._k === pk && r._codigo === row._codigo);
+        const prevRend = prev ? invRendTotal(prev, _seen) : 0;
+        return prevRend + invRendMes(row);
+    }
+
+    // valor investido acumulado (moeda nativa) — CUSTO DE AQUISIÇÃO.
+    // Percorre movimentações do ativo em ordem cronológica até o mês informado.
+    // Compra soma, venda subtrai. Se a posição (qtde) zera, reseta o investido.
+    // NOTA: inclui compras feitas com dividendos reinvestidos (correto p/ custo no IR).
+    function invValorInvestido(row) {
+        const codigo = row._codigo;
+        const limitKey = row._k; // até este mês inclusive
+        const mvs = movimentacoesData
+            .filter(m => m._codigo === codigo && m._k <= limitKey)
+            .sort((a,b) => a._date - b._date);
+        let qtde = 0, investido = 0;
+        for (const m of mvs) {
+            if (m._op === 'COMPRA') {
+                qtde += m._qty;
+                investido += m._montante;
+            } else if (m._op === 'VENDA') {
+                qtde -= m._qty;
+                investido -= m._montante;
+            }
+            if (qtde <= 0.001) { qtde = 0; investido = 0; }
+        }
+        return investido;
+    }
+
+    // dividendos/JCP acumulados de um ativo até o mês informado (moeda nativa).
+    // Soma a coluna div_jcp dos snapshots mensais de Investimentos até `limitKey`.
+    function dividendosAcumulados(codigo, limitKey) {
+        let total = 0;
+        for (const r of investimentosData) {
+            if (r._codigo !== codigo) continue;
+            if (r._k > limitKey) continue;
+            total += r._divJcp || 0;
+        }
+        return total;
+    }
+
+    // CAPITAL PRÓPRIO investido (moeda nativa) — usado só na aba Carteira.
+    // = custo de aquisição − dividendos reinvestidos. Como os dividendos viram
+    // compras (entram no custo) mas não são dinheiro novo do investidor, descontá-los
+    // separa "quanto eu pus do bolso" de "quanto rendeu via proventos reinvestidos".
+    function invCapitalProprio(row) {
+        return invValorInvestido(row) - dividendosAcumulados(row._codigo, row._k);
+    }
+
+
+    /* file input — single unified input handles all CSVs */
+    document.getElementById('mainFileInput').addEventListener('change', function() {
+        for (const file of this.files) handleFile(file);
+        this.value = ''; // allow re-selecting same files
+    });
+
+    function updateUploadStatus() {
+        const setStatus = (elId, uploadKey, loaded, rows) => {
+            const row = document.getElementById(elId);
+            if (!row) return;
+            const dot = row.querySelector('.uc-dot');
+            const txt = row.querySelector('.uc-status-text');
+            const rowsEl = row.querySelector('.uc-rows');
+            const card = document.querySelector('.upload-card[data-upload="' + uploadKey + '"]');
+            if (loaded) {
+                dot.classList.remove('pending'); dot.classList.add('ok');
+                txt.textContent = 'Carregado';
+                rowsEl.textContent = `${rows.toLocaleString('pt-BR')} linha${rows === 1 ? '' : 's'}`;
+                if (card) card.classList.add('loaded');
+            } else {
+                dot.classList.remove('ok'); dot.classList.add('pending');
+                txt.textContent = 'Pendente';
+                rowsEl.textContent = '';
+                if (card) card.classList.remove('loaded');
+            }
+        };
+        setStatus('statusReal', 'real', realizadoData.length > 0, realizadoData.length);
+        setStatus('statusProj', 'proj', projecaoData.length > 0, projecaoData.length);
+        setStatus('statusRem',  'rem',  remuneracaoData.length > 0, remuneracaoData.length);
+        setStatus('statusInv',  'inv',  investimentosData.length > 0, investimentosData.length);
+        setStatus('statusMov',  'mov',  movimentacoesData.length > 0, movimentacoesData.length);
+
+        // Badge da sidebar
+        const loaded = [realizadoData, projecaoData, remuneracaoData, investimentosData, movimentacoesData].filter(a => a.length > 0).length;
+        const badge = document.getElementById('uploadBadge');
+        badge.textContent = `${loaded}/5`;
+        badge.classList.toggle('ok', loaded === 5);
+        badge.classList.toggle('pending', loaded < 5);
     }
 
     // ────────── CROSS-FILTER HELPERS ──────────
@@ -1682,7 +1875,7 @@
         // Tabela de detalhamento só aparece nas views de análise (exceto holerite/investimentos/ir, que têm tabelas próprias)
         const detalhamento = document.getElementById('detalhamentoWrap');
         if (detalhamento) {
-            detalhamento.style.display = (viewName === 'inputinv' || viewName === 'holerite' || viewName === 'investimentos' || viewName === 'ir') ? 'none' : 'block';
+            detalhamento.style.display = (viewName === 'uploads' || viewName === 'holerite' || viewName === 'investimentos' || viewName === 'ir') ? 'none' : 'block';
         }
         // Em mobile, fecha a sidebar ao navegar
         if (window.innerWidth <= 860) {
@@ -1716,6 +1909,7 @@
     if (window.innerWidth <= 860) {
         document.getElementById('app').classList.add('collapsed');
     }
+    updateUploadStatus();
 
     /* ───── CSV AUTO-DETECTION ───── */
     const csvTypeLabels = {
@@ -1736,6 +1930,13 @@
         return null;
     }
 
+    function showDzFeedback(msg, type) {
+        const el = document.getElementById('dzFeedback');
+        el.textContent = msg;
+        el.className = 'dz-feedback ' + (type || '');
+        if (type) setTimeout(() => { el.textContent = ''; el.className = 'dz-feedback'; }, 3500);
+    }
+
     function handleFile(fileOrEvent, forcedType) {
         const file = fileOrEvent instanceof File ? fileOrEvent : fileOrEvent.target.files[0];
         if (!file) return;
@@ -1744,16 +1945,70 @@
             transformHeader: h => h.trim().toUpperCase(),
             complete: res => {
                 const type = forcedType || detectCsvType(res.meta.fields);
-                if (!type) return;
+                if (!type) {
+                    showDzFeedback('⚠ "' + file.name + '" não reconhecido — verifique o formato', 'err');
+                    return;
+                }
                 if (type === 'real') processRealizado(res.data);
                 else if (type === 'proj') processProjecao(res.data);
                 else if (type === 'rem') processRemuneracao(res.data);
                 else if (type === 'inv') processInvestimentos(res.data);
                 else if (type === 'mov') processMovimentacoes(res.data);
+                showDzFeedback('✓ ' + file.name + ' → ' + csvTypeLabels[type], 'ok');
+                /* highlight the matching status card briefly */
+                const card = document.querySelector('.upload-card[data-upload="' + type + '"]');
+                if (card) { card.classList.add('loaded'); }
                 renderAll();
             }
         });
     }
+
+    /* ───── UNIFIED DRAG & DROP ───── */
+    const dropzone = document.getElementById('mainDropzone');
+
+    // Prevent browser from opening file if dropped outside zone
+    ['dragover', 'drop'].forEach(evt => {
+        document.addEventListener(evt, e => {
+            if (!e.target.closest('.upload-dropzone')) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'none';
+            }
+        });
+    });
+
+    dropzone.addEventListener('dragenter', e => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover', 'drag-reject');
+        const item = e.dataTransfer.items[0];
+        const isCsv = item && (item.type === 'text/csv' || item.type === 'application/vnd.ms-excel' || item.kind === 'file');
+        dropzone.classList.add(isCsv ? 'dragover' : 'drag-reject');
+    });
+
+    dropzone.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+    });
+
+    dropzone.addEventListener('dragleave', e => {
+        if (!dropzone.contains(e.relatedTarget)) {
+            dropzone.classList.remove('dragover', 'drag-reject');
+        }
+    });
+
+    dropzone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover', 'drag-reject');
+        const files = [...e.dataTransfer.files];
+        const csvFiles = files.filter(f => f.name.toLowerCase().endsWith('.csv'));
+        if (csvFiles.length === 0) {
+            showDzFeedback('Apenas arquivos .csv são aceitos', 'err');
+            return;
+        }
+        if (csvFiles.length < files.length) {
+            showDzFeedback('Alguns arquivos ignorados (não são .csv)', 'err');
+        }
+        csvFiles.forEach(f => handleFile(f));
+    });
 
     function parseBRDate(str) {
         if (!str) return null;
@@ -1863,7 +2118,6 @@
 
     function processInvestimentos(data) {
         const num = v => parseNumber(v);
-        // Data: DD/MM/YYYY
         const parseData = s => {
             if (!s) return null;
             const p = String(s).trim().split('/');
@@ -1878,30 +2132,29 @@
             if (!codigo) return null;
             const dt = parseData(r['DATA REF']);
             if (!dt) return null;
+            const qtde  = num(r['QTDE']);
+            const preco = num(r['PREÇO UNIT'] || r['PRECO UNIT']);
+            const bruto = num(r['VALOR BRUTO']);
             return {
                 _codigo: codigo,
                 _tipo:   (r['TIPO INVESTIMENTO'] || 'NÃO CLASSIFICADO').trim(),
+                _moeda:  (r['MOEDA'] || 'BRL').trim().toUpperCase(),
                 _y: dt._y, _m: dt._m, _k: dt._k,
-                _investBRL: num(r['VALOR INVESTIDO BRL']),
-                _investUSD: num(r['VALOR INVESTIDO USD']),
-                _brutoBRL:  num(r['VALOR BRUTO BRL']),
-                _brutoUSD:  num(r['VALOR BRUTO USD']),
-                _rendBRL:   num(r['RENDIMENTO TOTAL BRL']),
-                _rendUSD:   num(r['RENDIMENTO TOTAL USD']),
-                _aporte:    num(r['APORTE MES'])
+                _qtde:   qtde,
+                _preco:  preco,
+                _bruto:  bruto > 0 ? bruto : qtde * preco,
+                _divJcp: num(r['DIV JCP'])
             };
         }).filter(r => r !== null);
         updateFilters();
     }
 
-    // ──────── MOVIMENTAÇÕES RV (para IR) ────────
-    // Parser tolerante a strings (CSV com separador ; e decimal BR)
+    // ──────── MOVIMENTAÇÕES RV (nova estrutura: moeda nativa) ────────
     function processMovimentacoes(data) {
         const toDate = v => {
             if (!v) return null;
             if (v instanceof Date) return v;
             const s = String(v).trim();
-            // yyyy-mm-dd ou dd/mm/yyyy
             if (s.includes('-')) { const p = s.split(/[\sT]/)[0].split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
             if (s.includes('/')) { const p = s.split('/'); return new Date(+p[2], +p[1]-1, +p[0]); }
             return new Date(s);
@@ -1912,26 +2165,27 @@
             const codigo = String(r['CODIGO'] || '').trim().toUpperCase();
             const op     = String(r['OPERAÇÃO'] || r['OPERACAO'] || '').trim().toUpperCase();
             if (!codigo || !op) return null;
-            const d = toDate(r['DATA REF']);
+            const d = toDate(r['DATA REF'] || r['DATA']);
             if (!d || isNaN(d.getTime())) return null;
-            const qty       = num(r['QUANTIADE'] || r['QUANTIDADE']);
-            const puUSD     = num(r['PREÇO UNITARIO USD'] || r['PRECO UNITARIO USD'] || r['PREÇO UNITÁRIO USD']);
-            const invUSD    = num(r['INVESTIDO USD']);
-            const ptax      = num(r['PTAX']);
-            const puBRL     = num(r['PREÇO UNITÁRIO BRL'] || r['PRECO UNITARIO BRL'] || r['PREÇO UNITARIO BRL']);
-            const invBRL    = num(r['INVESTIDO BRL']);
-            // TIPO vem do CSV quando disponível (ex: "AÇÃO EXTERIOR", "FII"). Fallback: infere pelo código.
-            const tipoRaw = String(r['TIPO'] || '').trim().toUpperCase();
+            const qty      = num(r['QTDE'] || r['QUANTIADE'] || r['QUANTIDADE']);
+            const preco    = num(r['PREÇO UNIT'] || r['PRECO UNIT']);
+            const montante = num(r['MONTANTE']);
+            const ptax     = num(r['PTAX']);
+            const moeda    = String(r['MOEDA'] || 'BRL').trim().toUpperCase();
+            const tipoRaw  = String(r['TIPO'] || '').trim().toUpperCase();
             const tipo = tipoRaw || (codigo.endsWith('11') ? 'FII' : 'AÇÃO');
+            const y = d.getFullYear(), m = d.getMonth() + 1;
             return {
                 _codigo: codigo,
-                _op: op,               // COMPRA ou VENDA
+                _op: op,                 // COMPRA ou VENDA
                 _date: d,
-                _y: d.getFullYear(),
-                _m: d.getMonth() + 1,
+                _y: y, _m: m,
+                _k: `${y}-${String(m).padStart(2,'0')}`,
                 _qty: qty,
-                _puUSD: puUSD, _invUSD: invUSD, _ptax: ptax,
-                _puBRL: puBRL, _invBRL: invBRL,
+                _preco: preco,
+                _montante: montante > 0 ? montante : qty * preco,
+                _ptax: ptax,
+                _moeda: moeda,
                 _tipo: tipo
             };
         }).filter(r => r !== null)
@@ -1939,12 +2193,10 @@
         updateFilters();
     }
 
-    // Calcula, para cada movimentação, o preço médio e lucro usando o método do preço médio
-    // (recalculado a cada compra; vendas não afetam o preço médio das cotas que continuam).
-    // Retorna a lista enriquecida com _qtyAfter, _avgAfter (BRL e USD), e para vendas: _lucroBRL, _lucroUSD.
-    // Também é possível filtrar por um código específico; se codigo=null, processa todos agrupando por CODIGO.
+    // Calcula preço médio e lucro pelo método do preço médio, na MOEDA NATIVA do ativo.
+    // Cada movimentação ganha: _qtyAfter, _avgNativeBefore/After, _lucroNative (vendas),
+    // _realizedNative (acumulado). A conversão p/ a moeda de exibição é feita na renderização.
     function computePositions(codigo = null) {
-        // Agrupa por código, mantendo ordem cronológica
         const byCode = {};
         movimentacoesData.forEach(m => {
             if (codigo && m._codigo !== codigo) return;
@@ -1955,57 +2207,38 @@
         const enriched = [];
         Object.entries(byCode).forEach(([code, mvs]) => {
             let qty = 0;
-            let totalCostBRL = 0;
-            let totalCostUSD = 0;
-            let realizedBRL = 0;
-            let realizedUSD = 0;
+            let totalCost = 0;   // custo total na moeda nativa
+            let realized = 0;    // lucro realizado acumulado na moeda nativa
 
             mvs.forEach(m => {
                 const row = { ...m };
                 if (m._op === 'COMPRA') {
-                    // Qty negativa em compra = ajuste/estorno. Tratamos como mudança de posição sem alterar preço médio
-                    // (se qty > 0, incorpora custo normalmente; se qty < 0, só ajusta posição sem mexer no avg)
                     if (m._qty > 0) {
                         qty += m._qty;
-                        totalCostBRL += m._invBRL;
-                        totalCostUSD += m._invUSD;
+                        totalCost += m._montante;
                     } else if (m._qty < 0) {
-                        // Ajuste: reduz qty proporcionalmente ao avg atual (mantém preço médio)
-                        const avgBRL = qty > 0 ? totalCostBRL / qty : 0;
-                        const avgUSD = qty > 0 ? totalCostUSD / qty : 0;
-                        qty += m._qty; // qty diminui
-                        totalCostBRL += m._qty * avgBRL;
-                        totalCostUSD += m._qty * avgUSD;
-                        if (qty < 0.0001) { qty = 0; totalCostBRL = 0; totalCostUSD = 0; }
+                        const avg = qty > 0 ? totalCost / qty : 0;
+                        qty += m._qty;
+                        totalCost += m._qty * avg;
+                        if (qty < 0.0001) { qty = 0; totalCost = 0; }
                     }
-                    row._avgBRLBefore = null; // não aplicável
-                    row._avgUSDBefore = null;
+                    row._avgNativeBefore = null;
                 } else if (m._op === 'VENDA') {
-                    const avgBRL = qty > 0 ? totalCostBRL / qty : 0;
-                    const avgUSD = qty > 0 ? totalCostUSD / qty : 0;
-                    row._avgBRLBefore = avgBRL;
-                    row._avgUSDBefore = avgUSD;
-                    // Lucro = (preço venda - preço médio) × qty vendida
-                    row._lucroBRL = (m._puBRL - avgBRL) * m._qty;
-                    row._lucroUSD = (m._puUSD - avgUSD) * m._qty;
-                    realizedBRL += row._lucroBRL;
-                    realizedUSD += row._lucroUSD;
-                    // Baixa o custo proporcional à qty vendida (preço médio não muda)
-                    totalCostBRL -= avgBRL * m._qty;
-                    totalCostUSD -= avgUSD * m._qty;
+                    const avg = qty > 0 ? totalCost / qty : 0;
+                    row._avgNativeBefore = avg;
+                    row._lucroNative = (m._preco - avg) * m._qty;
+                    realized += row._lucroNative;
+                    totalCost -= avg * m._qty;
                     qty -= m._qty;
-                    if (qty < 0.0001) { qty = 0; totalCostBRL = 0; totalCostUSD = 0; }
+                    if (qty < 0.0001) { qty = 0; totalCost = 0; }
                 }
-                row._qtyAfter     = qty;
-                row._avgBRLAfter  = qty > 0 ? totalCostBRL / qty : 0;
-                row._avgUSDAfter  = qty > 0 ? totalCostUSD / qty : 0;
-                row._realizedBRL  = realizedBRL;
-                row._realizedUSD  = realizedUSD;
+                row._qtyAfter = qty;
+                row._avgNativeAfter = qty > 0 ? totalCost / qty : 0;
+                row._realizedNative = realized;
                 enriched.push(row);
             });
         });
 
-        // Mantém ordem cronológica global
         enriched.sort((a,b) => a._date - b._date);
         return enriched;
     }
@@ -2018,11 +2251,11 @@
             bycode[r._codigo] = {
                 codigo: r._codigo,
                 tipo: r._tipo,
+                moeda: r._moeda,
                 qtyAfter: r._qtyAfter,
-                avgBRL: r._avgBRLAfter,
-                avgUSD: r._avgUSDAfter,
-                realizedBRL: r._realizedBRL,
-                realizedUSD: r._realizedUSD,
+                avgNative: r._avgNativeAfter,
+                realizedNative: r._realizedNative,
+                lastKey: r._k,
                 lastDate: r._date
             };
         });
@@ -2030,6 +2263,7 @@
     }
 
     function updateFilters() {
+        updateUploadStatus();
         // Também considera datas do CSV de investimentos e do xlsx de movimentações no range de anos
         const allYears=[...new Set([
             ...realizadoData, ...projecaoData, ...remuneracaoData, ...investimentosData,
@@ -2095,12 +2329,8 @@
     function renderAll() {
         // Atualiza visibilidade dos chips de reset antes de renderizar
         updateResetChips();
-        // View de input investimentos: carrega tabela editável
-        if (currentView === 'inputinv') {
-            populateInputInvMonths();
-            loadInputInvMonth();
-            return;
-        }
+        // View de uploads não renderiza charts/tabelas
+        if (currentView === 'uploads') return;
         // View de investimentos roda sem depender dos filtros de ano/mês
         if (currentView === 'investimentos') {
             renderInvestimentos();
@@ -2145,20 +2375,24 @@
         /* Tabela — reflete os filtros */
         renderTableWithData(combined);
 
+        // Conversor local: valores de despesa são nativos em BRL, convertidos pela PTAX do mês `key`
+        const cv = v => convert(v, 'BRL', key);
+        const fmtD = v => fmtCcy(v);
+
         /* KPIs — também refletem os filtros */
         const txCount = filteredReal.length;
         const avgTx   = txCount > 0 ? sumR / txCount : 0;
-        document.getElementById('kpiReal').innerText    = sumR.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-        document.getElementById('kpiAvgTx').innerText   = avgTx.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+        document.getElementById('kpiReal').innerText    = fmtD(cv(sumR));
+        document.getElementById('kpiAvgTx').innerText   = fmtD(cv(avgTx));
         document.getElementById('kpiTxCount').innerText = txCount.toLocaleString('pt-BR');
         const expectedMM = getMediaMovelExpectedForMonth(key);
         document.getElementById('kpiTotal').innerText   = (expectedMM === null)
             ? '—'
-            : expectedMM.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+            : fmtD(cv(expectedMM));
         const inv = getInvestidoMes(key);
-        document.getElementById('kpiInv').innerText = inv.liquido.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+        document.getElementById('kpiInv').innerText = fmtD(cv(inv.liquido));
         document.getElementById('kpiInvSub').innerText = inv.resgate < 0
-            ? `Aporte ${inv.bruto.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} − Resgate ${Math.abs(inv.resgate).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}`
+            ? `Aporte ${fmtD(cv(inv.bruto))} − Resgate ${fmtD(cv(Math.abs(inv.resgate)))}`
             : 'Aportes do mês (líquido de resgates)';
         const grpData=aggregate(combined,'GRUPO');
         const top=Object.entries(grpData).sort((a,b)=>b[1]-a[1])[0];
@@ -2231,7 +2465,13 @@
         document.querySelectorAll('#currencyToggle button').forEach(b => {
             b.classList.toggle('active', b === btn);
         });
-        if (currentView === 'investimentos') renderInvestimentos();
+        // Espelha no toggle de IR para manter consistência visual entre abas
+        currentIrCcy = currentCcy;
+        document.querySelectorAll('#irCurrencyToggle button').forEach(b => {
+            b.classList.toggle('active', b.dataset.ccy === currentCcy);
+        });
+        // Moeda afeta o dashboard inteiro agora
+        renderAll();
     });
 
     function renderGroupPie(data) {
@@ -2951,14 +3191,20 @@
         content.style.display = 'block';
         noData.style.display = 'none';
 
-        const isBRL = currentCcy === 'BRL';
-        const invKey = isBRL ? '_investBRL' : '_investUSD';
-        const rendKey = isBRL ? '_rendBRL'  : '_rendUSD';
-        const sym = isBRL ? 'R$' : 'US$';
-        const locale = isBRL ? 'pt-BR' : 'en-US';
-        const currency = isBRL ? 'BRL' : 'USD';
-        const fmt = v => v.toLocaleString(locale, {style:'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0});
-        const fmtK = v => `${sym} ${(v/1000).toFixed(v >= 10000 ? 0 : 1)}k`;
+        const sym = currentCcy === 'BRL' ? 'R$' : 'US$';
+        const fmt = v => fmtCcy(v, {minimumFractionDigits:0, maximumFractionDigits:0});
+        const fmtK = v => fmtCcyK(v);
+
+        // Anexa, em cada linha, os valores CALCULADOS e já CONVERTIDOS p/ a moeda de exibição.
+        // _dispInv  = custo de aquisição (Σ montantes; inclui dividendos reinvestidos);
+        // _dispBruto = valor bruto (posição viva = preço × qtde, tabela Investimentos);
+        // _dispRend = NÃO-realizado (bruto − custo) por ativo. Os dividendos acumulados
+        //             (permanentes, inclusive de ativos vendidos) são somados à parte no byMonth.
+        investimentosData.forEach(r => {
+            r._dispInv   = convert(invValorInvestido(r), r._moeda, r._k);
+            r._dispBruto = convert(invBruto(r),          r._moeda, r._k);
+            r._dispRend  = r._dispBruto - r._dispInv;
+        });
 
         // Cross-filter: remove linhas filtradas por _tipo ou _codigo
         const hiddenTipos   = activeFilters.investimentos['_tipo']   || new Set();
@@ -2967,17 +3213,37 @@
             !hiddenTipos.has(r._tipo) && !hiddenCodigos.has(r._codigo)
         );
 
-        // Agregação por mês (usa filteredData)
+        // Agregação por mês (soma valores já convertidos — moedas mistas OK).
+        // Dividendos acumulados (permanentes) até o mês k: soma div_jcp de TODOS os snapshots
+        // até k — inclusive de ativos já liquidados. Respeita o cross-filter de tipo/código.
         const months = [...new Set(filteredData.map(r => r._k))].sort();
+        const divAcumAteMes = k => investimentosData.reduce((acc, r) => {
+            if (r._k > k) return acc;
+            if (hiddenTipos.has(r._tipo) || hiddenCodigos.has(r._codigo)) return acc;
+            return acc + convert(r._divJcp || 0, r._moeda, r._k);
+        }, 0);
         const byMonth = months.map(k => {
             const rows = filteredData.filter(r => r._k === k);
-            const invested = rows.reduce((a,b) => a + b[invKey], 0);
-            const rend     = rows.reduce((a,b) => a + b[rendKey], 0);
-            return { k, invested, rend, total: invested + rend };
+            // bruto    = posição real (Σ valor_bruto da tabela Investimentos).
+            // custo    = Σ montantes das compras − vendas (inclui dividendos reinvestidos).
+            // rendDiv  = dividendos acumulados permanentes (renda já embutida no bruto).
+            // investido (azul) = custo − rendDiv  → só o dinheiro que saiu do bolso.
+            // rendimento (verde) = bruto − investido = valorização + dividendos.
+            // total = bruto. NUNCA ultrapassa a posição real — dividendo redistribui, não soma.
+            const bruto    = rows.reduce((a,b) => a + b._dispBruto, 0);
+            const custo    = rows.reduce((a,b) => a + b._dispInv, 0);
+            const rendDiv  = divAcumAteMes(k);
+            const invested = custo - rendDiv;
+            const rend     = bruto - invested;
+            const total    = bruto;
+            // Decomposição do rendimento (verde) p/ o tooltip:
+            //   valorização = bruto − custo de aquisição cheio; dividendos = rendDiv.
+            //   valorização + dividendos = rend.
+            const valoriz  = bruto - custo;
+            return { k, invested, rend, total, valoriz, rendDiv };
         });
 
         if (byMonth.length === 0) {
-            // Filtros removeram todos os dados
             document.getElementById('invTotalInv').innerText  = '—';
             document.getElementById('invTotalRend').innerText = '—';
             document.getElementById('invTotalBruto').innerText = '—';
@@ -2988,7 +3254,7 @@
 
         const latest = byMonth[byMonth.length - 1];
         const latestKey = latest.k;
-        const latestRows = filteredData.filter(r => r._k === latestKey && r[invKey] > 0);
+        const latestRows = filteredData.filter(r => r._k === latestKey && r._dispInv > 0);
 
         // KPIs
         document.getElementById('invTotalInv').innerText  = fmt(latest.invested);
@@ -2999,21 +3265,17 @@
         document.getElementById('invAssets').innerText = latestRows.length;
         const [y,m] = latestKey.split('-');
         document.getElementById('invTotalInvSub').innerText = `Posição em ${monthNames[Number(m)-1]}/${y.slice(2)}`;
-        document.getElementById('invTotalRendSub').innerText = `Lucro acumulado desde o início`;
+        document.getElementById('invTotalRendSub').innerText = `Valoriz. ${fmt(latest.valoriz)} + Div. ${fmt(latest.rendDiv)}`;
 
         renderInvStackChart(byMonth, fmtK, fmt);
         renderInvRentChart(byMonth);
-        // Para o TypePie usamos a carteira completa do mês (não-filtrada por tipo) pra que o clique nas fatias funcione bem
-        // Quando skipPie=true (chamado pelo sync de legenda do próprio pie), preservamos o chart pra
-        // que a animação nativa do Chart.js (toggle suave da fatia) seja visível.
         if (!skipPie) {
-            const latestRowsAllTypes = investimentosData.filter(r => r._k === latestKey && r[invKey] > 0 && !hiddenCodigos.has(r._codigo));
-            renderInvTypePie(latestRowsAllTypes, invKey, fmt);
+            const latestRowsAllTypes = investimentosData.filter(r => r._k === latestKey && r._dispInv > 0 && !hiddenCodigos.has(r._codigo));
+            renderInvTypePie(latestRowsAllTypes, '_dispInv', fmt);
         }
-        // Top Bar inverso: mostra todos os códigos (não-filtrados por código), mas aplica filtro de tipo
-        const latestRowsForBar = investimentosData.filter(r => r._k === latestKey && r[invKey] > 0 && !hiddenTipos.has(r._tipo));
-        renderInvTopBar(latestRowsForBar, invKey, fmtK);
-        renderInvTable(latestRows, invKey, rendKey, fmt);
+        const latestRowsForBar = investimentosData.filter(r => r._k === latestKey && r._dispInv > 0 && !hiddenTipos.has(r._tipo));
+        renderInvTopBar(latestRowsForBar, '_dispInv', fmtK);
+        renderInvTable(latestRows, '_dispInv', '_dispRend', fmt);
     }
 
     function renderInvStackChart(byMonth, fmtK, fmt) {
@@ -3037,7 +3299,18 @@
                     legend: { position: 'bottom', labels: { color: tc, font: {size:11,family:'Inter'}, boxWidth: 10, usePointStyle: true, padding: 14 } },
                     tooltip: {
                         callbacks: {
-                            label: ctx => `${ctx.dataset.label}: ${fmt(ctx.parsed.y)}`,
+                            label: ctx => {
+                                // Na faixa de Rendimento, decompõe em Valorização + Dividendos.
+                                if (ctx.dataset.label === 'Rendimento') {
+                                    const r = byMonth[ctx.dataIndex];
+                                    return [
+                                        `Rendimento: ${fmt(ctx.parsed.y)}`,
+                                        `  • Valorização: ${fmt(r.valoriz)}`,
+                                        `  • Dividendos: ${fmt(r.rendDiv)}`
+                                    ];
+                                }
+                                return `${ctx.dataset.label}: ${fmt(ctx.parsed.y)}`;
+                            },
                             footer: items => {
                                 const sum = items.reduce((a,i) => a + i.parsed.y, 0);
                                 return `Total: ${fmt(sum)}`;
@@ -3275,52 +3548,47 @@
         noData.style.display = 'none';
 
         const year = Number(document.getElementById('yearFilter').value);
-        const isBRL = currentIrCcy === 'BRL';
-        const sym = isBRL ? 'R$' : 'US$';
-        const locale = isBRL ? 'pt-BR' : 'en-US';
-        const currency = isBRL ? 'BRL' : 'USD';
-        const fmt = v => v.toLocaleString(locale, {style:'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2});
+        const dispCcy = currentIrCcy;
+        const fmt = v => fmtCcy(v, {minimumFractionDigits:2, maximumFractionDigits:2}, dispCcy);
 
         const enriched = computePositions();
         const vendasDoAno = enriched.filter(r => r._op === 'VENDA' && r._y === year);
 
-        // Agrupa por mês/tipo para regra de isenção (ações nacionais: R$20k/mês de VENDAS TOTAIS)
+        // Vendas totais por mês/tipo para regra de isenção — sempre em BRL (regra da Receita)
         const vendasPorMesTipo = {};
         vendasDoAno.forEach(r => {
             const k = `${r._m}|${r._tipo}`;
-            if (!vendasPorMesTipo[k]) vendasPorMesTipo[k] = { totalVendidoBRL: 0, totalVendidoUSD: 0 };
-            vendasPorMesTipo[k].totalVendidoBRL += r._puBRL * r._qty;
-            vendasPorMesTipo[k].totalVendidoUSD += r._puUSD * r._qty;
+            if (!vendasPorMesTipo[k]) vendasPorMesTipo[k] = { totalVendidoBRL: 0 };
+            // venda bruta na moeda nativa convertida p/ BRL
+            vendasPorMesTipo[k].totalVendidoBRL += convert(r._preco * r._qty, r._moeda, r._k, 'BRL');
         });
 
-        // Enriquece cada venda com isenção e IR estimado
-        // Regras (simplificadas):
+        // Regras de IR:
         // - FII: 20% sobre lucro, sem isenção
-        // - AÇÃO EXTERIOR: 15% sobre lucro, sem isenção dos R$20k (regra brasileira não se aplica)
-        // - AÇÃO (nacional/genérica): 15% sobre lucro, isento se vendas totais do mês ≤ R$20k
+        // - AÇÃO EXTERIOR: 15% sobre lucro, sem isenção
+        // - AÇÃO nacional: 15%, isento se vendas totais do mês ≤ R$20k
         vendasDoAno.forEach(r => {
             const k = `${r._m}|${r._tipo}`;
             const totalMesTipoBRL = vendasPorMesTipo[k].totalVendidoBRL;
             const isFII = r._tipo === 'FII';
             const isAcaoExterior = r._tipo === 'AÇÃO EXTERIOR' || r._tipo === 'ACAO EXTERIOR';
             const isAcaoNacional = !isFII && !isAcaoExterior;
-            // Isenção em BRL independentemente da moeda visualizada (é a regra da Receita)
             const isento = isAcaoNacional && totalMesTipoBRL <= 20000;
             r._isento = isento;
-            r._isentoAplica = isAcaoNacional; // só nacional tem o "Sim/Não"; outras são N/A
-            const lucro = isBRL ? r._lucroBRL : r._lucroUSD;
+            r._isentoAplica = isAcaoNacional;
+            const lucro = convert(r._lucroNative, r._moeda, r._k, dispCcy);
             const aliquota = isFII ? 0.20 : 0.15;
             r._irEst = (r._isento || lucro <= 0) ? 0 : lucro * aliquota;
         });
 
-        const getLucro = r => isBRL ? r._lucroBRL : r._lucroUSD;
-        const getVenda = r => (isBRL ? r._puBRL : r._puUSD) * r._qty;
+        const getLucro = r => convert(r._lucroNative, r._moeda, r._k, dispCcy);
+        const getVenda = r => convert(r._preco * r._qty, r._moeda, r._k, dispCcy);
 
         const totalVendido = vendasDoAno.reduce((a,r) => a + getVenda(r), 0);
         const totalLucroBruto = vendasDoAno.filter(r => getLucro(r) > 0).reduce((a,r) => a + getLucro(r), 0);
         const totalPrejuizo   = vendasDoAno.filter(r => getLucro(r) < 0).reduce((a,r) => a + getLucro(r), 0);
         const totalIR = vendasDoAno.reduce((a,r) => a + r._irEst, 0);
-        const lucroLiq = totalLucroBruto + totalPrejuizo - totalIR; // prejuízo já é negativo
+        const lucroLiq = totalLucroBruto + totalPrejuizo - totalIR;
 
         document.getElementById('irTotVendido').innerText = fmt(totalVendido);
         document.getElementById('irNumVendas').innerText = `${vendasDoAno.length} venda${vendasDoAno.length === 1 ? '' : 's'} em ${year}`;
@@ -3330,7 +3598,7 @@
         document.getElementById('irLucroLiq').innerText = fmt(lucroLiq);
 
         renderIRMonthlyChart(vendasDoAno, getLucro, fmt);
-        renderIRTable(vendasDoAno, isBRL, fmt);
+        renderIRTable(vendasDoAno, dispCcy, fmt);
         renderIRAssetSelector();
         renderIRAssetDetail();
     }
@@ -3372,7 +3640,7 @@
         });
     }
 
-    function renderIRTable(vendas, isBRL, fmt) {
+    function renderIRTable(vendas, dispCcy, fmt) {
         const tb = document.getElementById('irTable');
         if (vendas.length === 0) {
             tb.innerHTML = `<tr><td colspan="9" style="padding:2rem;text-align:center;color:var(--muted)">Nenhuma venda no ano selecionado.</td></tr>`;
@@ -3380,9 +3648,9 @@
         }
         const sorted = [...vendas].sort((a,b) => a._date - b._date);
         tb.innerHTML = sorted.map(r => {
-            const pu = isBRL ? r._puBRL : r._puUSD;
-            const avg = isBRL ? r._avgBRLBefore : r._avgUSDBefore;
-            const lucro = isBRL ? r._lucroBRL : r._lucroUSD;
+            const pu = convert(r._preco, r._moeda, r._k, dispCcy);
+            const avg = convert(r._avgNativeBefore, r._moeda, r._k, dispCcy);
+            const lucro = convert(r._lucroNative, r._moeda, r._k, dispCcy);
             const lucroColor = lucro > 0 ? '#10B981' : (lucro < 0 ? '#DC2626' : 'var(--muted)');
             const dataStr = r._date.toLocaleDateString('pt-BR');
             const tipoLabel = tipoBadge(r._tipo);
@@ -3441,19 +3709,17 @@
         }
         detail.style.display = 'block';
 
-        const isBRL = currentIrCcy === 'BRL';
-        const locale = isBRL ? 'pt-BR' : 'en-US';
-        const currency = isBRL ? 'BRL' : 'USD';
-        const fmt = v => v.toLocaleString(locale, {style:'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2});
+        const dispCcy = currentIrCcy;
+        const fmt = v => fmtCcy(v, {minimumFractionDigits:2, maximumFractionDigits:2}, dispCcy);
 
         const enriched = computePositions(currentIrAsset);
         if (enriched.length === 0) return;
         const last = enriched[enriched.length - 1];
 
         const qty = last._qtyAfter;
-        const avg = isBRL ? last._avgBRLAfter : last._avgUSDAfter;
+        const avg = convert(last._avgNativeAfter, last._moeda, last._k, dispCcy);
         const invested = qty * avg;
-        const realized = isBRL ? last._realizedBRL : last._realizedUSD;
+        const realized = convert(last._realizedNative, last._moeda, last._k, dispCcy);
         const realizedColor = realized > 0 ? '#10B981' : (realized < 0 ? '#DC2626' : 'var(--muted)');
 
         document.getElementById('irAssetQty').innerText = qty.toLocaleString('pt-BR', {maximumFractionDigits: 4});
@@ -3464,16 +3730,18 @@
         lucroEl.innerText = fmt(realized);
         lucroEl.style.color = realizedColor;
 
-        // Lucro Não-Realizado: cruza com investimentosData pelo CODIGO, pega a posição mais recente
+        // Lucro Não-Realizado: cruza com investimentosData pelo CODIGO, posição mais recente.
+        // = valor_bruto (posição) − valor investido (Σ montantes). Não inclui dividendos/JCP,
+        // que são renda, não valorização de capital.
         const unrealEl = document.getElementById('irAssetUnreal');
         const unrealSubEl = document.getElementById('irAssetUnrealSub');
         if (qty > 0 && investimentosData.length > 0) {
             const positions = investimentosData.filter(p => p._codigo === currentIrAsset);
             if (positions.length > 0) {
-                // Pega a posição mais recente (maior _k = yyyy-mm)
                 positions.sort((a,b) => a._k.localeCompare(b._k));
                 const latestPos = positions[positions.length - 1];
-                const unreal = isBRL ? latestPos._rendBRL : latestPos._rendUSD;
+                const unrealNative = invBruto(latestPos) - invValorInvestido(latestPos);
+                const unreal = convert(unrealNative, latestPos._moeda, latestPos._k, dispCcy);
                 const unrealColor = unreal > 0 ? '#10B981' : (unreal < 0 ? '#DC2626' : 'var(--muted)');
                 unrealEl.innerText = fmt(unreal);
                 unrealEl.style.color = unrealColor;
@@ -3491,15 +3759,15 @@
         } else {
             unrealEl.innerText = '—';
             unrealEl.style.color = 'var(--muted)';
-            unrealSubEl.innerText = 'Dados de Investimentos indisponíveis';
+            unrealSubEl.innerText = 'Faça upload de Investimentos';
         }
 
         // Histórico completo
         const tb = document.getElementById('irAssetTable');
         tb.innerHTML = enriched.map(r => {
-            const pu = isBRL ? r._puBRL : r._puUSD;
+            const pu = convert(r._preco, r._moeda, r._k, dispCcy);
             const valor = pu * r._qty;
-            const avgAfter = isBRL ? r._avgBRLAfter : r._avgUSDAfter;
+            const avgAfter = convert(r._avgNativeAfter, r._moeda, r._k, dispCcy);
             const isCompra = r._op === 'COMPRA';
             const isAjuste = isCompra && r._qty < 0;
             const opLabel = isAjuste
@@ -3507,7 +3775,7 @@
                 : (isCompra
                     ? `<span class="badge badge-real">Compra</span>`
                     : `<span class="badge badge-proj">Venda</span>`);
-            const lucro = r._op === 'VENDA' ? (isBRL ? r._lucroBRL : r._lucroUSD) : null;
+            const lucro = r._op === 'VENDA' ? convert(r._lucroNative, r._moeda, r._k, dispCcy) : null;
             const lucroCell = lucro !== null
                 ? `<td style="color:${lucro > 0 ? '#10B981' : (lucro < 0 ? '#DC2626' : 'var(--muted)')};font-weight:600">${fmt(lucro)}</td>`
                 : `<td class="muted">—</td>`;
@@ -3571,318 +3839,6 @@
             }
         });
     }
-
-    /* ── INPUT INVESTIMENTOS ── */
-    let inputInvOriginal = []; // snapshot para detectar mudanças
-    let inputInvRows = [];     // estado editável atual
-
-    function inputInvSetStatus(msg, type) {
-        const el = document.getElementById('inputInvStatus');
-        el.textContent = msg;
-        el.className = 'inv-input-status' + (type ? ' ' + type : '');
-    }
-
-    function populateInputInvMonths() {
-        const sel = document.getElementById('inputInvMonth');
-        if (!sel) return;
-        const keys = [...new Set(investimentosData.map(r => r._k))].sort();
-        sel.innerHTML = '';
-        keys.forEach(k => {
-            const o = document.createElement('option');
-            o.value = k;
-            const [y, m] = k.split('-');
-            o.textContent = `${m}/${y}`;
-            sel.appendChild(o);
-        });
-        // Seleciona o último mês por padrão
-        if (keys.length) sel.value = keys[keys.length - 1];
-    }
-
-    function loadInputInvMonth() {
-        const sel = document.getElementById('inputInvMonth');
-        if (!sel || !sel.value) return;
-        const key = sel.value;
-        const rows = investimentosData
-            .filter(r => r._k === key)
-            .map(r => ({
-                codigo: r._codigo,
-                tipo: r._tipo,
-                investUSD: r._investUSD,
-                investBRL: r._investBRL,
-                brutoUSD: r._brutoUSD,
-                brutoBRL: r._brutoBRL,
-                rendUSD: r._rendUSD,
-                rendBRL: r._rendBRL,
-                aporte: r._aporte,
-                _isNew: false
-            }));
-        inputInvRows = JSON.parse(JSON.stringify(rows));
-        inputInvOriginal = JSON.parse(JSON.stringify(rows));
-        renderInputInvTable();
-        document.getElementById('btnSaveInv').disabled = true;
-        inputInvSetStatus('');
-    }
-
-    function fmtInputNum(v) {
-        if (v === 0 || v === null || v === undefined) return '0';
-        return String(v).replace('.', ',');
-    }
-
-    function parseInputNum(s) {
-        if (!s) return 0;
-        return parseFloat(String(s).replace(/\./g, '').replace(',', '.')) || 0;
-    }
-
-    function renderInputInvTable() {
-        const tbody = document.getElementById('inputInvBody');
-        if (!tbody) return;
-        tbody.innerHTML = '';
-        inputInvRows.forEach((row, i) => {
-            const tr = document.createElement('tr');
-            const fields = [
-                { key: 'codigo', val: row.codigo, type: 'text' },
-                { key: 'tipo', val: row.tipo, type: 'text' },
-                { key: 'investUSD', val: fmtInputNum(row.investUSD), type: 'num' },
-                { key: 'investBRL', val: fmtInputNum(row.investBRL), type: 'num' },
-                { key: 'brutoUSD', val: fmtInputNum(row.brutoUSD), type: 'num' },
-                { key: 'brutoBRL', val: fmtInputNum(row.brutoBRL), type: 'num' },
-                { key: 'rendUSD', val: fmtInputNum(row.rendUSD), type: 'num' },
-                { key: 'rendBRL', val: fmtInputNum(row.rendBRL), type: 'num' },
-                { key: 'aporte', val: fmtInputNum(row.aporte), type: 'num' },
-            ];
-            fields.forEach(f => {
-                const td = document.createElement('td');
-                const inp = document.createElement('input');
-                inp.type = 'text';
-                inp.value = f.val;
-                inp.dataset.row = i;
-                inp.dataset.key = f.key;
-                if (f.type === 'num') inp.style.textAlign = 'right';
-                inp.addEventListener('input', onInputInvChange);
-                td.appendChild(inp);
-                tr.appendChild(td);
-            });
-            // delete button
-            const tdDel = document.createElement('td');
-            tdDel.className = 'row-actions';
-            const btn = document.createElement('button');
-            btn.textContent = '✕';
-            btn.title = 'Remover ativo';
-            btn.addEventListener('click', () => {
-                inputInvRows.splice(i, 1);
-                renderInputInvTable();
-                checkInputInvDirty();
-            });
-            tdDel.appendChild(btn);
-            tr.appendChild(tdDel);
-            tbody.appendChild(tr);
-        });
-    }
-
-    function onInputInvChange(e) {
-        const i = +e.target.dataset.row;
-        const key = e.target.dataset.key;
-        const raw = e.target.value;
-        if (['codigo', 'tipo'].includes(key)) {
-            inputInvRows[i][key] = raw;
-        } else {
-            inputInvRows[i][key] = parseInputNum(raw);
-        }
-        // highlight changed
-        const orig = inputInvOriginal[i];
-        if (orig) {
-            const origVal = ['codigo', 'tipo'].includes(key) ? orig[key] : fmtInputNum(orig[key]);
-            e.target.classList.toggle('changed', raw !== origVal);
-        } else {
-            e.target.classList.add('changed');
-        }
-        checkInputInvDirty();
-    }
-
-    function checkInputInvDirty() {
-        const dirty = JSON.stringify(inputInvRows) !== JSON.stringify(inputInvOriginal);
-        document.getElementById('btnSaveInv').disabled = !dirty;
-    }
-
-    async function duplicateToNextMonth() {
-        const sel = document.getElementById('inputInvMonth');
-        if (!sel || !sel.value) return;
-        const [y, m] = sel.value.split('-').map(Number);
-        let ny = y, nm = m + 1;
-        if (nm > 12) { nm = 1; ny++; }
-        const nextKey = `${ny}-${String(nm).padStart(2, '0')}`;
-
-        // Checa se já existe dados nesse mês
-        const existing = investimentosData.filter(r => r._k === nextKey);
-        if (existing.length > 0) {
-            if (!confirm(`Já existem ${existing.length} registros em ${String(nm).padStart(2,'0')}/${ny}. Deseja sobrescrever?`)) return;
-        }
-
-        // Copia do mês atual
-        const currentRows = investimentosData.filter(r => r._k === sel.value);
-        if (currentRows.length === 0) {
-            inputInvSetStatus('Nenhum dado no mês selecionado para duplicar.', 'err');
-            return;
-        }
-
-        inputInvSetStatus('Duplicando para ' + String(nm).padStart(2,'0') + '/' + ny + '...', '');
-        const dataRef = `${ny}-${String(nm).padStart(2,'0')}-01`;
-
-        try {
-            // Se já existe, deleta antes
-            if (existing.length > 0) {
-                const { error: delErr } = await sbClient
-                    .from('investimentos')
-                    .delete()
-                    .eq('data_ref', dataRef);
-                if (delErr) throw delErr;
-            }
-
-            const inserts = currentRows.map(r => ({
-                data_ref: dataRef,
-                codigo: r._codigo,
-                tipo_investimento: r._tipo,
-                valor_investido_usd: r._investUSD,
-                valor_investido_brl: r._investBRL,
-                valor_bruto_usd: r._brutoUSD,
-                valor_bruto_brl: r._brutoBRL,
-                rendimento_total_usd: r._rendUSD,
-                rendimento_total_brl: r._rendBRL,
-                aporte_mes: r._aporte
-            }));
-
-            const { error: insErr } = await sbClient
-                .from('investimentos')
-                .insert(inserts);
-            if (insErr) throw insErr;
-
-            inputInvSetStatus('✓ Duplicado com sucesso para ' + String(nm).padStart(2,'0') + '/' + ny, 'ok');
-
-            // Recarrega dados de investimentos
-            await reloadInvestimentosFromSupabase();
-            populateInputInvMonths();
-            sel.value = nextKey;
-            loadInputInvMonth();
-
-        } catch (err) {
-            console.error('Erro ao duplicar mês:', err);
-            inputInvSetStatus('Erro: ' + (err.message || err), 'err');
-        }
-    }
-
-    async function saveInputInvChanges() {
-        const sel = document.getElementById('inputInvMonth');
-        if (!sel || !sel.value) return;
-        const key = sel.value;
-        const [y, m] = key.split('-');
-        const dataRef = `${y}-${m}-01`;
-
-        const btn = document.getElementById('btnSaveInv');
-        btn.disabled = true;
-        btn.textContent = 'Salvando...';
-        inputInvSetStatus('Salvando alterações...', '');
-
-        try {
-            // Deleta tudo do mês e reinsere
-            const { error: delErr } = await sbClient
-                .from('investimentos')
-                .delete()
-                .eq('data_ref', dataRef);
-            if (delErr) throw delErr;
-
-            if (inputInvRows.length > 0) {
-                const inserts = inputInvRows.filter(r => r.codigo.trim()).map(r => ({
-                    data_ref: dataRef,
-                    codigo: r.codigo.trim(),
-                    tipo_investimento: r.tipo.trim(),
-                    valor_investido_usd: r.investUSD,
-                    valor_investido_brl: r.investBRL,
-                    valor_bruto_usd: r.brutoUSD,
-                    valor_bruto_brl: r.brutoBRL,
-                    rendimento_total_usd: r.rendUSD,
-                    rendimento_total_brl: r.rendBRL,
-                    aporte_mes: r.aporte
-                }));
-
-                if (inserts.length > 0) {
-                    const { error: insErr } = await sbClient
-                        .from('investimentos')
-                        .insert(inserts);
-                    if (insErr) throw insErr;
-                }
-            }
-
-            inputInvSetStatus('✓ Salvo com sucesso!', 'ok');
-
-            // Recarrega dados
-            await reloadInvestimentosFromSupabase();
-            populateInputInvMonths();
-            sel.value = key;
-            loadInputInvMonth();
-
-            // Re-render gráficos se necessário
-            if (currentView === 'investimentos') renderInvestimentos();
-
-        } catch (err) {
-            console.error('Erro ao salvar:', err);
-            inputInvSetStatus('Erro: ' + (err.message || err), 'err');
-        } finally {
-            btn.textContent = 'Salvar alterações';
-            checkInputInvDirty();
-        }
-    }
-
-    async function reloadInvestimentosFromSupabase() {
-        const { data: investimentos, error } = await sbClient
-            .from('investimentos')
-            .select('*')
-            .order('data_ref', { ascending: true })
-            .limit(10000);
-        if (error) throw error;
-        if (investimentos) {
-            processInvestimentos(investimentos.map(row => {
-                let dataFormatted = '';
-                if (row.data_ref) {
-                    const parts = row.data_ref.split('-');
-                    if (parts.length === 3) {
-                        dataFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                    }
-                }
-                return {
-                    'DATA REF':              dataFormatted,
-                    'CODIGO':                row.codigo || '',
-                    'TIPO INVESTIMENTO':     row.tipo_investimento || '',
-                    'VALOR INVESTIDO USD':   String(row.valor_investido_usd || 0),
-                    'VALOR INVESTIDO BRL':   String(row.valor_investido_brl || 0),
-                    'VALOR BRUTO USD':       String(row.valor_bruto_usd || 0),
-                    'VALOR BRUTO BRL':       String(row.valor_bruto_brl || 0),
-                    'RENDIMENTO TOTAL USD':  String(row.rendimento_total_usd || 0),
-                    'RENDIMENTO TOTAL BRL':  String(row.rendimento_total_brl || 0),
-                    'APORTE MES':            String(row.aporte_mes || 0)
-                };
-            }));
-        }
-    }
-
-    function addInputInvRow() {
-        inputInvRows.push({
-            codigo: '', tipo: '', investUSD: 0, investBRL: 0,
-            brutoUSD: 0, brutoBRL: 0, rendUSD: 0, rendBRL: 0,
-            aporte: 0, _isNew: true
-        });
-        renderInputInvTable();
-        checkInputInvDirty();
-        // Foca no primeiro campo da nova linha
-        const tbody = document.getElementById('inputInvBody');
-        const lastRow = tbody.lastElementChild;
-        if (lastRow) lastRow.querySelector('input').focus();
-    }
-
-    // Event listeners (delegados para sobreviver a re-renders)
-    document.getElementById('inputInvMonth')?.addEventListener('change', loadInputInvMonth);
-    document.getElementById('btnDuplicateMonth')?.addEventListener('click', duplicateToNextMonth);
-    document.getElementById('btnSaveInv')?.addEventListener('click', saveInputInvChanges);
-    document.getElementById('btnAddRow')?.addEventListener('click', addInputInvRow);
 
     /* ── SUPABASE SETUP ── */
     const SUPABASE_URL = 'https://ssadvppxdmpmvbtmxoal.supabase.co';
@@ -4086,16 +4042,15 @@
             if (errMov) throw errMov;
             if (movimentacoes) {
                 processMovimentacoes(movimentacoes.map(row => ({
-                    'DATA REF':             row.data_ref,
-                    'CODIGO':               row.codigo,
-                    'TIPO':                 row.tipo,
-                    'OPERAÇÃO':             row.operacao,
-                    'QUANTIADE':            String(row.quantidade || 0),
-                    'PREÇO UNITARIO USD':   String(row.preco_unitario_usd || 0),
-                    'INVESTIDO USD':        String(row.investido_usd || 0),
-                    'PTAX':                 String(row.ptax || 0),
-                    'PREÇO UNITÁRIO BRL':   String(row.preco_unitario_brl || 0),
-                    'INVESTIDO BRL':        String(row.investido_brl || 0)
+                    'DATA REF':    row.data_ref,
+                    'CODIGO':      row.codigo,
+                    'TIPO':        row.tipo,
+                    'OPERAÇÃO':    row.operacao,
+                    'MOEDA':       row.moeda || 'BRL',
+                    'QTDE':        String(row.qtde || 0),
+                    'PREÇO UNIT':  String(row.preco_unit || 0),
+                    'MONTANTE':    String(row.montante || 0),
+                    'PTAX':        String(row.ptax || 0)
                 })));
             }
 
@@ -4109,7 +4064,6 @@
             if (errInv) throw errInv;
             if (investimentos) {
                 processInvestimentos(investimentos.map(row => {
-                    // Converter data_ref de "2025-06-01" para "01/06/2025"
                     let dataFormatted = '';
                     if (row.data_ref) {
                         const parts = row.data_ref.split('-');
@@ -4118,18 +4072,52 @@
                         }
                     }
                     return {
-                        'DATA REF':              dataFormatted,
-                        'CODIGO':                row.codigo || '',
-                        'TIPO INVESTIMENTO':     row.tipo_investimento || '',
-                        'VALOR INVESTIDO USD':   String(row.valor_investido_usd || 0),
-                        'VALOR INVESTIDO BRL':   String(row.valor_investido_brl || 0),
-                        'VALOR BRUTO USD':       String(row.valor_bruto_usd || 0),
-                        'VALOR BRUTO BRL':       String(row.valor_bruto_brl || 0),
-                        'RENDIMENTO TOTAL USD':  String(row.rendimento_total_usd || 0),
-                        'RENDIMENTO TOTAL BRL':  String(row.rendimento_total_brl || 0),
-                        'APORTE MES':            String(row.aporte_mes || 0)
+                        'DATA REF':          dataFormatted,
+                        'CODIGO':            row.codigo || '',
+                        'TIPO INVESTIMENTO': row.tipo_investimento || '',
+                        'MOEDA':             row.moeda || 'BRL',
+                        'QTDE':              String(row.qtde || 0),
+                        'PREÇO UNIT':        String(row.preco_unit || 0),
+                        'VALOR BRUTO':       String(row.valor_bruto || 0),
+                        'DIV JCP':           String(row.div_jcp || 0)
                     };
                 }));
+            }
+
+            // Cotação mensal do dólar (PTAX BRL/USD)
+            const { data: dolar, error: errDol } = await sbClient
+                .from('dolar_mensal')
+                .select('*')
+                .order('data_ref', { ascending: true })
+                .limit(10000);
+            if (errDol) {
+                console.warn('dolar_mensal indisponível, usando fallback:', errDol.message);
+            } else if (dolar) {
+                dolarData = {};
+                dolar.forEach(row => {
+                    if (!row.data_ref) return;
+                    const parts = String(row.data_ref).split('-'); // YYYY-MM-DD
+                    if (parts.length >= 2) {
+                        const key = `${parts[0]}-${parts[1]}`;
+                        dolarData[key] = parseNumber(row.ptax);
+                    }
+                });
+            }
+
+            // Rendimento base (acumulado pré-2025) por ativo
+            const { data: rendBase, error: errRB } = await sbClient
+                .from('rendimento_base')
+                .select('*')
+                .limit(10000);
+            if (errRB) {
+                console.warn('rendimento_base indisponível:', errRB.message);
+            } else if (rendBase) {
+                rendBaseData = {};
+                rendBase.forEach(row => {
+                    if (row.codigo) {
+                        rendBaseData[row.codigo.trim()] = parseNumber(row.rendimento_total);
+                    }
+                });
             }
 
             // Trigger renderAll após carregar todos os dados
