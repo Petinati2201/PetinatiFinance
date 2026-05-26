@@ -779,6 +779,128 @@
         ::-webkit-scrollbar { width:5px; height:5px; }
         ::-webkit-scrollbar-track { background:transparent; }
         ::-webkit-scrollbar-thumb { background:var(--border); border-radius:99px; }
+    /* ══ INPUT INVESTIMENTOS ══ */
+    .ii-toolbar { display:flex; align-items:center; gap:.75rem; flex-wrap:wrap; margin-bottom:1rem; }
+    .ii-toolbar label { font-size:12px; color:var(--muted); font-weight:500; }
+    .ii-toolbar select, .ii-toolbar button {
+        font-family:'Inter',sans-serif; font-size:13px; border-radius:8px;
+        padding:.5rem .85rem; border:1px solid var(--border); background:var(--surface);
+        color:var(--text); cursor:pointer; transition:border-color .15s;
+    }
+    .ii-toolbar select:hover, .ii-toolbar button:hover { border-color:var(--accent2); }
+    .ii-toolbar button.primary { background:#059669; color:#fff; border-color:#059669; font-weight:600; }
+    .ii-toolbar button.primary:hover { background:#047857; }
+    .ii-toolbar button.primary:disabled { opacity:.45; cursor:not-allowed; }
+    .ii-toolbar .spacer { flex:1; }
+    .ii-status { font-size:12px; color:var(--muted); min-height:1.4em; margin-bottom:.8rem; }
+    .ii-status.ok { color:#059669; } .ii-status.err { color:#DC2626; }
+
+    .ii-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .ii-table th {
+        text-align:left; padding:.5rem .6rem; font-size:10px; font-weight:600;
+        text-transform:uppercase; letter-spacing:.05em; color:var(--muted); white-space:nowrap;
+        border-bottom:1px solid var(--border);
+    }
+    .ii-table th.calc { color:#059669; }
+    .ii-table td { padding:.3rem .4rem; border-bottom:1px solid var(--line); vertical-align:middle; }
+    .ii-table td input {
+        width:100%; box-sizing:border-box; font-family:'Inter',sans-serif; font-size:13px;
+        padding:.4rem .5rem; border:1px solid transparent; border-radius:6px;
+        background:transparent; color:var(--text); transition:.15s;
+    }
+    .ii-table td input:hover { border-color:var(--border); }
+    .ii-table td input:focus { outline:none; border-color:var(--accent2); background:var(--bg); }
+    .ii-table td input.changed { background:rgba(5,150,105,.06); border-color:rgba(5,150,105,.3); }
+    .ii-table td.static-cell { color:var(--text); padding:.55rem .6rem; }
+    .ii-table td.calc-cell { color:#059669; font-weight:600; padding:.55rem .6rem; text-align:right; }
+    .ii-table tr.dirty-row { background:rgba(5,150,105,.04); }
+    .ii-table .empty-state, .mov-table .empty-state { text-align:center; color:var(--muted); padding:2rem; font-style:italic; }
+    .act-discard {
+        background:transparent; border:none; color:#DC2626; cursor:pointer; font-size:15px;
+        padding:.2rem .4rem; border-radius:5px; transition:background .15s;
+    }
+    .act-discard:hover { background:rgba(220,38,38,.1); }
+    .legend-note { display:flex; gap:1.2rem; flex-wrap:wrap; margin-top:.9rem; font-size:11px; color:var(--muted); }
+    .legend-note .swatch { display:inline-block; width:11px; height:11px; border-radius:3px; vertical-align:-1px; margin-right:3px; }
+    .legend-note .swatch.edit { background:var(--border); }
+    .legend-note .swatch.calc { background:rgba(5,150,105,.4); }
+
+    /* ══ MOVIMENTAÇÕES ══ */
+    .mov-filter-bar { display:flex; align-items:center; gap:.75rem; margin-bottom:1.2rem; flex-wrap:wrap; }
+    .mov-filter-bar label { font-size:12px; color:var(--muted); font-weight:500; }
+    .mov-filter-bar select {
+        font-family:'Inter',sans-serif; font-size:13px; border-radius:8px; padding:.5rem .85rem;
+        border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer;
+    }
+    .mov-filter-bar .spacer { flex:1; }
+    .mov-add-btn {
+        font-family:'Inter',sans-serif; font-size:13px; border-radius:8px; padding:.5rem 1rem;
+        border:1px solid #059669; background:#059669; color:#fff; font-weight:600; cursor:pointer;
+    }
+    .mov-add-btn:hover { background:#047857; }
+    .mov-kpi-row { display:flex; gap:1.5rem; flex-wrap:wrap; margin-bottom:1.2rem; padding:.85rem 1rem;
+        background:var(--surface); border:1px solid var(--line); border-radius:10px; }
+    .mov-kpi-item { font-size:12px; color:var(--muted); }
+    .mov-kpi-item strong { color:var(--text); font-size:14px; }
+    .mov-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .mov-table th {
+        text-align:left; padding:.55rem .7rem; font-size:10px; font-weight:600;
+        text-transform:uppercase; letter-spacing:.05em; color:var(--muted); white-space:nowrap;
+        border-bottom:1px solid var(--border);
+    }
+    .mov-table td { padding:.6rem .7rem; border-bottom:1px solid var(--line); }
+    .mov-table td.num { text-align:right; font-variant-numeric:tabular-nums; }
+    .mov-table tr:hover { background:var(--line); }
+    .badge-compra, .badge-venda { font-size:10px; font-weight:700; padding:.18rem .5rem; border-radius:5px; letter-spacing:.04em; }
+    .badge-compra { background:rgba(5,150,105,.14); color:#059669; }
+    .badge-venda { background:rgba(220,38,38,.14); color:#DC2626; }
+    .mov-table .row-actions { text-align:right; }
+
+    /* ══ MODAL ══ */
+    .modal-overlay {
+        position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center;
+        justify-content:center; z-index:1000; opacity:0; pointer-events:none; transition:opacity .25s;
+    }
+    .modal-overlay.open { opacity:1; pointer-events:auto; }
+    .modal-box {
+        background:var(--surface); border:1px solid var(--border); border-radius:14px;
+        padding:1.6rem; width:min(440px, 92vw); max-height:90vh; overflow-y:auto;
+        transform:translateY(12px); transition:transform .25s;
+    }
+    .modal-overlay.open .modal-box { transform:translateY(0); }
+    .modal-title { font-family:'Newsreader',serif; font-size:1.35rem; font-weight:600; color:var(--text); margin:0 0 .2rem; }
+    .modal-sub { font-size:12px; color:var(--muted); margin-bottom:1.1rem; }
+    .modal-tipo-toggle { display:flex; gap:.5rem; margin-bottom:1.1rem; }
+    .modal-tipo-toggle button {
+        flex:1; font-family:'Inter',sans-serif; font-size:13px; font-weight:600; padding:.55rem;
+        border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--muted); cursor:pointer;
+    }
+    .modal-tipo-toggle button.active-compra { background:#059669; color:#fff; border-color:#059669; }
+    .modal-tipo-toggle button.active-venda { background:#DC2626; color:#fff; border-color:#DC2626; }
+    .modal-field { margin-bottom:.85rem; }
+    .modal-field label, .modal-ref-select label {
+        display:block; font-size:11px; font-weight:600; text-transform:uppercase;
+        letter-spacing:.08em; color:var(--muted); margin-bottom:.35rem;
+    }
+    .modal-field input, .modal-field select, .modal-ref-select select {
+        width:100%; box-sizing:border-box; font-family:'Inter',sans-serif; font-size:14px;
+        padding:.55rem .7rem; border:1px solid var(--border); border-radius:8px;
+        background:var(--bg); color:var(--text);
+    }
+    .modal-field input:focus, .modal-field select:focus { outline:none; border-color:var(--accent2); }
+    .modal-field input:disabled { opacity:.55; cursor:not-allowed; }
+    .modal-ref-select { margin-bottom:.85rem; }
+    .modal-row { display:flex; gap:.75rem; }
+    .modal-row .modal-field { flex:1; }
+    .calc-hint { font-size:10px; color:var(--muted); margin-top:.25rem; }
+    .modal-actions { display:flex; gap:.6rem; justify-content:flex-end; margin-top:1.3rem; }
+    .modal-btn-cancel, .modal-btn-confirm {
+        font-family:'Inter',sans-serif; font-size:13px; font-weight:600; padding:.55rem 1.1rem;
+        border-radius:8px; cursor:pointer; border:1px solid var(--border);
+    }
+    .modal-btn-cancel { background:var(--bg); color:var(--muted); }
+    .modal-btn-confirm { background:#059669; color:#fff; border-color:#059669; }
+    .modal-btn-confirm:hover { background:#047857; }
     </style>
 </head>
 
@@ -864,10 +986,13 @@
         <div class="sb-nav-group">
             <div class="sb-section-title">Dados</div>
             <nav class="sb-nav">
-                <div class="sb-link" data-view="uploads" onclick="switchView('uploads')">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-                    <span class="sb-link-label">Uploads</span>
-                    <span class="sb-upload-badge pending" id="uploadBadge">0/5</span>
+                <div class="sb-link" data-view="inputinv" onclick="switchView('inputinv')">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                    <span class="sb-link-label">Input Investimentos</span>
+                </div>
+                <div class="sb-link" data-view="movimentacoes" onclick="switchView('movimentacoes')">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 17l5-5 5 5M7 7l5 5 5-5"/></svg>
+                    <span class="sb-link-label">Movimentações</span>
                 </div>
             </nav>
         </div>
@@ -899,90 +1024,119 @@
     <main class="main">
 
     <!-- VIEW: UPLOADS -->
-    <div id="view-uploads" class="view">
+    <!-- VIEW: INPUT INVESTIMENTOS -->
+    <div id="view-inputinv" class="view">
         <div class="view-header">
             <div>
-                <h1 class="view-title">Uploads</h1>
-                <div class="view-subtitle">Arraste todos os CSVs de uma vez — o dashboard identifica cada um automaticamente</div>
+                <h1 class="view-title">Input Investimentos</h1>
+                <div class="view-subtitle">Entrada manual de posições mensais — grava direto no Supabase</div>
             </div>
         </div>
 
-        <!-- Unified drop zone -->
-        <label class="upload-dropzone" id="mainDropzone">
-            <div class="dz-icon">
-                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+        <div class="kpi-grid kpi-grid-4 mb2">
+            <div class="kpi-cell c-blue">
+                <span class="kpi-label">Valor Bruto</span>
+                <span id="iiKpiBruto" class="kpi-value">—</span>
+                <span class="kpi-sub">Soma do mês selecionado</span>
             </div>
-            <div class="dz-title">Solte seus CSVs aqui</div>
-            <div class="dz-subtitle">ou <b>clique para selecionar</b> — aceita múltiplos arquivos</div>
-            <div class="dz-feedback" id="dzFeedback"></div>
-            <input type="file" id="mainFileInput" accept=".csv" multiple/>
-        </label>
-
-        <!-- Compact status cards -->
-        <div class="upload-grid">
-            <div class="upload-card" data-upload="real">
-                <div class="uc-icon r">R$</div>
-                <div class="uc-title-wrap">
-                    <div class="uc-title">Realizado YTD</div>
-                    <div class="uc-desc">Lançamentos realizados</div>
-                </div>
-                <div class="uc-status-row" id="statusReal">
-                    <span class="uc-dot pending"></span>
-                    <span class="uc-status-text">Pendente</span>
-                    <span class="uc-rows"></span>
-                </div>
+            <div class="kpi-cell c-emerald">
+                <span class="kpi-label">Div / JCP</span>
+                <span id="iiKpiDiv" class="kpi-value">—</span>
+                <span class="kpi-sub">Proventos do mês</span>
             </div>
-
-            <div class="upload-card" data-upload="proj">
-                <div class="uc-icon p">∑</div>
-                <div class="uc-title-wrap">
-                    <div class="uc-title">Projeção YTG</div>
-                    <div class="uc-desc">Despesas futuras e recorrentes</div>
-                </div>
-                <div class="uc-status-row" id="statusProj">
-                    <span class="uc-dot pending"></span>
-                    <span class="uc-status-text">Pendente</span>
-                    <span class="uc-rows"></span>
-                </div>
+            <div class="kpi-cell c-amber">
+                <span class="kpi-label">Ativos</span>
+                <span id="iiKpiAtivos" class="kpi-value">0</span>
+                <span class="kpi-sub">Linhas no mês</span>
             </div>
-
-            <div class="upload-card" data-upload="rem">
-                <div class="uc-icon s">$</div>
-                <div class="uc-title-wrap">
-                    <div class="uc-title">Remuneração</div>
-                    <div class="uc-desc">Holerites mensais</div>
-                </div>
-                <div class="uc-status-row" id="statusRem">
-                    <span class="uc-dot pending"></span>
-                    <span class="uc-status-text">Pendente</span>
-                    <span class="uc-rows"></span>
-                </div>
+            <div class="kpi-cell c-indigo">
+                <span class="kpi-label">Alterações</span>
+                <span id="iiKpiPend" class="kpi-value">0</span>
+                <span class="kpi-sub">Pendentes de salvar</span>
             </div>
+        </div>
 
-            <div class="upload-card" data-upload="inv">
-                <div class="uc-icon i">₿</div>
-                <div class="uc-title-wrap">
-                    <div class="uc-title">Investimentos</div>
-                    <div class="uc-desc">Posições mensais da carteira</div>
-                </div>
-                <div class="uc-status-row" id="statusInv">
-                    <span class="uc-dot pending"></span>
-                    <span class="uc-status-text">Pendente</span>
-                    <span class="uc-rows"></span>
-                </div>
+        <div class="ii-toolbar">
+            <label>Mês de referência:</label>
+            <select id="iiMonth"></select>
+            <button id="iiBtnDuplicate">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:4px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                Duplicar p/ próximo mês
+            </button>
+            <div class="spacer"></div>
+            <button id="iiBtnAdd">+ Adicionar ativo</button>
+            <button id="iiBtnSave" class="primary" disabled>Salvar no Supabase</button>
+        </div>
+        <div class="ii-status" id="iiStatus"></div>
+
+        <div class="card mb3">
+            <div class="card-title" style="margin-bottom:.15rem">Posições do mês</div>
+            <div class="card-sub">Montante (valor bruto) = Qtde × Preço Unit. — calculado automaticamente</div>
+            <div style="overflow-x:auto">
+                <table class="ii-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Código</th>
+                            <th>Tipo</th>
+                            <th>Moeda</th>
+                            <th>Qtde</th>
+                            <th>Preço Unit.</th>
+                            <th class="calc">Valor Bruto</th>
+                            <th>Div / JCP</th>
+                            <th style="width:48px"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="iiBody"></tbody>
+                </table>
             </div>
+            <div class="legend-note">
+                <span><span class="swatch edit"></span> <b>Editável</b> — você digita</span>
+                <span><span class="swatch calc"></span> <b>Calculado</b> — Qtde × Preço</span>
+                <span>Linhas em destaque têm alterações não salvas.</span>
+            </div>
+        </div>
+    </div>
 
-            <div class="upload-card" data-upload="mov">
-                <div class="uc-icon m">%</div>
-                <div class="uc-title-wrap">
-                    <div class="uc-title">Movimentações RV</div>
-                    <div class="uc-desc">Compras e vendas para IR</div>
-                </div>
-                <div class="uc-status-row" id="statusMov">
-                    <span class="uc-dot pending"></span>
-                    <span class="uc-status-text">Pendente</span>
-                    <span class="uc-rows"></span>
-                </div>
+    <!-- VIEW: MOVIMENTAÇÕES -->
+    <div id="view-movimentacoes" class="view">
+        <div class="view-header">
+            <div>
+                <h1 class="view-title">Movimentações</h1>
+                <div class="view-subtitle">Histórico de compras e vendas por ativo — grava em movimentacoes_rv</div>
+            </div>
+        </div>
+
+        <div class="mov-filter-bar">
+            <label>Ativo:</label>
+            <select id="movAtivoFilter"><option value="">Todos</option></select>
+            <div class="spacer"></div>
+            <button class="primary mov-add-btn" id="btnNovaMovimentacao">+ Nova movimentação</button>
+        </div>
+
+        <div id="movKpis" class="mov-kpi-row"></div>
+
+        <div class="card mb3">
+            <div class="card-title" style="margin-bottom:.15rem">Histórico de Movimentações</div>
+            <div class="card-sub">Operações de compra e venda registradas</div>
+            <div style="overflow-x:auto">
+                <table class="mov-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Código</th>
+                            <th>Tipo</th>
+                            <th>Operação</th>
+                            <th>Qtde</th>
+                            <th>Preço Unit.</th>
+                            <th>Montante</th>
+                            <th>Moeda</th>
+                            <th>PTAX</th>
+                            <th style="width:40px"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="movBody"></tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -1545,6 +1699,84 @@
     </main>
 </div>
 
+<!-- MODAL: Nova Movimentação -->
+<div class="modal-overlay" id="modalMovOverlay">
+    <div class="modal-box">
+        <h2 class="modal-title">Nova Movimentação</h2>
+        <div class="modal-sub">Registre uma compra ou venda de ativo</div>
+
+        <div class="modal-tipo-toggle">
+            <button id="modalBtnCompra" class="active-compra" onclick="setModalOp('COMPRA')">Compra</button>
+            <button id="modalBtnVenda" onclick="setModalOp('VENDA')">Venda</button>
+        </div>
+
+        <div class="modal-ref-select" id="modalRefWrap" style="display:none">
+            <label>Ativo de referência (venda)</label>
+            <select id="modalRefAtivo"></select>
+        </div>
+
+        <div class="modal-field">
+            <label>Data</label>
+            <input type="text" id="modalData" placeholder="DD/MM/AAAA">
+        </div>
+
+        <div class="modal-row">
+            <div class="modal-field">
+                <label>Código</label>
+                <input type="text" id="modalCodigo" placeholder="Ex: KO, IVV">
+            </div>
+            <div class="modal-field">
+                <label>Tipo</label>
+                <select id="modalTipo">
+                    <option value="">Selecione...</option>
+                    <option>CRIPTO</option>
+                    <option>IMÓVEL</option>
+                    <option>MOEDA</option>
+                    <option>RENDA FIXA</option>
+                    <option>RENDA VARIÁVEL</option>
+                    <option>RENDA VARIÁVEL EXTERIOR</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="modal-row">
+            <div class="modal-field">
+                <label>Qtde</label>
+                <input type="text" id="modalQtde" placeholder="0">
+            </div>
+            <div class="modal-field">
+                <label>Preço Unitário</label>
+                <input type="text" id="modalPreco" placeholder="0,00">
+            </div>
+        </div>
+
+        <div class="modal-field">
+            <label>Montante</label>
+            <input type="text" id="modalMontante" disabled>
+            <div class="calc-hint">Qtde × Preço Unit. (calculado)</div>
+        </div>
+
+        <div class="modal-row">
+            <div class="modal-field">
+                <label>Moeda</label>
+                <select id="modalMoeda" onchange="onModalMoedaChange()">
+                    <option value="BRL">BRL</option>
+                    <option value="USD">USD</option>
+                </select>
+            </div>
+            <div class="modal-field" id="modalPtaxWrap" style="display:none">
+                <label>PTAX</label>
+                <input type="text" id="modalPtax" placeholder="Ex: 5,30">
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="modal-btn-cancel" onclick="closeModal()">Cancelar</button>
+            <button class="modal-btn-confirm" onclick="confirmModal()">Confirmar e salvar</button>
+        </div>
+    </div>
+</div>
+
 <script>
     let realizadoData = [];
     let investimentoMovData = []; // Movimentos com TIPO INVESTIMENTO/RESGATE INVESTIMENTO, separados das despesas
@@ -1766,45 +1998,9 @@
     }
 
 
-    /* file input — single unified input handles all CSVs */
-    document.getElementById('mainFileInput').addEventListener('change', function() {
-        for (const file of this.files) handleFile(file);
-        this.value = ''; // allow re-selecting same files
-    });
+    /* Uploads removidos — dados vêm do Supabase. updateUploadStatus() agora é no-op. */
+    function updateUploadStatus() { /* obsoleto: sem tela de uploads */ }
 
-    function updateUploadStatus() {
-        const setStatus = (elId, uploadKey, loaded, rows) => {
-            const row = document.getElementById(elId);
-            if (!row) return;
-            const dot = row.querySelector('.uc-dot');
-            const txt = row.querySelector('.uc-status-text');
-            const rowsEl = row.querySelector('.uc-rows');
-            const card = document.querySelector('.upload-card[data-upload="' + uploadKey + '"]');
-            if (loaded) {
-                dot.classList.remove('pending'); dot.classList.add('ok');
-                txt.textContent = 'Carregado';
-                rowsEl.textContent = `${rows.toLocaleString('pt-BR')} linha${rows === 1 ? '' : 's'}`;
-                if (card) card.classList.add('loaded');
-            } else {
-                dot.classList.remove('ok'); dot.classList.add('pending');
-                txt.textContent = 'Pendente';
-                rowsEl.textContent = '';
-                if (card) card.classList.remove('loaded');
-            }
-        };
-        setStatus('statusReal', 'real', realizadoData.length > 0, realizadoData.length);
-        setStatus('statusProj', 'proj', projecaoData.length > 0, projecaoData.length);
-        setStatus('statusRem',  'rem',  remuneracaoData.length > 0, remuneracaoData.length);
-        setStatus('statusInv',  'inv',  investimentosData.length > 0, investimentosData.length);
-        setStatus('statusMov',  'mov',  movimentacoesData.length > 0, movimentacoesData.length);
-
-        // Badge da sidebar
-        const loaded = [realizadoData, projecaoData, remuneracaoData, investimentosData, movimentacoesData].filter(a => a.length > 0).length;
-        const badge = document.getElementById('uploadBadge');
-        badge.textContent = `${loaded}/5`;
-        badge.classList.toggle('ok', loaded === 5);
-        badge.classList.toggle('pending', loaded < 5);
-    }
 
     // ────────── CROSS-FILTER HELPERS ──────────
     // Alterna um valor no filtro da view atual para um campo
@@ -1872,15 +2068,19 @@
         document.querySelectorAll('.view').forEach(el => {
             el.classList.toggle('active', el.id === `view-${viewName}`);
         });
-        // Tabela de detalhamento só aparece nas views de análise (exceto holerite/investimentos/ir, que têm tabelas próprias)
+        // Tabela de detalhamento só aparece nas views de análise (exceto as que têm tabelas próprias)
         const detalhamento = document.getElementById('detalhamentoWrap');
         if (detalhamento) {
-            detalhamento.style.display = (viewName === 'uploads' || viewName === 'holerite' || viewName === 'investimentos' || viewName === 'ir') ? 'none' : 'block';
+            const semDetalhe = ['inputinv', 'movimentacoes', 'holerite', 'investimentos', 'ir'];
+            detalhamento.style.display = semDetalhe.includes(viewName) ? 'none' : 'block';
         }
         // Em mobile, fecha a sidebar ao navegar
         if (window.innerWidth <= 860) {
             document.getElementById('app').classList.add('collapsed');
         }
+        // Telas de entrada de dados renderizam seu próprio conteúdo (não dependem de renderAll)
+        if (viewName === 'inputinv') { renderInputInv(); return; }
+        if (viewName === 'movimentacoes') { renderMov(); return; }
         renderAll();
     }
 
@@ -1911,104 +2111,9 @@
     }
     updateUploadStatus();
 
-    /* ───── CSV AUTO-DETECTION ───── */
-    const csvTypeLabels = {
-        real: 'Realizado YTD',
-        proj: 'Projeção YTG',
-        rem:  'Remuneração',
-        inv:  'Investimentos',
-        mov:  'Movimentações RV'
-    };
-
-    function detectCsvType(fields) {
-        const f = fields.map(h => h.toUpperCase().trim());
-        if (f.includes('TIPO INVESTIMENTO'))  return 'inv';
-        if (f.includes('OPERAÇÃO'))           return 'mov';
-        if (f.includes('DATA COMPETENCIA'))   return 'real';
-        if (f.includes('DATA FIM'))           return 'proj';
-        if (f.includes('FOLHA'))              return 'rem';
-        return null;
-    }
-
-    function showDzFeedback(msg, type) {
-        const el = document.getElementById('dzFeedback');
-        el.textContent = msg;
-        el.className = 'dz-feedback ' + (type || '');
-        if (type) setTimeout(() => { el.textContent = ''; el.className = 'dz-feedback'; }, 3500);
-    }
-
-    function handleFile(fileOrEvent, forcedType) {
-        const file = fileOrEvent instanceof File ? fileOrEvent : fileOrEvent.target.files[0];
-        if (!file) return;
-        Papa.parse(file, {
-            header: true, skipEmptyLines: true, delimiter: ";",
-            transformHeader: h => h.trim().toUpperCase(),
-            complete: res => {
-                const type = forcedType || detectCsvType(res.meta.fields);
-                if (!type) {
-                    showDzFeedback('⚠ "' + file.name + '" não reconhecido — verifique o formato', 'err');
-                    return;
-                }
-                if (type === 'real') processRealizado(res.data);
-                else if (type === 'proj') processProjecao(res.data);
-                else if (type === 'rem') processRemuneracao(res.data);
-                else if (type === 'inv') processInvestimentos(res.data);
-                else if (type === 'mov') processMovimentacoes(res.data);
-                showDzFeedback('✓ ' + file.name + ' → ' + csvTypeLabels[type], 'ok');
-                /* highlight the matching status card briefly */
-                const card = document.querySelector('.upload-card[data-upload="' + type + '"]');
-                if (card) { card.classList.add('loaded'); }
-                renderAll();
-            }
-        });
-    }
-
-    /* ───── UNIFIED DRAG & DROP ───── */
-    const dropzone = document.getElementById('mainDropzone');
-
-    // Prevent browser from opening file if dropped outside zone
-    ['dragover', 'drop'].forEach(evt => {
-        document.addEventListener(evt, e => {
-            if (!e.target.closest('.upload-dropzone')) {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'none';
-            }
-        });
-    });
-
-    dropzone.addEventListener('dragenter', e => {
-        e.preventDefault();
-        dropzone.classList.remove('dragover', 'drag-reject');
-        const item = e.dataTransfer.items[0];
-        const isCsv = item && (item.type === 'text/csv' || item.type === 'application/vnd.ms-excel' || item.kind === 'file');
-        dropzone.classList.add(isCsv ? 'dragover' : 'drag-reject');
-    });
-
-    dropzone.addEventListener('dragover', e => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'copy';
-    });
-
-    dropzone.addEventListener('dragleave', e => {
-        if (!dropzone.contains(e.relatedTarget)) {
-            dropzone.classList.remove('dragover', 'drag-reject');
-        }
-    });
-
-    dropzone.addEventListener('drop', e => {
-        e.preventDefault();
-        dropzone.classList.remove('dragover', 'drag-reject');
-        const files = [...e.dataTransfer.files];
-        const csvFiles = files.filter(f => f.name.toLowerCase().endsWith('.csv'));
-        if (csvFiles.length === 0) {
-            showDzFeedback('Apenas arquivos .csv são aceitos', 'err');
-            return;
-        }
-        if (csvFiles.length < files.length) {
-            showDzFeedback('Alguns arquivos ignorados (não são .csv)', 'err');
-        }
-        csvFiles.forEach(f => handleFile(f));
-    });
+    /* ───── CSV AUTO-DETECTION e DRAG&DROP removidos ─────
+       A entrada de dados agora é feita pelas telas Input Investimentos e
+       Movimentações (gravando no Supabase), e a carga vem de loadDataFromSupabase. */
 
     function parseBRDate(str) {
         if (!str) return null;
@@ -4040,6 +4145,7 @@
                 .limit(10000);
             
             if (errMov) throw errMov;
+            iiRawMov = movimentacoes || [];   // guarda cru (com id) p/ tela de input
             if (movimentacoes) {
                 processMovimentacoes(movimentacoes.map(row => ({
                     'DATA REF':    row.data_ref,
@@ -4062,6 +4168,7 @@
                 .limit(10000);
             
             if (errInv) throw errInv;
+            iiRawInvest = investimentos || [];   // guarda cru (com id) p/ tela de input
             if (investimentos) {
                 processInvestimentos(investimentos.map(row => {
                     let dataFormatted = '';
@@ -4125,12 +4232,341 @@
             renderAll();
             
             console.log('✅ Dados carregados do Supabase');
+            iiSyncFromRaw();   // sincroniza estado das telas de input com ids reais
             
         } catch (error) {
             console.error('❌ Erro ao carregar dados:', error);
             alert('Erro ao carregar dados do servidor. Verifique o console.');
         }
     }
+
+    /* ════════════════════════════════════════════════════════════════
+       INPUT INVESTIMENTOS + MOVIMENTAÇÕES — entrada de dados (Supabase)
+       Grava nas tabelas reais: investimentos (8 col) e movimentacoes_rv (9 col).
+       Modelo de rendimento NÃO é replicado aqui (a Carteira já deriva bruto−investido).
+    ════════════════════════════════════════════════════════════════ */
+    let iiRawInvest = [], iiRawMov = [];   // linhas cruas do Supabase (com id), populadas na carga
+    let iiRows = [];       // investimentos editáveis
+    let movRows = [];      // movimentações
+    let iiIdSeq = 1;
+    const iiTmpId = () => 'tmp' + (iiIdSeq++);
+    let iiDeleted = [];    // ids reais a apagar no Supabase ao salvar
+
+    /* ── HELPERS NUMÉRICOS / DATA (formato BR) ── */
+    function iiParseNum(s) {
+        if (s === null || s === undefined || s === '') return 0;
+        if (typeof s === 'number') return s;
+        return parseFloat(String(s).replace(/\./g, '').replace(',', '.')) || 0;
+    }
+    function iiFmtNum(v) { if (!v) return '0'; return Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 2 }); }
+    function iiFmtInput(v) { if (!v) return ''; return String(v).replace('.', ','); }
+    function isoToBR(iso) { if(!iso) return ''; const p=String(iso).slice(0,10).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:iso; }
+    function brToIso(br) { const p=String(br).split('/'); return p.length===3?`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`:null; }
+    function isoMonthKey(iso) { return String(iso).slice(0,7); }
+    function iiNextKey(k){ const [y,m]=k.split('-').map(Number); let ny=y,nm=m+1; if(nm>12){nm=1;ny++;} return `${ny}-${String(nm).padStart(2,'0')}`; }
+    function iiKeyLabel(k){ const [y,m]=k.split('-'); return `${m}/${y}`; }
+
+    /* ── SINCRONIZA estado local a partir das linhas cruas do Supabase ── */
+    function iiSyncFromRaw() {
+        iiRows = iiRawInvest.map(r => ({
+            id: r.id, _k: isoMonthKey(r.data_ref), data_ref: String(r.data_ref).slice(0,10),
+            codigo: r.codigo||'', tipo: r.tipo_investimento||'', moeda: r.moeda||'BRL',
+            qtde: Number(r.qtde)||0, preco: Number(r.preco_unit)||0, bruto: Number(r.valor_bruto)||0,
+            brutoManual:false, divJcp: Number(r.div_jcp)||0, _dirty:false, _new:false
+        }));
+        movRows = iiRawMov.map(r => ({
+            id: r.id, data: isoToBR(r.data_ref), codigo: r.codigo||'', tipo: r.tipo||'',
+            op: r.operacao||'COMPRA', moeda: r.moeda||'BRL', qtde: Number(r.qtde)||0,
+            preco: Number(r.preco_unit)||0, montante: Number(r.montante)||0, ptax: Number(r.ptax)||0
+        }));
+    }
+
+    /* ════════════════ INPUT INVESTIMENTOS ════════════════ */
+    function iiCalcBruto(row){ return row.brutoManual ? row.bruto : (row.qtde||0)*(row.preco||0); }
+    function iiAllMonths(){ return [...new Set(iiRows.map(r => r._k))].sort(); }
+    function iiRowByAnyId(id){ return iiRows.find(r => (r.id && String(r.id)===String(id)) || r._tmp===id); }
+
+    function iiPopulateMonths() {
+        const sel = document.getElementById('iiMonth');
+        const keys = iiAllMonths(); const prev = sel.value;
+        sel.innerHTML = '';
+        keys.forEach(k => { const o=document.createElement('option'); o.value=k; o.textContent=iiKeyLabel(k); sel.appendChild(o); });
+        if (keys.includes(prev)) sel.value = prev; else if (keys.length) sel.value = keys[keys.length-1];
+    }
+
+    function renderInputInv() {
+        iiPopulateMonths();
+        const key = document.getElementById('iiMonth').value;
+        const tbody = document.getElementById('iiBody');
+        const rows = iiRows.filter(r => r._k === key);
+        tbody.innerHTML = '';
+        if (rows.length === 0)
+            tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhum ativo neste mês. Use "Adicionar ativo" ou "Duplicar".</td></tr>';
+        rows.forEach(row => {
+            const tr = document.createElement('tr');
+            if (row._dirty || row._new) tr.classList.add('dirty-row');
+            const fields = [
+                {key:'data_ref',type:'date'},{key:'codigo',type:'text'},{key:'tipo',type:'tipo'},
+                {key:'moeda',type:'moeda'},{key:'qtde',type:'num'},{key:'preco',type:'num'},
+                {key:'bruto',type:'calc'},{key:'divJcp',type:'num'}
+            ];
+            fields.forEach(f => {
+                const td = document.createElement('td');
+                if (f.type==='calc') { td.className='calc-cell'; td.textContent=iiFmtNum(iiCalcBruto(row)); }
+                else if (f.type==='tipo' || f.type==='moeda') {
+                    const opts = f.type==='tipo' ? ['','CRIPTO','IMÓVEL','MOEDA','RENDA FIXA','RENDA VARIÁVEL','RENDA VARIÁVEL EXTERIOR'] : ['BRL','USD'];
+                    const sel = document.createElement('select');
+                    opts.forEach(t=>{ const o=document.createElement('option'); o.value=t; o.textContent=t||'—'; if(row[f.key]===t)o.selected=true; sel.appendChild(o); });
+                    sel.style.cssText='width:100%;font-size:13px;padding:.4rem;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--text)';
+                    sel.dataset.id=row.id||row._tmp; sel.dataset.key=f.key;
+                    sel.addEventListener('change', iiOnField);
+                    td.appendChild(sel);
+                } else {
+                    const inp = document.createElement('input'); inp.type='text';
+                    inp.value = f.type==='num' ? iiFmtInput(row[f.key]) : (f.type==='date' ? isoToBR(row[f.key]) : (row[f.key]||''));
+                    inp.style.textAlign = f.type==='num' ? 'right' : 'left';
+                    inp.dataset.id=row.id||row._tmp; inp.dataset.key=f.key; inp.dataset.kind=f.type;
+                    inp.addEventListener('input', iiOnField);
+                    td.appendChild(inp);
+                }
+                tr.appendChild(td);
+            });
+            const tdAct = document.createElement('td'); tdAct.style.textAlign='right';
+            const btn = document.createElement('button'); btn.className='act-discard'; btn.textContent='✕'; btn.title='Remover linha';
+            btn.addEventListener('click', ()=>iiDeleteRow(row.id||row._tmp));
+            tdAct.appendChild(btn); tr.appendChild(tdAct);
+            tbody.appendChild(tr);
+        });
+        iiRenderKpis(rows);
+        iiUpdateSaveBtn();
+    }
+
+    function iiOnField(e) {
+        const row = iiRowByAnyId(e.target.dataset.id); if (!row) return;
+        const key = e.target.dataset.key, kind = e.target.dataset.kind, val = e.target.value;
+        if (key==='data_ref') { const iso=brToIso(val); if(iso){row.data_ref=iso; row._k=isoMonthKey(iso);} }
+        else if (kind==='num'||key==='qtde'||key==='preco'||key==='divJcp') { row[key]=iiParseNum(val); if(key==='qtde'||key==='preco')row.brutoManual=false; }
+        else { row[key] = key==='codigo' ? val.toUpperCase() : val; }
+        row._dirty = true;
+        if (e.target.classList) e.target.classList.add('changed');
+        const tr = e.target.closest('tr');
+        if (tr) { const c=tr.querySelector('.calc-cell'); if(c) c.textContent=iiFmtNum(iiCalcBruto(row)); }
+        iiRenderKpis(iiRows.filter(r => r._k === document.getElementById('iiMonth').value));
+        iiUpdateSaveBtn();
+    }
+
+    function iiRenderKpis(rows) {
+        document.getElementById('iiKpiBruto').textContent = iiFmtNum(rows.reduce((a,r)=>a+iiCalcBruto(r),0));
+        document.getElementById('iiKpiDiv').textContent = iiFmtNum(rows.reduce((a,r)=>a+(r.divJcp||0),0));
+        document.getElementById('iiKpiAtivos').textContent = rows.length;
+        document.getElementById('iiKpiPend').textContent = iiRows.filter(r=>r._dirty||r._new).length + iiDeleted.length;
+    }
+    function iiUpdateSaveBtn() {
+        document.getElementById('iiBtnSave').disabled = (iiRows.filter(r=>r._dirty||r._new).length + iiDeleted.length) === 0;
+    }
+    function iiSetStatus(msg, type) {
+        const el = document.getElementById('iiStatus');
+        el.textContent = msg; el.className = 'ii-status' + (type?' '+type:'');
+        if (type==='ok') setTimeout(()=>{ if(el.textContent===msg){el.textContent='';el.className='ii-status';} }, 4000);
+    }
+    function iiDeleteRow(id) {
+        const row = iiRowByAnyId(id); if (!row) return;
+        if (row.id) {
+            // Linha já existente no Supabase: confirma, pois será apagada ao salvar.
+            const ref = row.codigo ? `${row.codigo} (${iiKeyLabel(row._k)})` : 'esta linha';
+            if (!confirm(`Excluir ${ref}? A remoção é efetivada ao clicar em "Salvar no Supabase".`)) return;
+            iiDeleted.push(row.id);
+        }
+        // Linha nova (não salva): remove direto, não há nada a perder.
+        iiRows = iiRows.filter(r => r !== row);
+        renderInputInv();
+    }
+    function iiAddRow() {
+        const key = document.getElementById('iiMonth').value || iiAllMonths().slice(-1)[0] || '2026-01';
+        const [y,m] = key.split('-');
+        iiRows.push({ _tmp:iiTmpId(), _k:key, data_ref:`${y}-${m}-01`, codigo:'', tipo:'', moeda:'BRL',
+            qtde:0, preco:0, bruto:0, brutoManual:false, divJcp:0, _dirty:true, _new:true });
+        renderInputInv();
+        const tb=document.getElementById('iiBody'); const last=tb.querySelector('tr:last-child input'); if(last) last.focus();
+    }
+    function iiDuplicateMonth() {
+        const key = document.getElementById('iiMonth').value; if (!key) return;
+        const nk = iiNextKey(key);
+        const source = iiRows.filter(r => r._k === key);
+        if (!source.length) { iiSetStatus('Nada para duplicar neste mês.', 'err'); return; }
+        const existing = iiRows.filter(r => r._k === nk);
+        if (existing.length && !confirm(`Já existem ${existing.length} ativos em ${iiKeyLabel(nk)}. Adicionar mesmo assim?`)) return;
+        const [ny,nm] = nk.split('-');
+        source.forEach(r => iiRows.push({ _tmp:iiTmpId(), _k:nk, data_ref:`${ny}-${nm}-01`,
+            codigo:r.codigo, tipo:r.tipo, moeda:r.moeda, qtde:r.qtde, preco:r.preco,
+            bruto:iiCalcBruto(r), brutoManual:r.brutoManual, divJcp:0, _dirty:true, _new:true }));
+        iiPopulateMonths();
+        document.getElementById('iiMonth').value = nk;
+        renderInputInv();
+        iiSetStatus(`${source.length} linhas duplicadas para ${iiKeyLabel(nk)} (pendentes de salvar).`, 'ok');
+    }
+
+    async function iiCurrentUserId() {
+        const { data:{ session } } = await sbClient.auth.getSession();
+        return session?.user?.id || null;
+    }
+    function iiToInvestPayload(r, uid) {
+        return { user_id: uid, data_ref: r.data_ref, codigo: r.codigo.trim(),
+            tipo_investimento: r.tipo.trim()||'NÃO CLASSIFICADO', moeda: r.moeda||'BRL',
+            qtde: r.qtde||0, preco_unit: r.preco||0, valor_bruto: iiCalcBruto(r), div_jcp: r.divJcp||0 };
+    }
+    async function iiReloadAll() { await loadAllDataFromSupabase(); }  // já chama iiSyncFromRaw no fim
+
+    async function iiSave() {
+        const btn = document.getElementById('iiBtnSave'); btn.disabled = true;
+        iiSetStatus('Salvando...', '');
+        try {
+            const invalids = iiRows.filter(r => (r._dirty||r._new) && (!r.codigo.trim() || !r.tipo.trim()));
+            if (invalids.length) { iiSetStatus(`${invalids.length} linha(s) sem código ou tipo. Corrija antes de salvar.`, 'err'); btn.disabled=false; return; }
+            const uid = await iiCurrentUserId();
+            if (iiDeleted.length) {
+                const { error } = await sbClient.from('investimentos').delete().in('id', iiDeleted);
+                if (error) throw error;
+            }
+            const novos = iiRows.filter(r => r._new).map(r => iiToInvestPayload(r, uid));
+            const editados = iiRows.filter(r => r._dirty && !r._new && r.id);
+            if (novos.length) { const { error } = await sbClient.from('investimentos').insert(novos); if (error) throw error; }
+            for (const r of editados) { const { error } = await sbClient.from('investimentos').update(iiToInvestPayload(r, uid)).eq('id', r.id); if (error) throw error; }
+            iiDeleted = [];
+            await iiReloadAll();
+            renderInputInv();
+            iiSetStatus(`✓ Salvo. ${novos.length} novo(s), ${editados.length} editado(s).`, 'ok');
+        } catch (err) { console.error(err); iiSetStatus('Erro ao salvar: ' + (err.message||err), 'err'); btn.disabled=false; }
+    }
+
+    /* ════════════════ MOVIMENTAÇÕES ════════════════ */
+    function movAtivos(){ return [...new Set(movRows.map(r=>r.codigo))].sort(); }
+    function movPopulateFilter() {
+        const sel = document.getElementById('movAtivoFilter'); const prev = sel.value;
+        sel.innerHTML = '<option value="">Todos</option>';
+        movAtivos().forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+        if (prev && movAtivos().includes(prev)) sel.value = prev;
+    }
+    function renderMov() {
+        movPopulateFilter();
+        const filter = document.getElementById('movAtivoFilter').value;
+        const rows = filter ? movRows.filter(r=>r.codigo===filter) : movRows;
+        const sorted = [...rows].sort((a,b)=> brToIso(b.data).localeCompare(brToIso(a.data)));
+        const tbody = document.getElementById('movBody'); tbody.innerHTML = '';
+        if (!sorted.length) tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Nenhuma movimentação encontrada.</td></tr>';
+        sorted.forEach(r => {
+            const tr = document.createElement('tr');
+            const badge = r.op==='COMPRA' ? 'badge-compra' : 'badge-venda';
+            tr.innerHTML = `<td>${r.data}</td><td><strong>${r.codigo}</strong></td><td>${r.tipo}</td>
+                <td><span class="${badge}">${r.op}</span></td><td class="num">${iiFmtNum(r.qtde)}</td>
+                <td class="num">${iiFmtNum(r.preco)}</td><td class="num">${iiFmtNum(r.montante)}</td>
+                <td>${r.moeda}</td><td class="num">${r.moeda==='USD'&&r.ptax?iiFmtNum(r.ptax):'—'}</td><td class="row-actions"></td>`;
+            const tdAct = tr.querySelector('.row-actions');
+            const btn = document.createElement('button'); btn.className='act-discard'; btn.textContent='✕'; btn.title='Excluir';
+            btn.addEventListener('click', ()=>movDelete(r.id));
+            tdAct.appendChild(btn);
+            tbody.appendChild(tr);
+        });
+        const kpi = document.getElementById('movKpis');
+        const compras = rows.filter(r=>r.op==='COMPRA'), vendas = rows.filter(r=>r.op==='VENDA');
+        const brl = r => r.moeda==='USD' ? r.montante*(r.ptax||0) : r.montante;
+        const qLiq = rows.reduce((a,r)=>a+(r.op==='COMPRA'?r.qtde:-r.qtde),0);
+        kpi.innerHTML = `<div class="mov-kpi-item">Movimentações: <strong>${rows.length}</strong></div>
+            <div class="mov-kpi-item">Compras (BRL): <strong>${iiFmtNum(compras.reduce((a,r)=>a+brl(r),0))}</strong></div>
+            <div class="mov-kpi-item">Vendas (BRL): <strong>${iiFmtNum(vendas.reduce((a,r)=>a+brl(r),0))}</strong></div>
+            <div class="mov-kpi-item">Qtde líquida: <strong>${iiFmtNum(qLiq)}</strong></div>`;
+    }
+
+    /* ── MODAL ── */
+    let modalOp = 'COMPRA';
+    function setModalOp(op) {
+        modalOp = op;
+        document.getElementById('modalBtnCompra').className = op==='COMPRA'?'active-compra':'';
+        document.getElementById('modalBtnVenda').className = op==='VENDA'?'active-venda':'';
+        const refWrap=document.getElementById('modalRefWrap');
+        const cod=document.getElementById('modalCodigo'), tipo=document.getElementById('modalTipo');
+        if (op==='VENDA') { refWrap.style.display=''; movPopulateRef(); cod.disabled=true; tipo.disabled=true; }
+        else { refWrap.style.display='none'; cod.disabled=false; cod.value=''; tipo.disabled=false; tipo.value=''; }
+    }
+    function movPopulateRef() {
+        const sel = document.getElementById('modalRefAtivo');
+        sel.innerHTML = '<option value="">Selecione o ativo...</option>';
+        movAtivos().forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+        sel.onchange = () => {
+            const cod = sel.value; if(!cod) return;
+            document.getElementById('modalCodigo').value = cod;
+            const ref = movRows.find(r=>r.codigo===cod);
+            if (ref) document.getElementById('modalTipo').value = ref.tipo||'';
+        };
+    }
+    function openModal() {
+        setModalOp('COMPRA');
+        ['modalData','modalCodigo','modalQtde','modalPreco','modalMontante','modalPtax'].forEach(id=>document.getElementById(id).value='');
+        document.getElementById('modalTipo').value=''; document.getElementById('modalMoeda').value='BRL';
+        document.getElementById('modalPtaxWrap').style.display='none';
+        document.getElementById('modalMovOverlay').classList.add('open');
+    }
+    function closeModal(){ document.getElementById('modalMovOverlay').classList.remove('open'); }
+    function onModalMoedaChange() {
+        document.getElementById('modalPtaxWrap').style.display = document.getElementById('modalMoeda').value==='USD'?'':'none';
+        updateModalMontante();
+    }
+    function updateModalMontante() {
+        const q=iiParseNum(document.getElementById('modalQtde').value);
+        const p=iiParseNum(document.getElementById('modalPreco').value);
+        const m=q*p;
+        document.getElementById('modalMontante').value = m ? iiFmtInput(Math.round(m*100)/100) : '';
+    }
+    async function confirmModal() {
+        const dataBR = document.getElementById('modalData').value.trim();
+        let codigo = document.getElementById('modalCodigo').value.trim().toUpperCase();
+        let tipo = document.getElementById('modalTipo').value;
+        const qtde = iiParseNum(document.getElementById('modalQtde').value);
+        const preco = iiParseNum(document.getElementById('modalPreco').value);
+        const moeda = document.getElementById('modalMoeda').value;
+        const ptax = moeda==='USD' ? iiParseNum(document.getElementById('modalPtax').value) : 0;
+        if (modalOp==='VENDA') {
+            const refCod = document.getElementById('modalRefAtivo').value;
+            if (!refCod) { alert('Selecione o ativo de referência para a venda.'); return; }
+            codigo = refCod;
+            const ref = movRows.find(r=>r.codigo===refCod); tipo = ref ? ref.tipo : tipo;
+        }
+        if (!dataBR||!codigo||!tipo||!qtde||!preco) { alert('Preencha Data, Código, Tipo, Qtde e Preço.'); return; }
+        if (moeda==='USD' && !ptax) { alert('Informe o PTAX para moeda USD.'); return; }
+        if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dataBR)) { alert('Data deve ser DD/MM/AAAA.'); return; }
+        const payload = { user_id: await iiCurrentUserId(), data_ref: brToIso(dataBR), codigo, tipo,
+            operacao: modalOp, moeda, qtde, preco_unit: preco, montante: qtde*preco, ptax };
+        try {
+            const { error } = await sbClient.from('movimentacoes_rv').insert([payload]);
+            if (error) throw error;
+            closeModal(); await iiReloadAll(); renderMov();
+        } catch (err) { console.error(err); alert('Erro ao salvar movimentação: ' + (err.message||err)); }
+    }
+    async function movDelete(id) {
+        if (!id || !confirm('Excluir esta movimentação?')) return;
+        try {
+            const { error } = await sbClient.from('movimentacoes_rv').delete().eq('id', id);
+            if (error) throw error;
+            await iiReloadAll(); renderMov();
+        } catch (err) { console.error(err); alert('Erro ao excluir: ' + (err.message||err)); }
+    }
+
+    /* ── LISTENERS das telas de input ── */
+    document.getElementById('iiMonth').addEventListener('change', renderInputInv);
+    document.getElementById('iiBtnAdd').addEventListener('click', iiAddRow);
+    document.getElementById('iiBtnDuplicate').addEventListener('click', iiDuplicateMonth);
+    document.getElementById('iiBtnSave').addEventListener('click', iiSave);
+    document.getElementById('btnNovaMovimentacao').addEventListener('click', openModal);
+    document.getElementById('movAtivoFilter').addEventListener('change', renderMov);
+    document.getElementById('modalQtde').addEventListener('input', updateModalMontante);
+    document.getElementById('modalPreco').addEventListener('input', updateModalMontante);
+    document.getElementById('modalData').addEventListener('input', function(e){
+        let v=e.target.value.replace(/\D/g,''); if(v.length>8)v=v.slice(0,8);
+        if(v.length>4)v=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4);
+        else if(v.length>2)v=v.slice(0,2)+'/'+v.slice(2);
+        e.target.value=v;
+    });
+    document.getElementById('modalMovOverlay').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
 </script>
 </body>
 </html>
