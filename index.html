@@ -816,8 +816,10 @@
     .ii-table tr.dirty-row { background:rgba(5,150,105,.04); }
     .ii-table .empty-state, .mov-table .empty-state { text-align:center; color:var(--muted); padding:2rem; font-style:italic; }
     /* Coluna Tipo precisa de mais espaço — a seta nativa do <select> sobrepunha o texto */
-    .ii-table th:nth-child(3), .ii-table td:nth-child(3) { min-width: 160px; }
+    .ii-table:not(.dolar-table) th:nth-child(3), .ii-table:not(.dolar-table) td:nth-child(3) { min-width: 160px; }
     .ii-table td select { padding-right: 1.4rem !important; }
+    /* Tabela de câmbio: campo PTAX compacto */
+    .dolar-table td input { max-width: 110px; }
     .act-discard {
         background:transparent; border:none; color:#DC2626; cursor:pointer; font-size:15px;
         padding:.2rem .4rem; border-radius:5px; transition:background .15s;
@@ -1012,7 +1014,7 @@
                 </div>
                 <div class="sb-link" data-view="dolar" onclick="switchView('dolar')">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-                    <span class="sb-link-label">Dólar (PTAX)</span>
+                    <span class="sb-link-label">Câmbio</span>
                 </div>
             </nav>
         </div>
@@ -1170,12 +1172,12 @@
         </div>
     </div>
 
-    <!-- VIEW: DÓLAR (PTAX) -->
+    <!-- VIEW: CÂMBIO (PTAX) -->
     <div id="view-dolar" class="view">
         <div class="view-header">
             <div>
-                <h1 class="view-title">Dólar (PTAX)</h1>
-                <div class="view-subtitle">Cotação mensal BRL/USD — alimenta a conversão de moeda do dashboard</div>
+                <h1 class="view-title">Câmbio</h1>
+                <div class="view-subtitle">Cotação mensal PTAX (BRL/USD) — alimenta a conversão de moeda do dashboard</div>
             </div>
         </div>
 
@@ -1205,8 +1207,8 @@
         <div class="ii-toolbar">
             <label>Adicionar / atualizar:</label>
             <select id="dolarInputMonth" style="font-family:'Inter',sans-serif;font-size:13px;border-radius:8px;padding:.45rem .75rem;border:1px solid var(--border);background:var(--surface);color:var(--text)"></select>
-            <input type="text" id="dolarInputPtax" placeholder="Ex: 5,30" style="font-family:'Inter',sans-serif;font-size:13px;border-radius:8px;padding:.45rem .75rem;border:1px solid var(--border);background:var(--surface);color:var(--text);width:120px">
-            <button id="dolarBtnAdd">+ Adicionar / Atualizar</button>
+            <input type="text" id="dolarInputPtax" placeholder="Ex: 5,30" style="font-family:'Inter',sans-serif;font-size:13px;border-radius:8px;padding:.45rem .75rem;border:1px solid var(--border);background:var(--surface);color:var(--text);width:100px">
+            <button id="dolarBtnAdd">+ Adicionar</button>
             <div class="spacer"></div>
             <button id="dolarBtnSave" class="primary" disabled>Gravar alterações</button>
         </div>
@@ -1216,11 +1218,12 @@
             <div class="card-title" style="margin-bottom:.15rem">Histórico de cotações</div>
             <div class="card-sub">Apenas uma PTAX por mês — adicionar um mês já existente atualiza o valor</div>
             <div style="overflow-x:auto">
-                <table class="ii-table">
+                <table class="ii-table dolar-table">
                     <thead>
                         <tr>
+                            <th style="width:80px">Ano</th>
                             <th>Mês</th>
-                            <th>PTAX (BRL/USD)</th>
+                            <th style="width:140px">PTAX</th>
                             <th style="width:48px"></th>
                         </tr>
                     </thead>
@@ -4670,8 +4673,22 @@
         const payload = { user_id: await iiCurrentUserId(), data_ref: brToIso(dataBR), codigo, tipo,
             operacao: modalOp, moeda, qtde, preco_unit: preco, montante: qtde*preco, ptax };
         try {
+            const uid = await iiCurrentUserId();
             const { error } = await sbClient.from('movimentacoes_rv').insert([payload]);
             if (error) throw error;
+
+            // Recarrega para o reconcile usar movRows com a nova mov
+            await iiReloadAll();
+
+            /* ── Auto-sync: reconcilia o snapshot de investimentos a partir das movs ──
+               Regra unificada: o reconcile aplica as regras corretas
+               (qtde acumulada, preço da última mov do mês, propagação aos meses
+               posteriores). Vale tanto para COMPRA quanto para VENDA. */
+            const mk = isoMonthKey(brToIso(dataBR));
+            let syncCount = 0;
+            try { syncCount = await reconcileInvestFromMonth(codigo, mk, uid); }
+            catch (syncErr) { console.warn('Auto-sync investimento falhou (não-bloqueante):', syncErr.message); }
+
             closeModal(); await iiReloadAll();
             // Garante que a movimentação recém-gravada fique visível mesmo se a data
             // não for do mês selecionado na ribbon.
@@ -4679,14 +4696,28 @@
             const tgl = document.getElementById('movHistToggle');
             tgl.textContent = 'Mostrar só o mês selecionado'; tgl.classList.add('active');
             renderMov();
+            if (syncCount) console.log(`✓ ${syncCount} posição(ões) em Investimentos sincronizada(s)`);
         } catch (err) { console.error(err); alert('Erro ao salvar movimentação: ' + (err.message||err)); }
     }
     async function movDelete(id) {
         if (!id || !confirm('Excluir esta movimentação?')) return;
+        // Captura codigo/mes ANTES de deletar (movRows ainda contém a linha)
+        const row = movRows.find(r => String(r.id) === String(id));
+        const codigo = row ? row.codigo : null;
+        const mk = row ? isoMonthKey(brToIso(row.data)) : null;
         try {
             const { error } = await sbClient.from('movimentacoes_rv').delete().eq('id', id);
             if (error) throw error;
-            await iiReloadAll(); renderMov();
+            await iiReloadAll();
+            // Reconcilia o snapshot — pode ter ficado com qtde defasada
+            if (codigo && mk) {
+                try {
+                    const uid = await iiCurrentUserId();
+                    await reconcileInvestFromMonth(codigo, mk, uid);
+                    await iiReloadAll();
+                } catch (syncErr) { console.warn('Reconcile após exclusão falhou:', syncErr.message); }
+            }
+            renderMov();
         } catch (err) { console.error(err); alert('Erro ao excluir: ' + (err.message||err)); }
     }
 
@@ -4739,10 +4770,76 @@
                 const { error } = await sbClient.from('movimentacoes_rv').update(payload).eq('id', r.id);
                 if (error) throw error;
             }
+            // Recarrega movRows para o reconcile usar dados frescos
+            await iiReloadAll();
+            // Reconcilia snapshots de investimentos para cada (ativo, mês) afetado
+            const uid = await iiCurrentUserId();
+            const affected = new Set(editados.map(r => `${r.codigo}|${isoMonthKey(brToIso(r.data))}`));
+            let syncCount = 0;
+            for (const pair of affected) {
+                const [codigo, mk] = pair.split('|');
+                syncCount += await reconcileInvestFromMonth(codigo, mk, uid);
+            }
             await iiReloadAll(); renderMov();
-            status.textContent = `✓ ${editados.length} movimentação(ões) atualizada(s).`; status.className = 'ii-status ok';
-            setTimeout(()=>{ if (status.textContent.startsWith('✓')) { status.textContent=''; status.className='ii-status'; } }, 4000);
+            const syncMsg = syncCount ? ` (+${syncCount} posição(ões) em Investimentos sincronizada(s))` : '';
+            status.textContent = `✓ ${editados.length} movimentação(ões) atualizada(s)${syncMsg}.`; status.className = 'ii-status ok';
+            setTimeout(()=>{ if (status.textContent.startsWith('✓')) { status.textContent=''; status.className='ii-status'; } }, 5000);
         } catch (err) { console.error(err); status.textContent = 'Erro: ' + (err.message||err); status.className = 'ii-status err'; btn.disabled = false; }
+    }
+
+    /* ════════════════ AUTO-SYNC MOVIMENTAÇÕES → INVESTIMENTOS ════════════════
+       Regras (definidas pelo usuário):
+       • Qtde do snapshot = acumulado de compras − vendas até o fim do mês
+       • Preço Unit. = preço da última (mais recente) movimentação do mês
+       • Sem mov no mês mas com snapshot → preserva preço/moeda/tipo existentes
+         (só atualiza qtde acumulada — caso de edição em mês anterior se propagar)
+       • Sem mov e sem snapshot → não faz nada
+       • Div/JCP existente é preservado */
+    async function reconcileInvestMonth(codigo, mk, uid) {
+        // Qtde acumulada (todas as movs do ativo até o fim do mês)
+        let qtdeAcum = 0;
+        movRows.filter(r => r.codigo === codigo).forEach(m => {
+            if (isoMonthKey(brToIso(m.data)) <= mk) qtdeAcum += (m.op === 'COMPRA' ? m.qtde : -m.qtde);
+        });
+        // Última mov DO mês (preço/moeda/tipo)
+        const movsInMonth = movRows
+            .filter(r => r.codigo === codigo && isoMonthKey(brToIso(r.data)) === mk)
+            .sort((a,b) => brToIso(b.data).localeCompare(brToIso(a.data)));
+        const existing = iiRows.find(r => r._k === mk && r.codigo === codigo);
+        let preco, moeda, tipo;
+        if (movsInMonth.length) {
+            const last = movsInMonth[0]; preco = last.preco; moeda = last.moeda; tipo = last.tipo;
+        } else if (existing) {
+            preco = existing.preco; moeda = existing.moeda; tipo = existing.tipo;
+        } else {
+            return 0; // Nada a fazer
+        }
+        if (qtdeAcum === 0 && !existing) return 0; // não cria snapshot zerado
+        const payload = {
+            user_id: uid, data_ref: `${mk}-01`, codigo,
+            tipo_investimento: tipo || 'NÃO CLASSIFICADO', moeda: moeda || 'BRL',
+            qtde: qtdeAcum, preco_unit: preco || 0,
+            valor_bruto: qtdeAcum * (preco || 0),
+            div_jcp: existing ? existing.divJcp : 0
+        };
+        if (existing && existing.id) {
+            const { error } = await sbClient.from('investimentos').update(payload).eq('id', existing.id);
+            if (error) { console.warn('Reconcile UPDATE falhou:', error.message); return 0; }
+        } else {
+            const { error } = await sbClient.from('investimentos').insert(payload);
+            if (error) { console.warn('Reconcile INSERT falhou:', error.message); return 0; }
+        }
+        return 1;
+    }
+    // Reconcilia o mês informado E todos os meses posteriores que tenham
+    // snapshot OU movimentação desse ativo (propaga qtde acumulada à frente).
+    async function reconcileInvestFromMonth(codigo, startMk, uid) {
+        const monthsWithSnap = iiRows.filter(r => r.codigo === codigo && r._k >= startMk).map(r => r._k);
+        const monthsWithMov  = movRows.filter(r => r.codigo === codigo).map(r => isoMonthKey(brToIso(r.data))).filter(mk => mk >= startMk);
+        const targets = [...new Set([...monthsWithSnap, ...monthsWithMov, startMk])].sort();
+        let count = 0;
+        for (const mk of targets) count += await reconcileInvestMonth(codigo, mk, uid);
+        return count;
     }
 
     /* ════════════════ DÓLAR (PTAX) ════════════════
@@ -4786,16 +4883,21 @@
         dolarPopulateMonthSelect();
         const tbody = document.getElementById('dolarBody'); tbody.innerHTML = '';
         const sorted = [...dolarRows].sort((a,b) => b._k.localeCompare(a._k));
+        const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
         if (!sorted.length) {
-            tbody.innerHTML = '<tr><td colspan="3" class="empty-state">Nenhuma cotação cadastrada. Use o campo acima para adicionar.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Nenhuma cotação cadastrada. Use o campo acima para adicionar.</td></tr>';
         }
         sorted.forEach(r => {
             const tr = document.createElement('tr');
             if (r._dirty || r._new) tr.classList.add('dirty-row');
-            // Coluna 1: nome do mês (read-only)
-            const tdMes = document.createElement('td'); tdMes.className = 'static-cell'; tdMes.textContent = dolarMonthLabel(r._k);
+            const [y,m] = r._k.split('-');
+            // Coluna 1: Ano (read-only)
+            const tdAno = document.createElement('td'); tdAno.className = 'static-cell'; tdAno.textContent = y;
+            tr.appendChild(tdAno);
+            // Coluna 2: Mês (read-only)
+            const tdMes = document.createElement('td'); tdMes.className = 'static-cell'; tdMes.textContent = meses[parseInt(m,10)-1] || m;
             tr.appendChild(tdMes);
-            // Coluna 2: PTAX editável
+            // Coluna 3: PTAX editável
             const tdPtax = document.createElement('td');
             const inp = document.createElement('input'); inp.type = 'text';
             inp.value = iiFmtInput(r.ptax); inp.style.textAlign = 'right';
@@ -4807,7 +4909,7 @@
                 dolarUpdateKpis(); dolarUpdateSaveBtn();
             });
             tdPtax.appendChild(inp); tr.appendChild(tdPtax);
-            // Coluna 3: excluir
+            // Coluna 4: excluir
             const tdAct = document.createElement('td'); tdAct.style.textAlign = 'right';
             const btn = document.createElement('button'); btn.className = 'act-discard'; btn.textContent = '✕'; btn.title = 'Excluir cotação';
             btn.addEventListener('click', () => dolarDeleteRow(r));
