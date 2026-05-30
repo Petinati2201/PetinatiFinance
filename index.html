@@ -1106,6 +1106,8 @@
                             <th>Qtde</th>
                             <th>Preço Unit.</th>
                             <th class="calc">Valor Bruto</th>
+                            <th>Aportado</th>
+                            <th>Rentab.</th>
                             <th>Div / JCP</th>
                             <th style="width:48px"></th>
                         </tr>
@@ -1115,7 +1117,9 @@
             </div>
             <div class="legend-note">
                 <span><span class="swatch edit"></span> <b>Editável</b> — você digita</span>
-                <span><span class="swatch calc"></span> <b>Calculado</b> — Qtde × Preço</span>
+                <span><span class="swatch calc"></span> <b>Calculado</b> — Qtde × Preço (RV); Saldo direto (RF)</span>
+                <span><b>Aportado</b> — soma de Movimentações até o mês</span>
+                <span><b>Rentab.</b> — (Bruto − Aportado) / Aportado</span>
                 <span>Linhas em destaque têm alterações não salvas.</span>
             </div>
         </div>
@@ -4383,12 +4387,18 @@
 
     /* ── SINCRONIZA estado local a partir das linhas cruas do Supabase ── */
     function iiSyncFromRaw() {
-        iiRows = iiRawInvest.map(r => ({
-            id: r.id, _k: isoMonthKey(r.data_ref), data_ref: String(r.data_ref).slice(0,10),
-            codigo: r.codigo||'', tipo: r.tipo_investimento||'', moeda: r.moeda||'BRL',
-            qtde: Number(r.qtde)||0, preco: Number(r.preco_unit)||0, bruto: Number(r.valor_bruto)||0,
-            brutoManual:false, divJcp: Number(r.div_jcp)||0, _dirty:false, _new:false
-        }));
+        iiRows = iiRawInvest.map(r => {
+            const tipo = r.tipo_investimento || '';
+            // RF: o "preço unitário" é o saldo do extrato. brutoManual=true para
+            // que iiCalcBruto use o campo bruto direto, ignorando qtde×preco.
+            const isRF = (tipo.toUpperCase().trim() === 'RENDA FIXA');
+            return {
+                id: r.id, _k: isoMonthKey(r.data_ref), data_ref: String(r.data_ref).slice(0,10),
+                codigo: r.codigo||'', tipo, moeda: r.moeda||'BRL',
+                qtde: Number(r.qtde)||0, preco: Number(r.preco_unit)||0, bruto: Number(r.valor_bruto)||0,
+                brutoManual: isRF, divJcp: Number(r.div_jcp)||0, _dirty:false, _new:false
+            };
+        });
         movRows = iiRawMov.map(r => ({
             id: r.id, data: isoToBR(r.data_ref), codigo: r.codigo||'', tipo: r.tipo||'',
             op: r.operacao||'COMPRA', moeda: r.moeda||'BRL', qtde: Number(r.qtde)||0,
@@ -4413,6 +4423,19 @@
         if (lbl) lbl.textContent = iiKeyLabel(key);
     }
 
+    // Soma de aportes (compras - vendas) das movimentações de um ativo até o mês.
+    // Retorna na moeda da própria movimentação (sem conversão).
+    function iiAportadoAteMes(codigo, monthKey){
+        let total = 0;
+        for (const m of movRows) {
+            if (m.codigo !== codigo) continue;
+            const mk = isoMonthKey(brToIso(m.data));
+            if (mk > monthKey) continue;
+            total += (m.op === 'COMPRA' ? m.montante : -m.montante);
+        }
+        return total;
+    }
+
     function renderInputInv() {
         iiPopulateMonths();
         const key = document.getElementById('iiMonth').value;
@@ -4420,10 +4443,12 @@
         const rows = iiRows.filter(r => r._k === key);
         tbody.innerHTML = '';
         if (rows.length === 0)
-            tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhum ativo neste mês. Use "Adicionar ativo" ou "Duplicar".</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" class="empty-state">Nenhum ativo neste mês. Use "Adicionar ativo" ou "Duplicar".</td></tr>';
         rows.forEach(row => {
             const tr = document.createElement('tr');
             if (row._dirty || row._new) tr.classList.add('dirty-row');
+            const isRF = (String(row.tipo||'').toUpperCase().trim() === 'RENDA FIXA');
+            // Para RF, a tabela mostra: qtde="—", preco="—", bruto editável (saldo do extrato).
             const fields = [
                 {key:'data_ref',type:'date'},{key:'codigo',type:'text'},{key:'tipo',type:'tipo'},
                 {key:'moeda',type:'moeda'},{key:'qtde',type:'num'},{key:'preco',type:'num'},
@@ -4431,6 +4456,27 @@
             ];
             fields.forEach(f => {
                 const td = document.createElement('td');
+                // RF: qtde e preço viram "—" não-editáveis
+                if (isRF && (f.key === 'qtde' || f.key === 'preco')) {
+                    td.className = 'static-cell';
+                    td.textContent = '—';
+                    td.style.textAlign = 'center';
+                    td.style.color = 'var(--muted)';
+                    tr.appendChild(td); return;
+                }
+                // RF: bruto vira input editável (Saldo Atual)
+                if (isRF && f.key === 'bruto') {
+                    const inp = document.createElement('input'); inp.type='text';
+                    inp.value = iiFmtInput(iiCalcBruto(row));
+                    inp.style.textAlign = 'right';
+                    inp.style.fontWeight = '600';
+                    inp.dataset.id = row.id||row._tmp; inp.dataset.key = 'bruto'; inp.dataset.kind = 'num';
+                    inp.title = 'Saldo do extrato (substitui Qtde × Preço para Renda Fixa)';
+                    inp.addEventListener('input', iiOnField);
+                    td.appendChild(inp);
+                    tr.appendChild(td); return;
+                }
+                // Caminho padrão (RV, cripto, outros)
                 if (f.type==='calc') { td.className='calc-cell'; td.textContent=iiFmtNum(iiCalcBruto(row)); }
                 else if (f.type==='tipo' || f.type==='moeda') {
                     const opts = f.type==='tipo' ? ['','CRIPTO','IMÓVEL','MOEDA','RENDA FIXA','RENDA VARIÁVEL','RENDA VARIÁVEL EXTERIOR'] : ['BRL','USD'];
@@ -4450,6 +4496,32 @@
                 }
                 tr.appendChild(td);
             });
+            // Coluna Aportado (calculada a partir das movimentações)
+            const aportado = iiAportadoAteMes(row.codigo, row._k);
+            const bruto = iiCalcBruto(row);
+            const sym = row.moeda === 'USD' ? 'US$' : 'R$';
+            const tdAp = document.createElement('td');
+            tdAp.className = 'static-cell'; tdAp.style.textAlign = 'right';
+            tdAp.style.color = 'var(--muted)'; tdAp.style.fontVariantNumeric = 'tabular-nums';
+            tdAp.textContent = aportado > 0 ? `${sym} ${iiFmtNum(aportado)}` : '—';
+            tdAp.title = 'Soma de COMPRAS − VENDAS das Movimentações até este mês';
+            tr.appendChild(tdAp);
+            // Coluna Rentab.
+            const tdR = document.createElement('td');
+            tdR.className = 'static-cell'; tdR.style.textAlign = 'right';
+            tdR.style.fontVariantNumeric = 'tabular-nums'; tdR.style.fontWeight = '600';
+            if (aportado > 0 && bruto > 0) {
+                const rend = bruto - aportado;
+                const pct = (rend / aportado) * 100;
+                const sign = rend >= 0 ? '+' : '';
+                tdR.textContent = `${sign}${iiFmtNum(pct)}%`;
+                tdR.style.color = rend >= 0 ? '#059669' : '#DC2626';
+                tdR.title = `Rendimento: ${sign}${sym} ${iiFmtNum(rend)}`;
+            } else {
+                tdR.textContent = '—'; tdR.style.color = 'var(--muted)';
+            }
+            tr.appendChild(tdR);
+            // Ação remover
             const tdAct = document.createElement('td'); tdAct.style.textAlign='right';
             const btn = document.createElement('button'); btn.className='act-discard'; btn.textContent='✕'; btn.title='Remover linha';
             btn.addEventListener('click', ()=>iiDeleteRow(row.id||row._tmp));
@@ -4464,12 +4536,43 @@
         const row = iiRowByAnyId(e.target.dataset.id); if (!row) return;
         const key = e.target.dataset.key, kind = e.target.dataset.kind, val = e.target.value;
         if (key==='data_ref') { const iso=brToIso(val); if(iso){row.data_ref=iso; row._k=isoMonthKey(iso);} }
-        else if (kind==='num'||key==='qtde'||key==='preco'||key==='divJcp') { row[key]=iiParseNum(val); if(key==='qtde'||key==='preco')row.brutoManual=false; }
+        else if (key === 'bruto') {
+            // Edição direta do Valor Bruto (modo RF): trava brutoManual.
+            row.bruto = iiParseNum(val);
+            row.brutoManual = true;
+        }
+        else if (kind==='num'||key==='qtde'||key==='preco'||key==='divJcp') {
+            row[key]=iiParseNum(val);
+            if(key==='qtde'||key==='preco') row.brutoManual=false;
+        }
+        else if (key === 'tipo') {
+            const newTipo = val;
+            const wasRF = (String(row.tipo||'').toUpperCase().trim() === 'RENDA FIXA');
+            const isRF  = (String(newTipo).toUpperCase().trim() === 'RENDA FIXA');
+            row.tipo = newTipo;
+            if (isRF && !wasRF) {
+                // Transição → RF: trava Saldo como bruto direto.
+                // Se já tinha qtde×preco, preserva esse valor como Saldo inicial.
+                row.bruto = iiCalcBruto(row);
+                row.brutoManual = true;
+                row.qtde = 1; row.preco = row.bruto; // normaliza
+            } else if (!isRF && wasRF) {
+                // Saindo de RF: volta para fórmula qtde×preco.
+                row.brutoManual = false;
+                // Mantém os valores como estão; o usuário ajusta qtde/preco.
+            }
+            row._dirty = true;
+            renderInputInv(); // re-render para refletir a mudança visual de RF
+            return;
+        }
         else { row[key] = key==='codigo' ? val.toUpperCase() : val; }
         row._dirty = true;
         if (e.target.classList) e.target.classList.add('changed');
         const tr = e.target.closest('tr');
-        if (tr) { const c=tr.querySelector('.calc-cell'); if(c) c.textContent=iiFmtNum(iiCalcBruto(row)); }
+        if (tr) {
+            const c = tr.querySelector('.calc-cell');
+            if(c) c.textContent = iiFmtNum(iiCalcBruto(row));
+        }
         iiRenderKpis(iiRows.filter(r => r._k === document.getElementById('iiMonth').value));
         iiUpdateSaveBtn();
     }
@@ -4528,9 +4631,15 @@
         return session?.user?.id || null;
     }
     function iiToInvestPayload(r, uid) {
+        const isRF = (String(r.tipo||'').toUpperCase().trim() === 'RENDA FIXA');
+        const bruto = iiCalcBruto(r);
+        // RF: normaliza para qtde=1, preco_unit=bruto (saldo). Mantém o esquema da
+        // tabela investimentos sem mudar, mas evita o lixo de qtde acumulada × preço.
         return { user_id: uid, data_ref: r.data_ref, codigo: r.codigo.trim(),
             tipo_investimento: r.tipo.trim()||'NÃO CLASSIFICADO', moeda: r.moeda||'BRL',
-            qtde: r.qtde||0, preco_unit: r.preco||0, valor_bruto: iiCalcBruto(r), div_jcp: r.divJcp||0 };
+            qtde: isRF ? 1 : (r.qtde||0),
+            preco_unit: isRF ? bruto : (r.preco||0),
+            valor_bruto: bruto, div_jcp: r.divJcp||0 };
     }
     async function iiReloadAll() { await loadAllDataFromSupabase(); }  // já chama iiSyncFromRaw no fim
 
