@@ -1106,8 +1106,6 @@
                             <th>Qtde</th>
                             <th>Preço Unit.</th>
                             <th class="calc">Valor Bruto</th>
-                            <th>Aportado</th>
-                            <th>Rentab.</th>
                             <th>Div / JCP</th>
                             <th style="width:48px"></th>
                         </tr>
@@ -1118,8 +1116,6 @@
             <div class="legend-note">
                 <span><span class="swatch edit"></span> <b>Editável</b> — você digita</span>
                 <span><span class="swatch calc"></span> <b>Calculado</b> — Qtde × Preço (RV); Saldo direto (RF)</span>
-                <span><b>Aportado</b> — soma de Movimentações até o mês</span>
-                <span><b>Rentab.</b> — (Bruto − Aportado) / Aportado</span>
                 <span>Linhas em destaque têm alterações não salvas.</span>
             </div>
         </div>
@@ -4423,19 +4419,6 @@
         if (lbl) lbl.textContent = iiKeyLabel(key);
     }
 
-    // Soma de aportes (compras - vendas) das movimentações de um ativo até o mês.
-    // Retorna na moeda da própria movimentação (sem conversão).
-    function iiAportadoAteMes(codigo, monthKey){
-        let total = 0;
-        for (const m of movRows) {
-            if (m.codigo !== codigo) continue;
-            const mk = isoMonthKey(brToIso(m.data));
-            if (mk > monthKey) continue;
-            total += (m.op === 'COMPRA' ? m.montante : -m.montante);
-        }
-        return total;
-    }
-
     function renderInputInv() {
         iiPopulateMonths();
         const key = document.getElementById('iiMonth').value;
@@ -4443,7 +4426,7 @@
         const rows = iiRows.filter(r => r._k === key);
         tbody.innerHTML = '';
         if (rows.length === 0)
-            tbody.innerHTML = '<tr><td colspan="11" class="empty-state">Nenhum ativo neste mês. Use "Adicionar ativo" ou "Duplicar".</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhum ativo neste mês. Use "Adicionar ativo" ou "Duplicar".</td></tr>';
         rows.forEach(row => {
             const tr = document.createElement('tr');
             if (row._dirty || row._new) tr.classList.add('dirty-row');
@@ -4496,31 +4479,6 @@
                 }
                 tr.appendChild(td);
             });
-            // Coluna Aportado (calculada a partir das movimentações)
-            const aportado = iiAportadoAteMes(row.codigo, row._k);
-            const bruto = iiCalcBruto(row);
-            const sym = row.moeda === 'USD' ? 'US$' : 'R$';
-            const tdAp = document.createElement('td');
-            tdAp.className = 'static-cell'; tdAp.style.textAlign = 'right';
-            tdAp.style.color = 'var(--muted)'; tdAp.style.fontVariantNumeric = 'tabular-nums';
-            tdAp.textContent = aportado > 0 ? `${sym} ${iiFmtNum(aportado)}` : '—';
-            tdAp.title = 'Soma de COMPRAS − VENDAS das Movimentações até este mês';
-            tr.appendChild(tdAp);
-            // Coluna Rentab.
-            const tdR = document.createElement('td');
-            tdR.className = 'static-cell'; tdR.style.textAlign = 'right';
-            tdR.style.fontVariantNumeric = 'tabular-nums'; tdR.style.fontWeight = '600';
-            if (aportado > 0 && bruto > 0) {
-                const rend = bruto - aportado;
-                const pct = (rend / aportado) * 100;
-                const sign = rend >= 0 ? '+' : '';
-                tdR.textContent = `${sign}${iiFmtNum(pct)}%`;
-                tdR.style.color = rend >= 0 ? '#059669' : '#DC2626';
-                tdR.title = `Rendimento: ${sign}${sym} ${iiFmtNum(rend)}`;
-            } else {
-                tdR.textContent = '—'; tdR.style.color = 'var(--muted)';
-            }
-            tr.appendChild(tdR);
             // Ação remover
             const tdAct = document.createElement('td'); tdAct.style.textAlign='right';
             const btn = document.createElement('button'); btn.className='act-discard'; btn.textContent='✕'; btn.title='Remover linha';
