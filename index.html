@@ -4794,8 +4794,21 @@
        • Sem mov no mês mas com snapshot → preserva preço/moeda/tipo existentes
          (só atualiza qtde acumulada — caso de edição em mês anterior se propagar)
        • Sem mov e sem snapshot → não faz nada
-       • Div/JCP existente é preservado */
+       • Div/JCP existente é preservado
+       ⚠️ Só reconcilia tipos baseados em quantidade (RV, RV Exterior, Cripto).
+         Renda fixa, imóvel e moeda ficam de fora — valor_bruto depende de
+         rendimentos que não constam nas movimentações. */
+    const QTY_BASED_TYPES = ['RENDA VARIÁVEL', 'RENDA VARIÁVEL EXTERIOR', 'CRIPTO'];
+    function isQtyBased(codigo) {
+        // Determina o tipo pelo ativo mais recente (mov ou snapshot)
+        const mov = movRows.find(r => r.codigo === codigo);
+        const snap = iiRows.find(r => r.codigo === codigo);
+        const tipo = (mov && mov.tipo) || (snap && snap.tipo) || '';
+        return QTY_BASED_TYPES.includes(tipo.toUpperCase().trim());
+    }
     async function reconcileInvestMonth(codigo, mk, uid) {
+        // Pula tipos não baseados em quantidade (renda fixa, imóvel, moeda)
+        if (!isQtyBased(codigo)) return 0;
         // Qtde acumulada (todas as movs do ativo até o fim do mês)
         let qtdeAcum = 0;
         movRows.filter(r => r.codigo === codigo).forEach(m => {
