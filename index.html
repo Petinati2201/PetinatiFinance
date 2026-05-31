@@ -489,6 +489,23 @@
         .app.collapsed #themeToggle { justify-content: center; padding: .5rem; }
         .app.collapsed #themeToggle span { display: none; }
 
+        #logoutBtn {
+            width: 100%;
+            padding: .5rem .75rem;
+            border-radius: 8px;
+            border: 1px solid var(--sb-border);
+            background: transparent;
+            display: flex; align-items: center; gap: .6rem;
+            cursor: pointer;
+            color: var(--sb-muted);
+            font-size: 12px;
+            font-weight: 500;
+            transition: border-color .2s, color .2s, background-color .2s;
+        }
+        #logoutBtn:hover { border-color: #DC2626; color: #FCA5A5; background: rgba(220,38,38,.08); }
+        .app.collapsed #logoutBtn { justify-content: center; padding: .5rem; }
+        .app.collapsed #logoutBtn span { display: none; }
+
         /* views */
         .view { display: none; }
         .view.active { display: block; animation: fadeUp .3s ease; }
@@ -697,22 +714,63 @@
             display: flex;
             flex-direction: column;
             gap: 24px;
+            transition: background-color .55s ease, border-color .55s ease, padding .55s ease, max-width .55s ease;
         }
         .login-brand {
             display: flex;
             flex-direction: column;
             gap: 4px;
+            transition: align-items .55s ease, text-align .55s ease;
         }
         .login-brand span:first-child {
             font-size: 10px;
             letter-spacing: .12em;
             text-transform: uppercase;
             color: var(--muted);
+            transition: font-size .55s ease, letter-spacing .55s ease;
         }
         .login-brand span:last-child {
             font-family: 'Instrument Serif', serif;
             font-size: 26px;
             color: var(--text);
+            transition: font-size .55s ease;
+        }
+        .login-fields, .login-btn, .login-error {
+            transition: opacity .45s ease .15s, max-height .55s ease, margin .55s ease, padding .55s ease;
+            max-height: 200px;
+            overflow: hidden;
+        }
+        /* Splash: só o brand grande no centro. Sem card, sem campos. */
+        #loginScreen.splash .login-card {
+            background: transparent;
+            border-color: transparent;
+            padding: 0;
+            max-width: 600px;
+        }
+        #loginScreen.splash .login-brand {
+            align-items: center;
+            text-align: center;
+        }
+        #loginScreen.splash .login-brand span:first-child {
+            font-size: 13px;
+            letter-spacing: .18em;
+        }
+        #loginScreen.splash .login-brand span:last-child {
+            font-size: 64px;
+            line-height: 1.1;
+        }
+        #loginScreen.splash .login-fields,
+        #loginScreen.splash .login-btn,
+        #loginScreen.splash .login-error {
+            opacity: 0;
+            pointer-events: none;
+            max-height: 0;
+            margin: 0;
+            padding: 0;
+            transition: opacity .25s ease, max-height .45s ease, margin .45s ease, padding .45s ease;
+        }
+        @media (max-width: 600px) {
+            #loginScreen.splash .login-brand span:last-child { font-size: 42px; }
         }
         .login-fields {
             display: flex;
@@ -937,7 +995,7 @@
 <body>
 
 <!-- LOGIN SCREEN -->
-<div id="loginScreen">
+<div id="loginScreen" class="splash">
     <div class="login-card">
         <div class="login-brand">
             <span>Gestão financeira</span>
@@ -1054,6 +1112,10 @@
                 <svg id="sunIcon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:#D97706"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
                 <svg id="moonIcon" class="hidden" width="14" height="14" fill="currentColor" viewBox="0 0 20 20" style="color:#818CF8"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>
                 <span id="themeLabel">Tema claro</span>
+            </button>
+            <button id="logoutBtn" aria-label="Sair">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                <span>Sair</span>
             </button>
         </div>
     </aside>
@@ -2225,6 +2287,12 @@
         document.getElementById('moonIcon').classList.toggle('hidden');
         document.getElementById('themeLabel').textContent = isDarkMode ? 'Tema escuro' : 'Tema claro';
         renderAll();
+    };
+
+    document.getElementById('logoutBtn').onclick = async () => {
+        if (!confirm('Sair da conta?')) return;
+        try { await sbClient.auth.signOut(); } catch (e) { console.warn('signOut falhou:', e); }
+        location.reload();
     };
 
     function onRibbonChange() {
@@ -4117,6 +4185,15 @@
         const userInput = document.getElementById('loginUser');
         const passInput = document.getElementById('loginPass');
 
+        // Splash visível por no mínimo 2s para a animação ser percebida.
+        // Se a sessão resolver antes, espera; se demorar mais, segue assim que terminar.
+        const MIN_SPLASH_MS = 2000;
+        const splashStart = Date.now();
+        const waitMinSplash = () => new Promise(res => {
+            const elapsed = Date.now() - splashStart;
+            setTimeout(res, Math.max(0, MIN_SPLASH_MS - elapsed));
+        });
+
         async function attempt() {
             const email = userInput.value.trim();
             const password = passInput.value;
@@ -4138,7 +4215,8 @@
 
                 if (error) throw error;
 
-                // Login bem-sucedido - carrega dados e remove tela
+                // Login bem-sucedido — volta ao splash antes de remover, fica mais suave
+                screen.classList.add('splash');
                 await loadAllDataFromSupabase();
                 screen.classList.add('hidden');
                 setTimeout(() => screen.remove(), 450);
@@ -4160,12 +4238,17 @@
         );
 
         // Verifica se já está autenticado (ex: refresh da página)
-        sbClient.auth.getSession().then(({ data: { session } }) => {
+        sbClient.auth.getSession().then(async ({ data: { session } }) => {
             if (session) {
-                loadAllDataFromSupabase().then(() => {
-                    screen.classList.add('hidden');
-                    setTimeout(() => screen.remove(), 450);
-                });
+                // Sessão válida: carrega dados em paralelo com a splash mínima
+                await Promise.all([loadAllDataFromSupabase(), waitMinSplash()]);
+                screen.classList.add('hidden');
+                setTimeout(() => screen.remove(), 450);
+            } else {
+                // Sem sessão: aguarda a splash mínima e transforma na tela de login
+                await waitMinSplash();
+                screen.classList.remove('splash');
+                setTimeout(() => userInput.focus(), 600);
             }
         });
     }
@@ -4686,14 +4769,22 @@
         const src = iiPrevKey(target);
         const source = iiRows.filter(r => r._k === src);
         if (!source.length) { iiSetStatus(`Nada para duplicar de ${iiKeyLabel(src)}.`, 'err'); return; }
-        const existing = iiRows.filter(r => r._k === target);
-        if (existing.length && !confirm(`Já existem ${existing.length} ativos em ${iiKeyLabel(target)}. Adicionar mesmo assim?`)) return;
+        // Pula códigos que já existem no mês destino (ex: snapshot criado pelo
+        // reconcile a partir de movimentação) para evitar duplicatas no Supabase.
+        const existingCodes = new Set(iiRows.filter(r => r._k === target).map(r => (r.codigo||'').trim().toUpperCase()));
         const [ty,tm] = target.split('-');
-        source.forEach(r => iiRows.push({ _tmp:iiTmpId(), _k:target, data_ref:`${ty}-${tm}-01`,
-            codigo:r.codigo, tipo:r.tipo, moeda:r.moeda, qtde:r.qtde, preco:r.preco,
-            bruto:iiCalcBruto(r), brutoManual:r.brutoManual, divJcp:0, _dirty:true, _new:true }));
+        let added = 0, skipped = 0;
+        source.forEach(r => {
+            const cod = (r.codigo||'').trim().toUpperCase();
+            if (existingCodes.has(cod)) { skipped++; return; }
+            iiRows.push({ _tmp:iiTmpId(), _k:target, data_ref:`${ty}-${tm}-01`,
+                codigo:r.codigo, tipo:r.tipo, moeda:r.moeda, qtde:r.qtde, preco:r.preco,
+                bruto:iiCalcBruto(r), brutoManual:r.brutoManual, divJcp:0, _dirty:true, _new:true });
+            added++;
+        });
         renderInputInv();
-        iiSetStatus(`${source.length} linhas copiadas de ${iiKeyLabel(src)} para ${iiKeyLabel(target)} (pendentes de salvar).`, 'ok');
+        const skipMsg = skipped ? ` ${skipped} já existente(s) ignorada(s).` : '';
+        iiSetStatus(`${added} linha(s) copiada(s) de ${iiKeyLabel(src)} para ${iiKeyLabel(target)} (pendentes de salvar).${skipMsg}`, 'ok');
     }
 
     async function iiCurrentUserId() {
@@ -5018,6 +5109,14 @@
         }
         if (!dataBR) { alert('Preencha a Data.'); return; }
         if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dataBR)) { alert('Data deve ser DD/MM/AAAA.'); return; }
+        // Aviso para mês futuro: protege contra digitação acidental e força
+        // ciência de que o reconcile vai criar/atualizar snapshot no futuro.
+        const movMk = isoMonthKey(brToIso(dataBR));
+        const now = new Date();
+        const currentMk = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+        if (movMk > currentMk) {
+            if (!confirm(`A data ${dataBR} é de um mês futuro (${iiKeyLabel(movMk)}). Isso vai criar/atualizar o snapshot em Investimentos para esse mês.\n\nConfirmar inclusão de movimentação em mês futuro?`)) return;
+        }
         const movCheck = validateMovInput({ codigo, tipo, qtde, preco, montante, moeda, ptax });
         if (!passesValidation(movCheck, 'Revisão da movimentação')) return;
         const payload = { user_id: await iiCurrentUserId(), data_ref: brToIso(dataBR), codigo, tipo,
