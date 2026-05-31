@@ -960,18 +960,17 @@
     .modal-compra-sub button:hover { border-color:var(--accent2); }
     .modal-compra-sub button.active { background:var(--accent2); color:#fff; border-color:var(--accent2); font-weight:600; }
     .modal-field { margin-bottom:.85rem; }
-    .modal-field label, .modal-ref-select label {
+    .modal-field label {
         display:block; font-size:11px; font-weight:600; text-transform:uppercase;
         letter-spacing:.08em; color:var(--muted); margin-bottom:.35rem;
     }
-    .modal-field input, .modal-field select, .modal-ref-select select {
+    .modal-field input, .modal-field select {
         width:100%; box-sizing:border-box; font-family:'Inter',sans-serif; font-size:14px;
         padding:.55rem .7rem; border:1px solid var(--border); border-radius:8px;
         background:var(--bg); color:var(--text);
     }
     .modal-field input:focus, .modal-field select:focus { outline:none; border-color:var(--accent2); }
-    .modal-field input:disabled { opacity:.55; cursor:not-allowed; }
-    .modal-ref-select { margin-bottom:.85rem; }
+    .modal-field input:disabled, .modal-field select:disabled { opacity:.55; cursor:not-allowed; }
     .modal-row { display:flex; gap:.75rem; }
     .modal-row .modal-field { flex:1; }
     .calc-hint { font-size:10px; color:var(--muted); margin-top:.25rem; }
@@ -1889,21 +1888,12 @@
             <button id="modalBtnReinv" onclick="setModalCompraSub('REINV')">Reinvestimento</button>
         </div>
 
-        <div class="modal-ref-select" id="modalRefWrap" style="display:none">
-            <label id="modalRefLabel">Ativo de referência</label>
-            <select id="modalRefAtivo"></select>
-        </div>
-
         <div class="modal-field">
             <label>Data</label>
             <input type="text" id="modalData" placeholder="DD/MM/AAAA">
         </div>
 
         <div class="modal-row">
-            <div class="modal-field">
-                <label>Código</label>
-                <input type="text" id="modalCodigo" placeholder="Ex: KO, IVV">
-            </div>
             <div class="modal-field">
                 <label>Tipo</label>
                 <select id="modalTipo" onchange="onModalTipoChange()">
@@ -1915,6 +1905,11 @@
                     <option>RENDA VARIÁVEL</option>
                     <option>RENDA VARIÁVEL EXTERIOR</option>
                 </select>
+            </div>
+            <div class="modal-field">
+                <label id="modalCodigoLabel">Código</label>
+                <input type="text" id="modalCodigo" placeholder="Ex: KO, IVV">
+                <select id="modalCodigoSelect" style="display:none"></select>
             </div>
         </div>
 
@@ -2460,7 +2455,7 @@
         const num = v => parseNumber(v);
 
         movimentacoesData = data.map(r => {
-            const codigo = String(r['CODIGO'] || '').trim().toUpperCase();
+            const codigo = String(r['CODIGO'] || '').trim();
             const op     = String(r['OPERAÇÃO'] || r['OPERACAO'] || '').trim().toUpperCase();
             if (!codigo || !op) return null;
             const d = toDate(r['DATA REF'] || r['DATA']);
@@ -4717,7 +4712,7 @@
             renderInputInv(); // re-render para refletir a mudança visual de RF
             return;
         }
-        else { row[key] = key==='codigo' ? val.toUpperCase() : val; }
+        else { row[key] = val; }
         row._dirty = true;
         if (e.target.classList) e.target.classList.add('changed');
         const tr = e.target.closest('tr');
@@ -4980,61 +4975,77 @@
     /* ── MODAL ── */
     let modalOp = 'COMPRA';
     let modalCompraSub = 'NOVO'; // 'NOVO' or 'REINV'
+
+    // True quando o código deve ser escolhido de uma lista (reinvestimento ou venda).
+    // Falso quando o código é digitado livremente (novo ativo).
+    function modalIsPickMode() {
+        return modalOp === 'VENDA' || (modalOp === 'COMPRA' && modalCompraSub === 'REINV');
+    }
+
     function setModalOp(op) {
         modalOp = op;
         document.getElementById('modalBtnCompra').className = op==='COMPRA'?'active-compra':'';
         document.getElementById('modalBtnVenda').className = op==='VENDA'?'active-venda':'';
-        const compraSub = document.getElementById('modalCompraSub');
-        const refWrap=document.getElementById('modalRefWrap');
-        const refLabel=document.getElementById('modalRefLabel');
-        const cod=document.getElementById('modalCodigo'), tipo=document.getElementById('modalTipo');
-        if (op==='VENDA') {
-            compraSub.style.display='none';
-            refWrap.style.display=''; refLabel.textContent='Ativo de referência (venda)';
-            movPopulateRef(); cod.disabled=true; tipo.disabled=true;
-        } else {
-            compraSub.style.display='flex';
-            setModalCompraSub(modalCompraSub);
-        }
+        document.getElementById('modalCompraSub').style.display = op==='COMPRA' ? 'flex' : 'none';
+        applyCodigoFieldMode();
     }
     function setModalCompraSub(mode) {
         modalCompraSub = mode;
         document.getElementById('modalBtnNovo').className = mode==='NOVO'?'active':'';
         document.getElementById('modalBtnReinv').className = mode==='REINV'?'active':'';
-        const refWrap=document.getElementById('modalRefWrap');
-        const refLabel=document.getElementById('modalRefLabel');
-        const cod=document.getElementById('modalCodigo'), tipo=document.getElementById('modalTipo');
-        if (mode==='REINV') {
-            refWrap.style.display=''; refLabel.textContent='Ativo existente';
-            movPopulateRef(); cod.disabled=true; tipo.disabled=true;
+        applyCodigoFieldMode();
+    }
+    // Aplica o estado do campo Código conforme o modo atual.
+    // Pick mode (Reinv/Venda): Tipo enabled (filtra), Código é um select dos ativos existentes do tipo.
+    // Free mode (Novo ativo): Tipo enabled (livre), Código é um input texto.
+    function applyCodigoFieldMode() {
+        const inp = document.getElementById('modalCodigo');
+        const sel = document.getElementById('modalCodigoSelect');
+        const tipo = document.getElementById('modalTipo');
+        const label = document.getElementById('modalCodigoLabel');
+        tipo.disabled = false;
+        if (modalIsPickMode()) {
+            inp.style.display = 'none'; inp.value = '';
+            sel.style.display = ''; sel.disabled = false;
+            label.textContent = modalOp === 'VENDA' ? 'Código (ativo da venda)' : 'Código (ativo existente)';
+            modalRefreshCodigoSelect();
         } else {
-            refWrap.style.display='none';
-            cod.disabled=false; cod.value=''; tipo.disabled=false; tipo.value='';
+            sel.style.display = 'none'; sel.value = '';
+            inp.style.display = ''; inp.disabled = false;
+            label.textContent = 'Código';
         }
     }
-    function movPopulateRef() {
-        const sel = document.getElementById('modalRefAtivo');
-        sel.innerHTML = '<option value="">Selecione o ativo...</option>';
-        // Merge codes from movimentações + investimentos for completeness
-        const allCodes = new Set([...movRows.map(r=>r.codigo), ...iiRows.map(r=>r.codigo)]);
-        [...allCodes].filter(Boolean).sort().forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
-        sel.onchange = () => {
-            const cod = sel.value; if(!cod) return;
-            document.getElementById('modalCodigo').value = cod;
-            const ref = movRows.find(r=>r.codigo===cod) || iiRows.find(r=>r.codigo===cod);
-            if (ref) document.getElementById('modalTipo').value = ref.tipo||'';
-            // Auto-preenche moeda do ativo existente
-            if (ref && ref.moeda) {
-                document.getElementById('modalMoeda').value = ref.moeda;
-                onModalMoedaChange();
-            }
-            onModalTipoChange();
+    // Popula o select de Código com ativos existentes (mov + invest) filtrados pelo Tipo escolhido.
+    // Dedup case-insensitive, mas preserva a capitalização original do primeiro registro encontrado.
+    function modalRefreshCodigoSelect() {
+        const sel = document.getElementById('modalCodigoSelect');
+        const prev = sel.value;
+        const tipoFiltro = (document.getElementById('modalTipo').value || '').trim().toUpperCase();
+        const dedup = new Map(); // key: codigo.toLowerCase() → value: { codigo (original case), tipo, moeda }
+        const consider = (r) => {
+            if (!r || !r.codigo) return;
+            if (tipoFiltro && (r.tipo||'').trim().toUpperCase() !== tipoFiltro) return;
+            const k = r.codigo.trim().toLowerCase();
+            if (!dedup.has(k)) dedup.set(k, { codigo: r.codigo, tipo: r.tipo, moeda: r.moeda });
         };
+        movRows.forEach(consider);
+        iiRows.forEach(consider);
+        sel.innerHTML = '<option value="">Selecione o ativo…</option>';
+        [...dedup.values()].sort((a,b)=>a.codigo.localeCompare(b.codigo)).forEach(item => {
+            const o = document.createElement('option'); o.value = item.codigo; o.textContent = item.codigo;
+            sel.appendChild(o);
+        });
+        // Restaura seleção anterior se ainda existir
+        if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+        if (!dedup.size && tipoFiltro) {
+            sel.innerHTML = `<option value="">Nenhum ativo de tipo ${tipoFiltro}</option>`;
+        }
     }
     function openModal() {
         modalCompraSub = 'NOVO';
         setModalOp('COMPRA');
         ['modalData','modalCodigo','modalQtde','modalPreco','modalMontante','modalPtax'].forEach(id=>document.getElementById(id).value='');
+        document.getElementById('modalCodigoSelect').innerHTML = '';
         document.getElementById('modalTipo').value=''; document.getElementById('modalMoeda').value='BRL';
         document.getElementById('modalPtaxWrap').style.display='none';
         onModalTipoChange(); // garante o estado não-RF (mostra Qtde/Preço, Montante calculado)
@@ -5048,6 +5059,9 @@
     // Alterna o formulário conforme o tipo. Renda Fixa é aporte por VALOR:
     // esconde Qtde/Preço e habilita o campo Montante como "Valor aportado".
     function onModalTipoChange() {
+        // Se estiver no modo de escolha (Reinv/Venda), atualiza a lista de códigos
+        // filtrada pelo tipo recém-selecionado.
+        if (modalIsPickMode()) modalRefreshCodigoSelect();
         const tipo = document.getElementById('modalTipo').value;
         const isRF = (String(tipo).toUpperCase().trim() === 'RENDA FIXA');
         const qpRow = document.getElementById('modalQtdePrecoRow');
@@ -5079,15 +5093,19 @@
     }
     async function confirmModal() {
         const dataBR = document.getElementById('modalData').value.trim();
-        let codigo = document.getElementById('modalCodigo').value.trim().toUpperCase();
+        let codigo = document.getElementById('modalCodigo').value.trim();
         let tipo = document.getElementById('modalTipo').value;
         const moeda = document.getElementById('modalMoeda').value;
         const ptax = moeda==='USD' ? iiParseNum(document.getElementById('modalPtax').value) : 0;
-        if (modalOp==='VENDA' || (modalOp==='COMPRA' && modalCompraSub==='REINV')) {
-            const refCod = document.getElementById('modalRefAtivo').value;
-            if (!refCod) { alert(modalOp==='VENDA' ? 'Selecione o ativo de referência para a venda.' : 'Selecione o ativo existente.'); return; }
-            codigo = refCod;
-            const ref = movRows.find(r=>r.codigo===refCod); tipo = ref ? ref.tipo : tipo;
+        if (modalIsPickMode()) {
+            const picked = document.getElementById('modalCodigoSelect').value;
+            if (!picked) { alert(modalOp==='VENDA' ? 'Selecione o ativo da venda.' : 'Selecione o ativo existente.'); return; }
+            if (!tipo) { alert('Selecione o Tipo primeiro.'); return; }
+            codigo = picked;
+            // Tipo já está selecionado (foi usado para filtrar); reaproveita do ativo se precisar
+            const pickedLc = picked.trim().toLowerCase();
+            const ref = movRows.find(r=>(r.codigo||'').trim().toLowerCase()===pickedLc) || iiRows.find(r=>(r.codigo||'').trim().toLowerCase()===pickedLc);
+            if (ref && !tipo) tipo = ref.tipo;
         }
         // RF: aporte por valor (qtde=1, preço=montante, espelhando Investimentos).
         // Demais: qtde × preço.
@@ -5246,24 +5264,30 @@
     const QTY_BASED_TYPES = ['RENDA VARIÁVEL', 'RENDA VARIÁVEL EXTERIOR', 'CRIPTO'];
     function isQtyBased(codigo) {
         // Determina o tipo pelo ativo mais recente (mov ou snapshot)
-        const mov = movRows.find(r => r.codigo === codigo);
-        const snap = iiRows.find(r => r.codigo === codigo);
+        const codigoLc = (codigo||'').trim().toLowerCase();
+        const eqCod = (c) => (c||'').trim().toLowerCase() === codigoLc;
+        const mov = movRows.find(r => eqCod(r.codigo));
+        const snap = iiRows.find(r => eqCod(r.codigo));
         const tipo = (mov && mov.tipo) || (snap && snap.tipo) || '';
         return QTY_BASED_TYPES.includes(tipo.toUpperCase().trim());
     }
     async function reconcileInvestMonth(codigo, mk, uid) {
-        // Pula tipos não baseados em quantidade (renda fixa, imóvel, moeda)
-        if (!isQtyBased(codigo)) return 0;
+        // Tipos baseados em quantidade (RV, Cripto): qtde acumulada × preço unitário
+        // Tipos não baseados em qtde (RF, Imóvel, Moeda): bruto_anterior + (compras − vendas)
+        if (!isQtyBased(codigo)) return await reconcileNonQtyMonth(codigo, mk, uid);
+        // Comparações case-insensitive para lidar com dados legados com capitalização diferente
+        const codigoLc = (codigo||'').trim().toLowerCase();
+        const eqCod = (c) => (c||'').trim().toLowerCase() === codigoLc;
         // Qtde acumulada (todas as movs do ativo até o fim do mês)
         let qtdeAcum = 0;
-        movRows.filter(r => r.codigo === codigo).forEach(m => {
+        movRows.filter(r => eqCod(r.codigo)).forEach(m => {
             if (isoMonthKey(brToIso(m.data)) <= mk) qtdeAcum += (m.op === 'COMPRA' ? m.qtde : -m.qtde);
         });
         // Última mov DO mês (preço/moeda/tipo)
         const movsInMonth = movRows
-            .filter(r => r.codigo === codigo && isoMonthKey(brToIso(r.data)) === mk)
+            .filter(r => eqCod(r.codigo) && isoMonthKey(brToIso(r.data)) === mk)
             .sort((a,b) => brToIso(b.data).localeCompare(brToIso(a.data)));
-        const existing = iiRows.find(r => r._k === mk && r.codigo === codigo);
+        const existing = iiRows.find(r => r._k === mk && eqCod(r.codigo));
         let preco, moeda, tipo;
         if (movsInMonth.length) {
             const last = movsInMonth[0]; preco = last.preco; moeda = last.moeda; tipo = last.tipo;
@@ -5273,8 +5297,10 @@
             return 0; // Nada a fazer
         }
         if (qtdeAcum === 0 && !existing) return 0; // não cria snapshot zerado
+        // Preserva capitalização do snapshot existente para evitar criar duplicatas com casing diferente
+        const codigoFinal = (existing && existing.codigo) || codigo;
         const payload = {
-            user_id: uid, data_ref: `${mk}-01`, codigo,
+            user_id: uid, data_ref: `${mk}-01`, codigo: codigoFinal,
             tipo_investimento: tipo || 'NÃO CLASSIFICADO', moeda: moeda || 'BRL',
             qtde: qtdeAcum, preco_unit: preco || 0,
             valor_bruto: qtdeAcum * (preco || 0),
@@ -5289,11 +5315,55 @@
         }
         return 1;
     }
+    // Reconcile para ativos NÃO baseados em quantidade (Renda Fixa, Imóvel, Moeda/Poupança):
+    // novo_bruto = bruto do snapshot anterior mais recente + (compras − vendas do mês atual)
+    // Diferenças vs qty-based:
+    // - Não propaga para frente (meses futuros podem ter ajustes manuais de juros)
+    // - Não usa qtde × preço; apenas valor_bruto direto
+    async function reconcileNonQtyMonth(codigo, mk, uid) {
+        // Comparação case-insensitive para lidar com dados legados (ex: "Poupança Itaú" vs "POUPANÇA ITAÚ")
+        const codigoLc = (codigo||'').trim().toLowerCase();
+        const eqCod = (c) => (c||'').trim().toLowerCase() === codigoLc;
+        const movsInMonth = movRows.filter(r => eqCod(r.codigo) && isoMonthKey(brToIso(r.data)) === mk);
+        const existing = iiRows.find(r => r._k === mk && eqCod(r.codigo));
+        if (!movsInMonth.length) return 0;
+        // Snapshot anterior mais recente desse ativo
+        const prevSnap = iiRows
+            .filter(r => eqCod(r.codigo) && r._k < mk)
+            .sort((a,b) => b._k.localeCompare(a._k))[0];
+        const prevBruto = prevSnap ? (prevSnap.bruto || 0) : 0;
+        const net = movsInMonth.reduce((s, m) => s + (m.op === 'COMPRA' ? m.montante : -m.montante), 0);
+        const newBruto = prevBruto + net;
+        const lastMov = [...movsInMonth].sort((a,b) => brToIso(b.data).localeCompare(brToIso(a.data)))[0];
+        const tipo  = lastMov.tipo  || (existing && existing.tipo)  || (prevSnap && prevSnap.tipo)  || 'NÃO CLASSIFICADO';
+        const moeda = lastMov.moeda || (existing && existing.moeda) || (prevSnap && prevSnap.moeda) || 'BRL';
+        // Preserva a capitalização do código existente (snapshot anterior > existente > nova mov)
+        const codigoFinal = (prevSnap && prevSnap.codigo) || (existing && existing.codigo) || codigo;
+        const payload = {
+            user_id: uid, data_ref: `${mk}-01`, codigo: codigoFinal,
+            tipo_investimento: tipo, moeda,
+            qtde: 0, preco_unit: 0,
+            valor_bruto: newBruto,
+            div_jcp: existing ? (existing.divJcp || 0) : 0
+        };
+        if (existing && existing.id) {
+            const { error } = await sbClient.from('investimentos').update(payload).eq('id', existing.id);
+            if (error) { console.warn('Reconcile non-qty UPDATE falhou:', error.message); return 0; }
+        } else {
+            const { error } = await sbClient.from('investimentos').insert(payload);
+            if (error) { console.warn('Reconcile non-qty INSERT falhou:', error.message); return 0; }
+        }
+        return 1;
+    }
     // Reconcilia o mês informado E todos os meses posteriores que tenham
     // snapshot OU movimentação desse ativo (propaga qtde acumulada à frente).
     async function reconcileInvestFromMonth(codigo, startMk, uid) {
-        const monthsWithSnap = iiRows.filter(r => r.codigo === codigo && r._k >= startMk).map(r => r._k);
-        const monthsWithMov  = movRows.filter(r => r.codigo === codigo).map(r => isoMonthKey(brToIso(r.data))).filter(mk => mk >= startMk);
+        // Para tipos não baseados em qtde, só reconcilia o mês exato (sem propagação)
+        if (!isQtyBased(codigo)) return await reconcileInvestMonth(codigo, startMk, uid);
+        const codigoLc = (codigo||'').trim().toLowerCase();
+        const eqCod = (c) => (c||'').trim().toLowerCase() === codigoLc;
+        const monthsWithSnap = iiRows.filter(r => eqCod(r.codigo) && r._k >= startMk).map(r => r._k);
+        const monthsWithMov  = movRows.filter(r => eqCod(r.codigo)).map(r => isoMonthKey(brToIso(r.data))).filter(mk => mk >= startMk);
         const targets = [...new Set([...monthsWithSnap, ...monthsWithMov, startMk])].sort();
         let count = 0;
         for (const mk of targets) count += await reconcileInvestMonth(codigo, mk, uid);
@@ -5701,6 +5771,16 @@
     });
     document.getElementById('modalQtde').addEventListener('input', updateModalMontante);
     document.getElementById('modalPreco').addEventListener('input', updateModalMontante);
+    document.getElementById('modalCodigoSelect').addEventListener('change', function(){
+        // Quando um ativo existente é escolhido, preenche moeda automaticamente.
+        const cod = this.value; if (!cod) return;
+        const lc = cod.trim().toLowerCase();
+        const ref = movRows.find(r=>(r.codigo||'').trim().toLowerCase()===lc) || iiRows.find(r=>(r.codigo||'').trim().toLowerCase()===lc);
+        if (ref && ref.moeda) {
+            document.getElementById('modalMoeda').value = ref.moeda;
+            onModalMoedaChange();
+        }
+    });
     // Máscaras numéricas nos inputs estáticos
     ['modalQtde','modalPreco','modalMontante','modalPtax','dolarInputPtax'].forEach(id => iiMaskNumeric(document.getElementById(id)));
     document.getElementById('modalData').addEventListener('input', function(e){
