@@ -714,7 +714,7 @@
             display: flex;
             flex-direction: column;
             gap: 24px;
-            transition: background-color .55s ease, border-color .55s ease, padding .55s ease, max-width .55s ease;
+            transition: background-color .55s ease, border-color .55s ease;
         }
         .login-brand {
             display: flex;
@@ -736,27 +736,24 @@
             transition: font-size .55s ease;
         }
         .login-fields, .login-btn, .login-error {
-            transition: opacity .45s ease .15s, max-height .55s ease, margin .55s ease, padding .55s ease;
-            max-height: 200px;
-            overflow: hidden;
+            transition: opacity .45s ease .1s;
         }
-        /* Splash: só o brand grande no centro. Sem card, sem campos. */
+        /* Splash: card invisível, campos invisíveis, mas todos no MESMO lugar
+           que ocupariam no form. Assim o título encolhe no lugar — sem deslocar. */
         #loginScreen.splash .login-card {
             background: transparent;
             border-color: transparent;
-            padding: 0;
-            max-width: 600px;
         }
         #loginScreen.splash .login-brand {
             align-items: center;
             text-align: center;
         }
         #loginScreen.splash .login-brand span:first-child {
-            font-size: 13px;
+            font-size: 12px;
             letter-spacing: .18em;
         }
         #loginScreen.splash .login-brand span:last-child {
-            font-size: 64px;
+            font-size: 48px;
             line-height: 1.1;
         }
         #loginScreen.splash .login-fields,
@@ -764,13 +761,10 @@
         #loginScreen.splash .login-error {
             opacity: 0;
             pointer-events: none;
-            max-height: 0;
-            margin: 0;
-            padding: 0;
-            transition: opacity .25s ease, max-height .45s ease, margin .45s ease, padding .45s ease;
+            transition: opacity .25s ease;
         }
         @media (max-width: 600px) {
-            #loginScreen.splash .login-brand span:last-child { font-size: 42px; }
+            #loginScreen.splash .login-brand span:last-child { font-size: 38px; }
         }
         .login-fields {
             display: flex;
