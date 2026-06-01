@@ -5329,12 +5329,27 @@
             valor_bruto: qtdeAcum * (preco || 0),
             div_jcp: existing ? existing.divJcp : 0
         };
-        if (existing && existing.id) {
-            const { error } = await sbClient.from('investimentos').update(payload).eq('id', existing.id);
-            if (error) { console.warn('Reconcile UPDATE falhou:', error.message); return 0; }
-        } else {
-            const { error } = await sbClient.from('investimentos').insert(payload);
-            if (error) { console.warn('Reconcile INSERT falhou:', error.message); return 0; }
+        // Upsert protegido por UNIQUE(user_id, codigo, data_ref): se já existir snapshot
+        // pra esse (ativo, mês), o DB sobrescreve; caso contrário, insere. Elimina o branch
+        // INSERT/UPDATE e a categoria inteira de bugs de duplicata por cache estale.
+        const { data: upserted, error } = await sbClient
+            .from('investimentos')
+            .upsert(payload, { onConflict: 'user_id,codigo,data_ref' })
+            .select()
+            .single();
+        if (error) { console.warn('Reconcile UPSERT falhou:', error.message); return 0; }
+        // Mantém o cache local sincronizado pra iterações subsequentes do mesmo loop
+        if (existing) {
+            existing.qtde = qtdeAcum; existing.preco = preco || 0;
+            existing.bruto = qtdeAcum * (preco || 0); existing.tipo = tipo || existing.tipo;
+            existing.moeda = moeda || existing.moeda;
+        } else if (upserted) {
+            iiRows.push({
+                id: upserted.id, _k: mk, data_ref: `${mk}-01`,
+                codigo: codigoFinal, tipo: tipo || 'NÃO CLASSIFICADO', moeda: moeda || 'BRL',
+                qtde: qtdeAcum, preco: preco || 0, bruto: qtdeAcum * (preco || 0),
+                brutoManual: false, divJcp: 0, _dirty: false, _new: false
+            });
         }
         return 1;
     }
@@ -5369,12 +5384,21 @@
             valor_bruto: newBruto,
             div_jcp: existing ? (existing.divJcp || 0) : 0
         };
-        if (existing && existing.id) {
-            const { error } = await sbClient.from('investimentos').update(payload).eq('id', existing.id);
-            if (error) { console.warn('Reconcile non-qty UPDATE falhou:', error.message); return 0; }
-        } else {
-            const { error } = await sbClient.from('investimentos').insert(payload);
-            if (error) { console.warn('Reconcile non-qty INSERT falhou:', error.message); return 0; }
+        const { data: upserted, error } = await sbClient
+            .from('investimentos')
+            .upsert(payload, { onConflict: 'user_id,codigo,data_ref' })
+            .select()
+            .single();
+        if (error) { console.warn('Reconcile non-qty UPSERT falhou:', error.message); return 0; }
+        if (existing) {
+            existing.bruto = newBruto; existing.tipo = tipo; existing.moeda = moeda;
+        } else if (upserted) {
+            iiRows.push({
+                id: upserted.id, _k: mk, data_ref: `${mk}-01`,
+                codigo: codigoFinal, tipo, moeda,
+                qtde: 0, preco: 0, bruto: newBruto,
+                brutoManual: true, divJcp: 0, _dirty: false, _new: false
+            });
         }
         return 1;
     }
