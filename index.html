@@ -4501,32 +4501,33 @@
         }
         return parseFloat(str) || 0;
     }
-    /* Formatação "smart": min 2 casas decimais, max 5, sem zeros à direita além da 2ª casa.
+    /* Formatação "smart": min 2 casas decimais, max 10, sem zeros à direita além da 2ª casa.
        Exemplos: 233        → "233,00"
                  233.50     → "233,50"
                  233.0001   → "233,0001"
                  0.00380    → "0,0038"
-                 1234.56789 → "1.234,56789"  (preserva até 5)
+                 1234.56789 → "1.234,56789"
        Usado em qtde, preço, montante e PTAX para manter consistência visual. */
     function iiFmtSmart(v) {
         if (v === null || v === undefined || v === '' || isNaN(Number(v))) return '';
-        // Arredonda em 5 casas pra eliminar ruído de float (1.2300000001 → 1.23)
-        const n = Math.round(Number(v) * 1e5) / 1e5;
-        const formatted = n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 5 });
+        // Arredonda em 10 casas pra eliminar ruído de float (1.2300000001 → 1.23)
+        const n = Math.round(Number(v) * 1e10) / 1e10;
+        const formatted = n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 10 });
         // Apara zeros após a 2ª casa decimal: ",00010" → ",0001"; ",50" fica intacto
         return formatted.replace(/(,\d{2})(\d*?)0+$/, '$1$2');
     }
     function iiFmtNum(v) { if (!v && v !== 0) return '0'; return iiFmtSmart(v); }
     function iiFmtInput(v) { if (!v && v !== 0) return ''; return iiFmtSmart(v); }
 
-    /* ── Máscara numérica brasileira (milhar com ponto, decimal com vírgula, até 5 casas) ──
-       Aceita até 5 casas decimais p/ suportar ativos fracionários (ex.: IMÓVEL com qtde 0,0038).
-       No blur, reformatta usando iiFmtSmart (min 2, max 5, trim de zeros à direita). */
+    /* ── Máscara numérica brasileira (milhar com ponto, decimal com vírgula, sem limite de casas) ──
+       Aceita quantas casas decimais o usuário quiser digitar. No blur, reformatta usando
+       iiFmtSmart (min 2, max 10, trim de zeros à direita). */
     function iiMaskNumeric(inp) {
         inp.addEventListener('input', function() {
             let v = inp.value.replace(/[^\d,]/g, '');
             const ci = v.indexOf(',');
-            if (ci !== -1) v = v.slice(0, ci + 1) + v.slice(ci + 1).replace(/,/g, '').slice(0, 5);
+            // Mantém só a primeira vírgula; depois dela, sem limite de dígitos.
+            if (ci !== -1) v = v.slice(0, ci + 1) + v.slice(ci + 1).replace(/,/g, '');
             const parts = v.split(',');
             let intPart = parts[0].replace(/^0+(?=\d)/, '') || '';
             intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
@@ -5786,6 +5787,11 @@
     document.getElementById('dolarInputPtax').addEventListener('keydown', function(e){
         if (e.key === 'Enter') dolarAddOrUpdate();
     });
+    // IMPORTANTE: máscaras ANTES dos listeners de cálculo. Os listeners 'input' disparam
+    // em ordem de registro, e updateModalMontante precisa ler o valor JÁ normalizado pela
+    // máscara — caso contrário, ao digitar "520000" ele tropeça em estados intermediários
+    // como "5.2000" (onde o ponto do milhar da rodada anterior é reinterpretado como decimal).
+    ['modalQtde','modalPreco','modalMontante','modalPtax','dolarInputPtax'].forEach(id => iiMaskNumeric(document.getElementById(id)));
     document.getElementById('modalQtde').addEventListener('input', updateModalMontante);
     document.getElementById('modalPreco').addEventListener('input', updateModalMontante);
     document.getElementById('modalCodigoSelect').addEventListener('change', function(){
@@ -5798,8 +5804,6 @@
             onModalMoedaChange();
         }
     });
-    // Máscaras numéricas nos inputs estáticos
-    ['modalQtde','modalPreco','modalMontante','modalPtax','dolarInputPtax'].forEach(id => iiMaskNumeric(document.getElementById(id)));
     document.getElementById('modalData').addEventListener('input', function(e){
         let v=e.target.value.replace(/\D/g,''); if(v.length>8)v=v.slice(0,8);
         if(v.length>4)v=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4);
