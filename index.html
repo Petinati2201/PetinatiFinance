@@ -4660,8 +4660,8 @@
                     inp.style.fontWeight = '600';
                     inp.dataset.id = row.id||row._tmp; inp.dataset.key = 'bruto'; inp.dataset.kind = 'num';
                     inp.title = 'Saldo do extrato (substitui Qtde × Preço para Renda Fixa)';
-                    inp.addEventListener('input', iiOnField);
                     iiMaskNumeric(inp);
+                    inp.addEventListener('input', iiOnField);
                     td.appendChild(inp);
                     tr.appendChild(td); return;
                 }
@@ -4680,8 +4680,8 @@
                     inp.value = f.type==='num' ? iiFmtInput(row[f.key]) : (f.type==='date' ? isoToBR(row[f.key]) : (row[f.key]||''));
                     inp.style.textAlign = f.type==='num' ? 'right' : 'left';
                     inp.dataset.id=row.id||row._tmp; inp.dataset.key=f.key; inp.dataset.kind=f.type;
-                    inp.addEventListener('input', iiOnField);
                     if (f.type==='num') iiMaskNumeric(inp);
+                    inp.addEventListener('input', iiOnField);
                     td.appendChild(inp);
                 }
                 tr.appendChild(td);
@@ -4978,7 +4978,8 @@
                     : '—'}</td>
                 <td class="row-actions"></td>`;
             // Listeners de edição inline para qtde/preco/ptax/montante
-            tr.querySelectorAll('input[data-key]').forEach(inp => { inp.addEventListener('input', movOnEdit); iiMaskNumeric(inp); });
+            // Máscara ANTES do listener de cálculo (idem fix do modal Nova Movimentação)
+            tr.querySelectorAll('input[data-key]').forEach(inp => { iiMaskNumeric(inp); inp.addEventListener('input', movOnEdit); });
             // Botão excluir
             const tdAct = tr.querySelector('.row-actions');
             const btn = document.createElement('button'); btn.className='act-discard'; btn.textContent='✕'; btn.title='Excluir';
@@ -5448,13 +5449,13 @@
             const inp = document.createElement('input'); inp.type = 'text';
             inp.value = iiFmtInput(r.ptax); inp.style.textAlign = 'right';
             inp.dataset.k = r._k;
+            iiMaskNumeric(inp);
             inp.addEventListener('input', function(e){
                 const row = dolarRows.find(x => x._k === e.target.dataset.k); if (!row) return;
                 row.ptax = iiParseNum(e.target.value); row._dirty = true;
                 e.target.classList.add('changed');
                 dolarUpdateKpis(); dolarUpdateSaveBtn();
             });
-            iiMaskNumeric(inp);
             tdPtax.appendChild(inp); tr.appendChild(tdPtax);
             // Coluna 4: excluir
             const tdAct = document.createElement('td'); tdAct.style.textAlign = 'right';
