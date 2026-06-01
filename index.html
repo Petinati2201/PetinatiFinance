@@ -5280,7 +5280,11 @@
        ⚠️ Só reconcilia tipos baseados em quantidade (RV, RV Exterior, Cripto).
          Renda fixa, imóvel e moeda ficam de fora — valor_bruto depende de
          rendimentos que não constam nas movimentações. */
-    const QTY_BASED_TYPES = ['RENDA VARIÁVEL', 'RENDA VARIÁVEL EXTERIOR', 'CRIPTO'];
+    // Tipos cujo snapshot é modelado como qtde × preço (preserva ambos no reconcile).
+    // IMÓVEL entra aqui porque o modelo é "fração do imóvel × valor de mercado" — igual ação.
+    // RENDA FIXA, MOEDA e outros tipos "valor consolidado" caem no caminho non-qty (qtde=preco=0,
+    // valor_bruto direto).
+    const QTY_BASED_TYPES = ['RENDA VARIÁVEL', 'RENDA VARIÁVEL EXTERIOR', 'CRIPTO', 'IMÓVEL'];
     function isQtyBased(codigo) {
         // Determina o tipo pelo ativo mais recente (mov ou snapshot)
         const codigoLc = (codigo||'').trim().toLowerCase();
