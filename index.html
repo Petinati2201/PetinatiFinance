@@ -579,11 +579,12 @@
         }
         .kpi-grid-5 { grid-template-columns: repeat(5,1fr); }
         .kpi-grid-6 { grid-template-columns: repeat(6,1fr); }
+        .kpi-grid-4 { grid-template-columns: repeat(4,1fr); }
         .kpi-grid-2 { grid-template-columns: repeat(2,1fr); }
         @media(max-width:1200px) { .kpi-grid-6 { grid-template-columns: repeat(3,1fr); } }
-        @media(max-width:1100px) { .kpi-grid-5 { grid-template-columns: repeat(3,1fr); } }
+        @media(max-width:1100px) { .kpi-grid-5 { grid-template-columns: repeat(3,1fr); } .kpi-grid-4 { grid-template-columns: repeat(2,1fr); } }
         @media(max-width:860px)  { .kpi-grid-5,.kpi-grid-6 { grid-template-columns: repeat(2,1fr); } }
-        @media(max-width:500px)  { .kpi-grid-5,.kpi-grid-6,.kpi-grid-2 { grid-template-columns:1fr; } }
+        @media(max-width:500px)  { .kpi-grid-5,.kpi-grid-6,.kpi-grid-4,.kpi-grid-2 { grid-template-columns:1fr; } }
 
         .kpi-cell {
             background: var(--surface);
@@ -1614,7 +1615,12 @@
         </div>
 
         <div id="invContent">
-            <div class="kpi-grid kpi-grid-5 mb2">
+            <div class="kpi-grid kpi-grid-4 mb2">
+                <div class="kpi-cell c-amber">
+                    <span class="kpi-label">Total Portfólio</span>
+                    <span id="invTotalBruto" class="kpi-value">—</span>
+                    <span class="kpi-sub">Investido + rendimento</span>
+                </div>
                 <div class="kpi-cell c-blue">
                     <span class="kpi-label">Total Investido</span>
                     <span id="invTotalInv" class="kpi-value">—</span>
@@ -1624,16 +1630,6 @@
                     <span class="kpi-label">Rendimento Acumulado</span>
                     <span id="invTotalRend" class="kpi-value">—</span>
                     <span class="kpi-sub" id="invTotalRendSub">Lucro desde o início</span>
-                </div>
-                <div class="kpi-cell c-amber">
-                    <span class="kpi-label">Valor Total</span>
-                    <span id="invTotalBruto" class="kpi-value">—</span>
-                    <span class="kpi-sub">Investido + rendimento</span>
-                </div>
-                <div class="kpi-cell c-pink">
-                    <span class="kpi-label">Rentabilidade Total</span>
-                    <span id="invRentab" class="kpi-value">—</span>
-                    <span class="kpi-sub">Rendimento / investido</span>
                 </div>
                 <div class="kpi-cell c-indigo">
                     <span class="kpi-label">Ativos</span>
@@ -2568,8 +2564,19 @@
         if (lastY && allYears.includes(Number(lastY))) ySelect.value=lastY;
         if (mSelect.options.length === 0) {
             mSelect.innerHTML=monthNames.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');
-            const currentMonth = new Date().getMonth()+1;
-            mSelect.value = String(currentMonth);
+            // Default na abertura: último mês com YTD realizado (em vez do mês corrente do
+            // calendário). Se hoje é junho mas só tem dados até maio, abre em maio.
+            // Fallback para mês do calendário quando não houver realizadoData.
+            const latestReal = realizadoData
+                .filter(r => r._y && r._m)
+                .sort((a,b) => (b._y - a._y) || (b._m - a._m))[0];
+            if (latestReal) {
+                ySelect.value = String(latestReal._y);
+                mSelect.value = String(latestReal._m);
+            } else {
+                const currentMonth = new Date().getMonth()+1;
+                mSelect.value = String(currentMonth);
+            }
         }
     }
 
@@ -3540,7 +3547,6 @@
             document.getElementById('invTotalInv').innerText  = '—';
             document.getElementById('invTotalRend').innerText = '—';
             document.getElementById('invTotalBruto').innerText = '—';
-            document.getElementById('invRentab').innerText = '—';
             document.getElementById('invAssets').innerText = '0';
             return;
         }
@@ -3553,8 +3559,6 @@
         document.getElementById('invTotalInv').innerText  = fmt(latest.invested);
         document.getElementById('invTotalRend').innerText = fmt(latest.rend);
         document.getElementById('invTotalBruto').innerText = fmt(latest.total);
-        const rentab = latest.invested > 0 ? (latest.rend / latest.invested * 100) : 0;
-        document.getElementById('invRentab').innerText = rentab.toFixed(2) + '%';
         document.getElementById('invAssets').innerText = latestRows.length;
         const [y,m] = latestKey.split('-');
         document.getElementById('invTotalInvSub').innerText = `Posição em ${monthNames[Number(m)-1]}/${y.slice(2)}`;
@@ -5546,18 +5550,19 @@
                 if (error) throw error;
                 window._dolarDeleted = [];
             }
-            // 2) Inserts (linhas _new)
-            const novos = dolarRows.filter(r => r._new).map(r => ({
+            // 2+3) Upsert (insere novos e atualiza existentes em uma só chamada).
+            // Com UNIQUE(user_id, data_ref) no DB, o Postgres decide entre INSERT e
+            // UPDATE pelo onConflict — elimina o branch e protege contra duplicatas
+            // mesmo se o cache local estiver dessincronizado.
+            const aSalvar = dolarRows.filter(r => r._dirty || r._new).map(r => ({
                 user_id: uid, data_ref: r.data_ref, ptax: r.ptax
             }));
-            if (novos.length) {
-                const { error } = await sbClient.from('dolar_mensal').insert(novos);
-                if (error) throw error;
-            }
-            // 3) Updates (linhas existentes com _dirty)
+            const novos = dolarRows.filter(r => r._new);
             const editados = dolarRows.filter(r => r._dirty && !r._new && r.id);
-            for (const r of editados) {
-                const { error } = await sbClient.from('dolar_mensal').update({ ptax: r.ptax }).eq('id', r.id);
+            if (aSalvar.length) {
+                const { error } = await sbClient
+                    .from('dolar_mensal')
+                    .upsert(aSalvar, { onConflict: 'user_id,data_ref' });
                 if (error) throw error;
             }
             // Recarrega dados (atualiza IDs das novas e o dolarData global)
