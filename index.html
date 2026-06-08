@@ -1770,7 +1770,8 @@
                     </table>
                 </div>
                 <div id="irIsencaoNote" style="font-size:11px;color:var(--muted);margin-top:.75rem;padding:.5rem .75rem;background:var(--bg);border-radius:6px;line-height:1.5">
-                    <b>Regras aplicadas (simplificadas):</b> Ações brasileiras têm isenção quando as vendas totais do mês ficam ≤ R$ 20.000 (lucro tributado a 15% caso exceda). Ações no exterior são tributadas a 15% sobre o ganho, sem a isenção dos R$ 20k. FIIs são sempre tributados a 20% sobre o ganho, sem isenção. Consulte as regras vigentes da Receita para sua declaração — em especial para ações no exterior, que têm obrigações acessórias específicas.
+                    <b>Escopo:</b> esta aba cobre apenas ganho de capital em <b>RV, RV Exterior, FII e Cripto</b>. Renda Fixa (IR retido na fonte), imóveis e veículos (GCAP — formulário próprio na Receita) ficam de fora.<br>
+                    <b>Regras aplicadas (simplificadas):</b> Ações brasileiras têm isenção quando vendas totais do mês ≤ R$ 20.000 (15% sobre ganho caso exceda). FIIs: 20% sobre ganho, sem isenção. Ações no exterior: 15% sobre ganho, sem isenção dos R$ 20k, com obrigações acessórias específicas. Cripto: 15% sobre ganho, isento se vendas totais do mês ≤ R$ 35.000.
                 </div>
             </div>
 
@@ -1781,9 +1782,10 @@
                 <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:1.25rem">
                     <div class="pill-toggle" id="irAssetTypeFilter">
                         <button class="active" data-tipo="ALL">Todos</button>
-                        <button data-tipo="AÇÃO EXTERIOR">Ações Ext.</button>
                         <button data-tipo="AÇÃO">Ações</button>
                         <button data-tipo="FII">FIIs</button>
+                        <button data-tipo="AÇÃO EXTERIOR">Ações Ext.</button>
+                        <button data-tipo="CRIPTO">Cripto</button>
                     </div>
                     <select id="irAssetSelect" class="ctrl-select" style="max-width:320px;flex:1;min-width:220px"></select>
                 </div>
@@ -3688,20 +3690,40 @@
             return;
         }
 
-        const latest = byMonth[byMonth.length - 1];
-        const latestKey = latest.k;
+        // Mês selecionado pela ribbon dirige KPIs/pizza/top-bar/tabela.
+        // Os gráficos de barras stacked e linha % ficam históricos (byMonth completo).
+        // Fallback: se o mês escolhido não tem dados, cai no último mês ≤ ribbon
+        // com dados; em última instância, último mês qualquer.
+        const ribbonKey = ribbonMonthKey();
+        const monthsWithData = [...new Set(filteredData.map(r => r._k))].sort();
+        let pickedKey = monthsWithData.includes(ribbonKey)
+            ? ribbonKey
+            : ([...monthsWithData].reverse().find(k => k <= ribbonKey) || monthsWithData[monthsWithData.length - 1]);
+
+        // Computa o "snapshot do mês" igual ao byMonth — para que os KPIs respondam
+        // ao ribbon mesmo para meses pré-2025 (fora do eixo dos gráficos).
+        const pickedRows = filteredData.filter(r => r._k === pickedKey);
+        const _bruto    = pickedRows.reduce((a,b) => a + b._dispBruto, 0);
+        const _custo    = pickedRows.reduce((a,b) => a + b._dispInv, 0);
+        const _rendDiv  = divAcumAteMes(pickedKey);
+        const _invested = _custo - _rendDiv;
+        const _rend     = _bruto - _invested;
+        const _valoriz  = _bruto - _custo;
+        const picked = { k: pickedKey, invested: _invested, rend: _rend, total: _bruto, valoriz: _valoriz, rendDiv: _rendDiv };
+
+        const latestKey = picked.k;
         const latestRows = filteredData.filter(r => r._k === latestKey && r._dispBruto > 0);
 
         // KPIs
-        document.getElementById('invTotalInv').innerText  = fmt(latest.invested);
-        document.getElementById('invTotalRend').innerText = fmt(latest.rend);
-        document.getElementById('invTotalBruto').innerText = fmt(latest.total);
-        const rentab = latest.invested > 0 ? (latest.rend / latest.invested * 100) : 0;
+        document.getElementById('invTotalInv').innerText  = fmt(picked.invested);
+        document.getElementById('invTotalRend').innerText = fmt(picked.rend);
+        document.getElementById('invTotalBruto').innerText = fmt(picked.total);
+        const rentab = picked.invested > 0 ? (picked.rend / picked.invested * 100) : 0;
         document.getElementById('invRentab').innerText = rentab.toFixed(2) + '%';
         document.getElementById('invAssets').innerText = latestRows.length;
         const [y,m] = latestKey.split('-');
         document.getElementById('invTotalInvSub').innerText = `Posição em ${monthNames[Number(m)-1]}/${y.slice(2)}`;
-        document.getElementById('invTotalRendSub').innerText = `Valoriz. ${fmt(latest.valoriz)} + Div. ${fmt(latest.rendDiv)}`;
+        document.getElementById('invTotalRendSub').innerText = `Valoriz. ${fmt(picked.valoriz)} + Div. ${fmt(picked.rendDiv)}`;
 
         renderInvStackChart(byMonth, fmtK, fmt);
         renderInvRentChart(byMonth);
@@ -3945,7 +3967,9 @@
         renderIRAssetDetail();
     });
 
-    // Handler do filtro de tipo (pill-toggle)
+    // Handler do filtro de tipo (pill-toggle).
+    // Agora afeta TUDO na aba IR: KPIs, gráfico mensal, tabela "Vendas do Ano"
+    // e o detalhe por ativo — não só o selector de ativo.
     document.getElementById('irAssetTypeFilter').addEventListener('click', e => {
         const btn = e.target.closest('button[data-tipo]');
         if (!btn) return;
@@ -3953,11 +3977,29 @@
         document.querySelectorAll('#irAssetTypeFilter button').forEach(b => {
             b.classList.toggle('active', b === btn);
         });
-        // Ao mudar o filtro, reseta o ativo atual (se não estiver mais visível na lista)
-        // e redesenha o select + detalhe
-        renderIRAssetSelector();
-        renderIRAssetDetail();
+        renderIR();
     });
+
+    // Critério de ELEGIBILIDADE para a aba IR.
+    // Só entram operações de bolsa/cripto: RV (BR), RVE (Exterior), FII, Cripto + tipos
+    // qty-based custom marcados pelo usuário no tipoRegistry. Ficam de FORA:
+    // RF (IR retido na fonte), Imóvel/Veículo/Moeda (GCAP — formulário próprio fora do escopo).
+    function irElegivel(tipo) {
+        const t = String(tipo||'').toUpperCase().trim();
+        if (t === 'FII' || t === 'AÇÃO' || t === 'AÇÃO EXTERIOR' || t === 'ACAO EXTERIOR') return true;
+        return tipoRegistry.isQtyBased(t);
+    }
+    // Casa o filtro de tipo (pill toggle) com o _tipo da movimentação.
+    // 'ALL' → tudo elegível; 'AÇÃO' cobre legado + 'RENDA VARIÁVEL'; 'AÇÃO EXTERIOR' idem.
+    function irMatchTipoFilter(tipo, filter) {
+        if (filter === 'ALL') return true;
+        const t = String(tipo||'').toUpperCase().trim();
+        if (filter === 'AÇÃO')          return t === 'AÇÃO' || t === 'RENDA VARIÁVEL';
+        if (filter === 'AÇÃO EXTERIOR') return t === 'AÇÃO EXTERIOR' || t === 'ACAO EXTERIOR' || t === 'RENDA VARIÁVEL EXTERIOR';
+        if (filter === 'FII')           return t === 'FII';
+        if (filter === 'CRIPTO')        return t === 'CRIPTO';
+        return t === filter;
+    }
 
     function renderIR() {
         const content = document.getElementById('irContent');
@@ -3975,7 +4017,13 @@
         const fmt = v => fmtCcy(v, {minimumFractionDigits:2, maximumFractionDigits:2}, dispCcy);
 
         const enriched = computePositions();
-        const vendasDoAno = enriched.filter(r => r._op === 'VENDA' && r._y === year);
+        // Aplica filtros: ano + elegibilidade (exclui RF/Imóvel/Veículo) + pill de tipo
+        const vendasDoAno = enriched.filter(r =>
+            r._op === 'VENDA'
+            && r._y === year
+            && irElegivel(r._tipo)
+            && irMatchTipoFilter(r._tipo, currentIrTypeFilter)
+        );
 
         // Vendas totais por mês/tipo para regra de isenção — sempre em BRL (regra da Receita)
         const vendasPorMesTipo = {};
@@ -3988,19 +4036,25 @@
 
         // Regras de IR:
         // - FII: 20% sobre lucro, sem isenção
-        // - AÇÃO EXTERIOR: 15% sobre lucro, sem isenção
-        // - AÇÃO nacional: 15%, isento se vendas totais do mês ≤ R$20k
+        // - AÇÃO EXTERIOR / RV EXTERIOR: 15% sobre lucro, sem isenção
+        // - CRIPTO: 15% sobre lucro, isento se vendas totais do mês ≤ R$35k (regra Receita)
+        // - AÇÃO NACIONAL / RENDA VARIÁVEL: 15%, isento se vendas totais do mês ≤ R$20k
         vendasDoAno.forEach(r => {
             const k = `${r._m}|${r._tipo}`;
             const totalMesTipoBRL = vendasPorMesTipo[k].totalVendidoBRL;
-            const isFII = r._tipo === 'FII';
-            const isAcaoExterior = r._tipo === 'AÇÃO EXTERIOR' || r._tipo === 'ACAO EXTERIOR';
-            const isAcaoNacional = !isFII && !isAcaoExterior;
-            const isento = isAcaoNacional && totalMesTipoBRL <= 20000;
+            const t = String(r._tipo||'').toUpperCase().trim();
+            const isFII = t === 'FII';
+            const isAcaoExterior = t === 'AÇÃO EXTERIOR' || t === 'ACAO EXTERIOR' || t === 'RENDA VARIÁVEL EXTERIOR';
+            const isCripto = t === 'CRIPTO';
+            const isAcaoNacional = t === 'AÇÃO' || t === 'RENDA VARIÁVEL';
+            let isento = false, isentoAplica = false, aliquota = 0.15;
+            if (isAcaoNacional) { isentoAplica = true; isento = totalMesTipoBRL <= 20000; }
+            else if (isCripto)  { isentoAplica = true; isento = totalMesTipoBRL <= 35000; }
+            else if (isFII)     { aliquota = 0.20; }
+            // exterior: nada de isenção, alíquota 15%
             r._isento = isento;
-            r._isentoAplica = isAcaoNacional;
+            r._isentoAplica = isentoAplica;
             const lucro = convert(r._lucroNative, r._moeda, r._k, dispCcy);
-            const aliquota = isFII ? 0.20 : 0.15;
             r._irEst = (r._isento || lucro <= 0) ? 0 : lucro * aliquota;
         });
 
@@ -4094,12 +4148,20 @@
         }).join('');
     }
 
-    // Label visual do tipo de ativo (usado em várias tabelas)
+    // Label visual do tipo de ativo (usado em várias tabelas).
+    // Reconhece os principais tipos cadastrados; default cinza com o nome do tipo.
     function tipoBadge(tipo) {
-        const norm = String(tipo || '').toUpperCase();
+        const norm = String(tipo || '').toUpperCase().trim();
         if (norm === 'FII') return '<span class="badge badge-proj">FII</span>';
-        if (norm === 'AÇÃO EXTERIOR' || norm === 'ACAO EXTERIOR') return '<span class="badge" style="background:#DBEAFE;color:#1D4ED8">Ação Ext.</span>';
-        return '<span class="badge badge-real">Ação</span>';
+        if (norm === 'AÇÃO EXTERIOR' || norm === 'ACAO EXTERIOR' || norm === 'RENDA VARIÁVEL EXTERIOR')
+            return '<span class="badge" style="background:#DBEAFE;color:#1D4ED8">Ação Ext.</span>';
+        if (norm === 'AÇÃO' || norm === 'RENDA VARIÁVEL')
+            return '<span class="badge badge-real">Ação</span>';
+        if (norm === 'CRIPTO')
+            return '<span class="badge" style="background:#DCFCE7;color:#15803D">Cripto</span>';
+        // Tipos non-qty (RF/Imóvel/Moeda/Veículo/custom) — badge cinza identificando o tipo
+        const label = norm.length > 14 ? norm.slice(0,12) + '…' : norm;
+        return `<span class="badge" style="background:#E5E7EB;color:#374151">${label || '—'}</span>`;
     }
 
     function renderIRAssetSelector() {
