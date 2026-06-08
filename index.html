@@ -2212,10 +2212,13 @@
 
     // aporte do mês = soma das compras (montante na moeda nativa) das movimentações
     // do mesmo código no mesmo mês. Vendas reduzem o aporte.
+    // Comparação case-insensitive: snapshots e movs podem ter capitalização diferente
+    // (ex: "Poupança Itaú" no snapshot vs "POUPANÇA ITAÚ" na mov).
     function aporteDoMes(codigo, key) {
+        const cLc = (codigo||'').trim().toLowerCase();
         let total = 0;
         for (const m of movimentacoesData) {
-            if (m._codigo !== codigo) continue;
+            if ((m._codigo||'').trim().toLowerCase() !== cLc) continue;
             if (m._k !== key) continue;
             total += m._op === 'COMPRA' ? m._montante : -m._montante;
         }
@@ -2225,14 +2228,17 @@
     // rendimento do mês (moeda nativa)
     function invRendMes(row) {
         const pk = prevMonthKey(row._k);
-        const prev = investimentosData.find(r => r._k === pk && r._codigo === row._codigo);
+        const rowCodeLc = (row._codigo||'').trim().toLowerCase();
+        const prev = investimentosData.find(r => r._k === pk && (r._codigo||'').trim().toLowerCase() === rowCodeLc);
         const brutoAtual = invBruto(row);
         const aporte = aporteDoMes(row._codigo, row._k);
         if (!prev) {
             // 1º mês registrado: rendimento = div/jcp + rendimento base histórico (pré-2025).
             // O rendBaseData contém o rendimento acumulado até dez/2024, na moeda nativa.
             // Se não houver base, conta só div/jcp (ativo começou na série, sem histórico).
-            const base = rendBaseData[row._codigo] || 0;
+            // Lookup case-insensitive na base também, para acompanhar a normalização.
+            const baseKey = Object.keys(rendBaseData).find(k => k.trim().toLowerCase() === rowCodeLc);
+            const base = baseKey ? rendBaseData[baseKey] : 0;
             return base + (row._divJcp || 0);
         }
         return (brutoAtual - invBruto(prev)) - aporte + (row._divJcp || 0);
@@ -2242,45 +2248,54 @@
     function invRendTotal(row, _seen) {
         // proteção contra loop (encadeamento defensivo)
         _seen = _seen || new Set();
-        const id = row._k + '|' + row._codigo;
+        const id = row._k + '|' + (row._codigo||'').trim().toLowerCase();
         if (_seen.has(id)) return 0;
         _seen.add(id);
         const pk = prevMonthKey(row._k);
-        const prev = investimentosData.find(r => r._k === pk && r._codigo === row._codigo);
+        const rowCodeLc = (row._codigo||'').trim().toLowerCase();
+        const prev = investimentosData.find(r => r._k === pk && (r._codigo||'').trim().toLowerCase() === rowCodeLc);
         const prevRend = prev ? invRendTotal(prev, _seen) : 0;
         return prevRend + invRendMes(row);
     }
 
     // valor investido acumulado (moeda nativa) — CUSTO DE AQUISIÇÃO.
     // Percorre movimentações do ativo em ordem cronológica até o mês informado.
-    // Compra soma, venda subtrai. Se a posição (qtde) zera, reseta o investido.
-    // NOTA: inclui compras feitas com dividendos reinvestidos (correto p/ custo no IR).
+    // Compra soma, venda subtrai.
+    // Reset por qtde=0 só faz sentido para tipos QTY-BASED (RV/Cripto): posição zerou,
+    // custo zera. Para RF/Imóvel/Moeda, qtde=1 é convenção em cada mov — uma venda já
+    // zeraria o investido prematuramente. Para esses casos, usamos Σ compras − Σ vendas
+    // sem reset (e nunca deixamos ficar negativo, que indicaria saídas > entradas
+    // registradas, situação típica em RF onde o saldo inicial não veio de uma compra).
+    // Comparação case-insensitive: "Poupança Itaú" vs "POUPANÇA ITAÚ" devem casar.
     function invValorInvestido(row) {
         const codigo = row._codigo;
+        const codigoLc = (codigo||'').trim().toLowerCase();
         const limitKey = row._k; // até este mês inclusive
         const mvs = movimentacoesData
-            .filter(m => m._codigo === codigo && m._k <= limitKey)
+            .filter(m => (m._codigo||'').trim().toLowerCase() === codigoLc && m._k <= limitKey)
             .sort((a,b) => a._date - b._date);
+        const qtyBased = tipoRegistry.isQtyBased(row._tipo);
         let qtde = 0, investido = 0;
         for (const m of mvs) {
-            if (m._op === 'COMPRA') {
-                qtde += m._qty;
-                investido += m._montante;
-            } else if (m._op === 'VENDA') {
-                qtde -= m._qty;
-                investido -= m._montante;
-            }
-            if (qtde <= 0.001) { qtde = 0; investido = 0; }
+            if (m._op === 'COMPRA') { qtde += m._qty; investido += m._montante; }
+            else if (m._op === 'VENDA') { qtde -= m._qty; investido -= m._montante; }
+            if (qtyBased && qtde <= 0.001) { qtde = 0; investido = 0; }
         }
+        // Para non-qty (RF/Imóvel/Moeda), evita investido negativo — significa que as
+        // vendas registradas superaram as compras, o que em RF apenas indica que o
+        // saldo veio de antes do início do histórico de movimentações. Custo mínimo 0.
+        if (!qtyBased && investido < 0) investido = 0;
         return investido;
     }
 
     // dividendos/JCP acumulados de um ativo até o mês informado (moeda nativa).
     // Soma a coluna div_jcp dos snapshots mensais de Investimentos até `limitKey`.
+    // Comparação case-insensitive (consistente com aporteDoMes/invValorInvestido).
     function dividendosAcumulados(codigo, limitKey) {
+        const cLc = (codigo||'').trim().toLowerCase();
         let total = 0;
         for (const r of investimentosData) {
-            if (r._codigo !== codigo) continue;
+            if ((r._codigo||'').trim().toLowerCase() !== cLc) continue;
             if (r._k > limitKey) continue;
             total += r._divJcp || 0;
         }
