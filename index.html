@@ -3633,7 +3633,11 @@
         // Agregação por mês (soma valores já convertidos — moedas mistas OK).
         // Dividendos acumulados (permanentes) até o mês k: soma div_jcp de TODOS os snapshots
         // até k — inclusive de ativos já liquidados. Respeita o cross-filter de tipo/código.
-        const months = [...new Set(filteredData.map(r => r._k))].sort();
+        // Eixo X dos gráficos travado em jan/2025: snapshots anteriores existem na base
+        // (ex.: imóvel/veículo herdados de 2020) mas não devem aparecer como barras soltas.
+        // divAcumAteMes continua varrendo TODO o histórico — só o eixo visível é cortado.
+        const MIN_CHART_MONTH = '2025-01';
+        const months = [...new Set(filteredData.map(r => r._k))].filter(k => k >= MIN_CHART_MONTH).sort();
         const divAcumAteMes = k => investimentosData.reduce((acc, r) => {
             if (r._k > k) return acc;
             if (hiddenTipos.has(r._tipo) || hiddenCodigos.has(r._codigo)) return acc;
