@@ -4763,7 +4763,13 @@
 
     /* ════════════════ INPUT INVESTIMENTOS ════════════════ */
     let iiShowAll = false;
-    function iiCalcBruto(row){ return row.brutoManual ? row.bruto : (row.qtde||0)*(row.preco||0); }
+    function iiCalcBruto(row){
+        if (row.brutoManual) return row.bruto;
+        const calc = (row.qtde||0)*(row.preco||0);
+        // Fallback: tipos non-qty (MOEDA, Imóvel) após auto-reconcile ficam com
+        // qtde=0 e preço=0, mas o valor_bruto salvo é o correto. Usa direto.
+        return calc || (row.bruto || 0);
+    }
     function iiAllMonths(){ return [...new Set(iiRows.map(r => r._k))].sort(); }
     function iiRowByAnyId(id){ return iiRows.find(r => (r.id && String(r.id)===String(id)) || r._tmp===id); }
     function iiTipos(){ return [...new Set(iiRows.map(r=>r.tipo).filter(Boolean))].sort(); }
