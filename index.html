@@ -2662,6 +2662,10 @@
                     row._avgNativeBefore = avg;
                     row._lucroNative = (m._preco - avg) * m._qty;
                     realized += row._lucroNative;
+                    // Para tipo MOEDA: preço E avg são PTAX (BRL/USD), então _lucroNative
+                    // já está em BRL — é o ganho/perda cambial realizado. Replicamos no
+                    // campo _lucroBRL pra ficar explícito na renderização.
+                    if (m._tipo === 'MOEDA') row._lucroBRL = row._lucroNative;
                     totalCost -= avg * m._qty;
                     qty -= m._qty;
                     if (qty < 0.0001) { qty = 0; totalCost = 0; }
@@ -3634,9 +3638,13 @@
         // _dispBruto = valor bruto (posição viva = preço × qtde, tabela Investimentos);
         // _dispRend = NÃO-realizado (bruto − custo) por ativo. Os dividendos acumulados
         //             (permanentes, inclusive de ativos vendidos) são somados à parte no byMonth.
+        // CONVENÇÃO MOEDA: para tipo === 'MOEDA', preço é a PTAX (BRL/USD) e o montante
+        // (qtde × preço) já está em BRL — mesmo que moeda='USD'. Tratamos como BRL-efetivo
+        // na conversão pra não multiplicar PTAX duas vezes.
         investimentosData.forEach(r => {
-            r._dispInv   = convert(invValorInvestido(r), r._moeda, r._k);
-            r._dispBruto = convert(invBruto(r),          r._moeda, r._k);
+            const effCcy = r._tipo === 'MOEDA' ? 'BRL' : r._moeda;
+            r._dispInv   = convert(invValorInvestido(r), effCcy, r._k);
+            r._dispBruto = convert(invBruto(r),          effCcy, r._k);
             r._dispRend  = r._dispBruto - r._dispInv;
         });
 
@@ -4030,8 +4038,10 @@
         vendasDoAno.forEach(r => {
             const k = `${r._m}|${r._tipo}`;
             if (!vendasPorMesTipo[k]) vendasPorMesTipo[k] = { totalVendidoBRL: 0 };
-            // venda bruta na moeda nativa convertida p/ BRL
-            vendasPorMesTipo[k].totalVendidoBRL += convert(r._preco * r._qty, r._moeda, r._k, 'BRL');
+            // Venda bruta na moeda nativa convertida p/ BRL.
+            // MOEDA: preço já é PTAX, então preço × qtde já está em BRL — efetivo 'BRL'.
+            const effCcy = r._tipo === 'MOEDA' ? 'BRL' : r._moeda;
+            vendasPorMesTipo[k].totalVendidoBRL += convert(r._preco * r._qty, effCcy, r._k, 'BRL');
         });
 
         // Regras de IR:
@@ -5047,9 +5057,13 @@
             if (!(m.preco > 0)) errors.push('Preço deve ser maior que zero.');
         }
         if (m.moeda === 'USD') {
-            if (!(m.ptax > 0)) errors.push('PTAX obrigatório para moeda USD.');
-            else if (m.ptax < 2 || m.ptax > 10)
-                warnings.push(`PTAX ${iiFmtNum(m.ptax)} fora da faixa usual (2–10). Confirma?`);
+            // MOEDA: preço já é a PTAX por convenção, então PTAX separado é redundante.
+            // Para outros tipos USD (ações, ETFs no exterior), PTAX continua obrigatório.
+            const isMoedaTipo = String(m.tipo||'').toUpperCase().trim() === 'MOEDA';
+            if (!isMoedaTipo && !(m.ptax > 0)) errors.push('PTAX obrigatório para moeda USD.');
+            const ptaxCheck = isMoedaTipo ? (m.ptax > 0 ? m.ptax : m.preco) : m.ptax;
+            if (ptaxCheck > 0 && (ptaxCheck < 2 || ptaxCheck > 10))
+                warnings.push(`PTAX ${iiFmtNum(ptaxCheck)} fora da faixa usual (2–10). Confirma?`);
         }
         return { errors, warnings };
     }
