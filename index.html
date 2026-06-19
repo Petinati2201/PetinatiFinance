@@ -1857,7 +1857,6 @@
                     <div class="pill-toggle" id="irAssetTypeFilter">
                         <button class="active" data-tipo="ALL">Todos</button>
                         <button data-tipo="AÇÃO">Renda Variável</button>
-                        <button data-tipo="FII">FIIs</button>
                         <button data-tipo="AÇÃO EXTERIOR">Renda Variável Exterior</button>
                         <button data-tipo="CRIPTO">Cripto</button>
                     </div>
@@ -4073,17 +4072,15 @@
         return tipoRegistry.isQtyBased(t);
     }
     // Casa o filtro de tipo (pill toggle) com o _tipo da movimentação.
-    // 'ALL' → tudo elegível. Detecção de FII: via tipo legado 'FII' OU ticker
-    // que casa com padrão FII brasileiro (4 letras + 11), pra cobrir o caso
-    // em que FIIs foram cadastrados como 'RENDA VARIÁVEL' no esquema novo.
+    // 'ALL' → tudo elegível. 'AÇÃO' (rótulo "Renda Variável" na UI) agora
+    // engloba tudo de RV — ações + FIIs no mesmo grupo visual. A distinção
+    // tributária de FII (20% sem isenção) continua sendo aplicada por ticker
+    // no cálculo de IR mais abaixo, independente desse filtro visual.
     function irMatchTipoFilter(tipo, filter, codigo) {
         if (filter === 'ALL') return true;
         const t = String(tipo||'').toUpperCase().trim();
-        const c = String(codigo||'').toUpperCase().trim();
-        const isFIITicker = /^[A-Z]{4}11$/.test(c);
-        if (filter === 'AÇÃO')          return (t === 'AÇÃO' || t === 'RENDA VARIÁVEL') && !isFIITicker;
+        if (filter === 'AÇÃO')          return t === 'AÇÃO' || t === 'RENDA VARIÁVEL' || t === 'FII';
         if (filter === 'AÇÃO EXTERIOR') return t === 'AÇÃO EXTERIOR' || t === 'ACAO EXTERIOR' || t === 'RENDA VARIÁVEL EXTERIOR';
-        if (filter === 'FII')           return t === 'FII' || ((t === 'RENDA VARIÁVEL' || !t) && isFIITicker);
         if (filter === 'CRIPTO')        return t === 'CRIPTO';
         return t === filter;
     }
