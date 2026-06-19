@@ -1081,7 +1081,7 @@
                 </div>
                 <div class="sb-link" data-view="inputytd" onclick="switchView('inputytd')">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
-                    <span class="sb-link-label">Input YTD/YTG</span>
+                    <span class="sb-link-label">Input de Despesas</span>
                 </div>
                 <div class="sb-link" data-view="download" onclick="switchView('download')">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -1323,7 +1323,7 @@
     <div id="view-inputytd" class="view">
         <div class="view-header">
             <div>
-                <h1 class="view-title">Input YTD / YTG</h1>
+                <h1 class="view-title">Input de Despesas</h1>
                 <div class="view-subtitle">Projeção (YTG) editável + upload CSV de realizado (YTD) por mês</div>
             </div>
         </div>
@@ -1856,9 +1856,9 @@
                 <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:1.25rem">
                     <div class="pill-toggle" id="irAssetTypeFilter">
                         <button class="active" data-tipo="ALL">Todos</button>
-                        <button data-tipo="AÇÃO">Ações</button>
+                        <button data-tipo="AÇÃO">Renda Variável</button>
                         <button data-tipo="FII">FIIs</button>
-                        <button data-tipo="AÇÃO EXTERIOR">Ações Ext.</button>
+                        <button data-tipo="AÇÃO EXTERIOR">Renda Variável Exterior</button>
                         <button data-tipo="CRIPTO">Cripto</button>
                     </div>
                     <select id="irAssetSelect" class="ctrl-select" style="max-width:320px;flex:1;min-width:220px"></select>
@@ -4073,13 +4073,17 @@
         return tipoRegistry.isQtyBased(t);
     }
     // Casa o filtro de tipo (pill toggle) com o _tipo da movimentação.
-    // 'ALL' → tudo elegível; 'AÇÃO' cobre legado + 'RENDA VARIÁVEL'; 'AÇÃO EXTERIOR' idem.
-    function irMatchTipoFilter(tipo, filter) {
+    // 'ALL' → tudo elegível. Detecção de FII: via tipo legado 'FII' OU ticker
+    // que casa com padrão FII brasileiro (4 letras + 11), pra cobrir o caso
+    // em que FIIs foram cadastrados como 'RENDA VARIÁVEL' no esquema novo.
+    function irMatchTipoFilter(tipo, filter, codigo) {
         if (filter === 'ALL') return true;
         const t = String(tipo||'').toUpperCase().trim();
-        if (filter === 'AÇÃO')          return t === 'AÇÃO' || t === 'RENDA VARIÁVEL';
+        const c = String(codigo||'').toUpperCase().trim();
+        const isFIITicker = /^[A-Z]{4}11$/.test(c);
+        if (filter === 'AÇÃO')          return (t === 'AÇÃO' || t === 'RENDA VARIÁVEL') && !isFIITicker;
         if (filter === 'AÇÃO EXTERIOR') return t === 'AÇÃO EXTERIOR' || t === 'ACAO EXTERIOR' || t === 'RENDA VARIÁVEL EXTERIOR';
-        if (filter === 'FII')           return t === 'FII';
+        if (filter === 'FII')           return t === 'FII' || ((t === 'RENDA VARIÁVEL' || !t) && isFIITicker);
         if (filter === 'CRIPTO')        return t === 'CRIPTO';
         return t === filter;
     }
@@ -4105,7 +4109,7 @@
             r._op === 'VENDA'
             && r._y === year
             && irElegivel(r._tipo)
-            && irMatchTipoFilter(r._tipo, currentIrTypeFilter)
+            && irMatchTipoFilter(r._tipo, currentIrTypeFilter, r._codigo)
         );
 
         // Vendas totais por mês/tipo para regra de isenção — sempre em BRL (regra da Receita)
@@ -4120,7 +4124,9 @@
         });
 
         // Regras de IR:
-        // - FII: 20% sobre lucro, sem isenção
+        // - FII: 20% sobre lucro, sem isenção (detectado por tipo legado 'FII' OU
+        //   ticker que case com padrão FII brasileiro de 4 letras + 11, caso o
+        //   ativo tenha sido cadastrado como 'RENDA VARIÁVEL' no esquema novo).
         // - AÇÃO EXTERIOR / RV EXTERIOR: 15% sobre lucro, sem isenção
         // - CRIPTO: 15% sobre lucro, isento se vendas totais do mês ≤ R$35k (regra Receita)
         // - AÇÃO NACIONAL / RENDA VARIÁVEL: 15%, isento se vendas totais do mês ≤ R$20k
@@ -4128,10 +4134,12 @@
             const k = `${r._m}|${r._tipo}`;
             const totalMesTipoBRL = vendasPorMesTipo[k].totalVendidoBRL;
             const t = String(r._tipo||'').toUpperCase().trim();
-            const isFII = t === 'FII';
+            const c = String(r._codigo||'').toUpperCase().trim();
+            const isFIITicker = /^[A-Z]{4}11$/.test(c);
+            const isFII = t === 'FII' || ((t === 'RENDA VARIÁVEL' || !t) && isFIITicker);
             const isAcaoExterior = t === 'AÇÃO EXTERIOR' || t === 'ACAO EXTERIOR' || t === 'RENDA VARIÁVEL EXTERIOR';
             const isCripto = t === 'CRIPTO';
-            const isAcaoNacional = t === 'AÇÃO' || t === 'RENDA VARIÁVEL';
+            const isAcaoNacional = (t === 'AÇÃO' || t === 'RENDA VARIÁVEL') && !isFII;
             let isento = false, isentoAplica = false, aliquota = 0.15;
             if (isAcaoNacional) { isentoAplica = true; isento = totalMesTipoBRL <= 20000; }
             else if (isCripto)  { isentoAplica = true; isento = totalMesTipoBRL <= 35000; }
