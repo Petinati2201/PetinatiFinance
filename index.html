@@ -4259,10 +4259,11 @@
 
     function renderIRAssetSelector() {
         const snapAll = getAssetSnapshot();
-        // Aplica filtro de tipo
+        // Aplica filtro de tipo usando a mesma função que filtra as vendas,
+        // pra reconhecer 'RENDA VARIÁVEL'/'RENDA VARIÁVEL EXTERIOR' e FII por ticker.
         const snap = currentIrTypeFilter === 'ALL'
             ? snapAll
-            : snapAll.filter(a => a.tipo === currentIrTypeFilter);
+            : snapAll.filter(a => irMatchTipoFilter(a.tipo, currentIrTypeFilter, a.codigo));
         const sel = document.getElementById('irAssetSelect');
         const prev = currentIrAsset;
         const opts = ['<option value="">— Selecione um ativo —</option>']
