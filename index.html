@@ -1788,10 +1788,6 @@
                 <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:1.25rem">
                     <div class="pill-toggle" id="irAssetTypeFilter">
                         <button class="active" data-tipo="ALL">Todos</button>
-                        <button data-tipo="AÇÃO">Ações</button>
-                        <button data-tipo="FII">FIIs</button>
-                        <button data-tipo="AÇÃO EXTERIOR">Ações Ext.</button>
-                        <button data-tipo="CRIPTO">Cripto</button>
                     </div>
                     <select id="irAssetSelect" class="ctrl-select" style="max-width:320px;flex:1;min-width:220px"></select>
                 </div>
@@ -3901,51 +3897,38 @@
         });
         if (!activeFilters.investimentos) activeFilters.investimentos = {};
         activeFilters.investimentos['_tipo'] = hiddenSet;
-        // skipPie=true: preserva a animação nativa do toggle de fatia da pie de TIPO.
-        // skipAssetPie=true: evita destroy+create da pie de ativo no mesmo frame,
-        // o que causaria reflow e interromperia a animação do tipo.
+        // Não recria nenhuma pie: a animação de ocultar a fatia da pie de TIPO já
+        // rolou nativamente. A pie de ATIVO permanece intacta (não muda de posição).
+        // Apenas cards, tabela e KPIs são atualizados.
         renderInvestimentos(true, true);
-        // Defere a recriação da pie de ativo para depois da animação (~400ms).
-        setTimeout(() => {
-            const hiddenTipos = activeFilters.investimentos['_tipo'] || new Set();
-            const latestKey = investimentosData.map(r=>r._k).filter(Boolean).sort().pop() || '';
-            const latestRowsForBar = investimentosData.filter(r => r._k === latestKey && r._dispBruto > 0 && !hiddenTipos.has(r._tipo));
-            renderInvAssetPie(latestRowsForBar, '_dispInv', fmtCcy);
-        }, 400);
     }
 
     // Estado da pie por ativo:
-    //   invAssetPieOthersCodigos  = códigos agrupados na fatia "Outros" no render atual
+    //   invAssetPieOthersCodigos  = códigos agrupados na fatia "Outros"
     //   invAssetPieOthersDetail   = mesmos códigos com valores (para tooltip detalhado)
     let invAssetPieOthersCodigos = [];
     let invAssetPieOthersDetail  = [];
     const INV_ASSET_PIE_TOP_N = 8;
 
     function renderInvAssetPie(latestRows, invKey, fmt) {
-        const hiddenCodigos = (activeFilters.investimentos || {})['_codigo'] || new Set();
-
         // Agrega por código (latestRows já está filtrado por tipo via hiddenTipos)
         const agg = {};
         latestRows.forEach(r => {
             agg[r._codigo] = (agg[r._codigo] || 0) + r[invKey];
         });
+        const sorted = Object.entries(agg).sort((a, b) => b[1] - a[1]);
 
-        // Separa visíveis vs filtrados, ambos ordenados desc por valor
-        const allSorted     = Object.entries(agg).sort((a, b) => b[1] - a[1]);
-        const visibleSorted = allSorted.filter(([k]) => !hiddenCodigos.has(k));
-        const hiddenEntries = allSorted.filter(([k]) =>  hiddenCodigos.has(k));
-
-        // REAGRUPAMENTO DINÂMICO: Top N + Outros calculado entre os VISÍVEIS.
-        // Se você filtra um do Top N, um do Outros sobe automaticamente.
+        // Top N + Outros — fixo no render. Clicar na legenda apenas oculta a fatia
+        // (animação nativa do Chart.js), sem recompor o agrupamento.
         const labels = [];
         const data   = [];
-        if (visibleSorted.length <= INV_ASSET_PIE_TOP_N) {
-            visibleSorted.forEach(([k, v]) => { labels.push(k); data.push(v); });
+        if (sorted.length <= INV_ASSET_PIE_TOP_N) {
+            sorted.forEach(([k, v]) => { labels.push(k); data.push(v); });
             invAssetPieOthersCodigos = [];
             invAssetPieOthersDetail  = [];
         } else {
-            const top  = visibleSorted.slice(0, INV_ASSET_PIE_TOP_N);
-            const rest = visibleSorted.slice(INV_ASSET_PIE_TOP_N);
+            const top  = sorted.slice(0, INV_ASSET_PIE_TOP_N);
+            const rest = sorted.slice(INV_ASSET_PIE_TOP_N);
             top.forEach(([k, v]) => { labels.push(k); data.push(v); });
             const othersSum = rest.reduce((a, [, v]) => a + v, 0);
             labels.push('Outros');
@@ -3954,17 +3937,9 @@
             invAssetPieOthersDetail  = rest.map(([k, v]) => ({ codigo: k, valor: v }));
         }
 
-        // Fatias-fantasma dos filtrados: presentes na legenda (para permitir
-        // reativar via clique) mas ocultas no doughnut via toggleDataVisibility.
-        const ghostStartIdx = labels.length;
-        hiddenEntries.forEach(([k, v]) => { labels.push(k); data.push(v); });
-
-        // Cores: palette para Top N; cinza neutro para "Outros" e fantasmas.
-        const colors = labels.map((label, i) => {
-            if (i >= ghostStartIdx)   return '#94A3B8';
-            if (label === 'Outros')   return '#94A3B8';
-            return palette[i % palette.length];
-        });
+        const colors = labels.map((label, i) =>
+            label === 'Outros' ? '#94A3B8' : palette[i % palette.length]
+        );
 
         if (charts.invAssetPie) charts.invAssetPie.destroy();
         const tc = isDarkMode ? '#6B6966' : '#8A8880';
@@ -3982,7 +3957,6 @@
                     },
                     tooltip: {
                         callbacks: {
-                            // Total considera só fatias visíveis (fantasmas não contam pro %)
                             label: ctx => {
                                 const total = ctx.dataset.data.reduce(
                                     (sum, val, i) => ctx.chart.getDataVisibility(i) ? sum + val : sum, 0
@@ -3994,7 +3968,6 @@
                                     : '';
                                 return `${ctx.label}: ${fmt(v)} (${p}%)${suffix}`;
                             },
-                            // Tooltip de "Outros": expande lista detalhada (código, valor, % do grupo)
                             afterLabel: ctx => {
                                 if (ctx.label !== 'Outros' || invAssetPieOthersDetail.length === 0) return undefined;
                                 const totalOutros = invAssetPieOthersDetail.reduce((a, x) => a + x.valor, 0);
@@ -4015,14 +3988,6 @@
                 }
             }
         });
-
-        // Marca as fatias-fantasma como hidden (visíveis na legenda apenas)
-        if (ghostStartIdx < labels.length) {
-            for (let i = ghostStartIdx; i < labels.length; i++) {
-                charts.invAssetPie.toggleDataVisibility(i);
-            }
-            charts.invAssetPie.update('none');
-        }
     }
 
     function syncInvCodigoFilter() {
@@ -4032,12 +3997,12 @@
 
         if (!activeFilters.investimentos) activeFilters.investimentos = {};
 
-        // Códigos representados na pie atual (Top N + Outros expandido + fantasmas)
+        // Códigos representados na pie atual (Top N + Outros expandido)
         const representedSet = new Set();
         labels.forEach(l => { if (l !== 'Outros') representedSet.add(l); });
         invAssetPieOthersCodigos.forEach(c => representedSet.add(c));
 
-        // Preserva códigos no filtro que NÃO estão na pie (ex.: tipo do ativo oculto)
+        // Preserva códigos no filtro que NÃO estão na pie atual
         const current = activeFilters.investimentos['_codigo'] || new Set();
         const next = new Set();
         current.forEach(c => { if (!representedSet.has(c)) next.add(c); });
@@ -4050,9 +4015,9 @@
         });
 
         activeFilters.investimentos['_codigo'] = next;
-        // Recria TUDO incluindo a pie de ativo — necessário para o reagrupamento
-        // dinâmico (um ativo do Outros sobe pro Top N quando outro é filtrado).
-        renderInvestimentos(false, false);
+        // skipPie=true e skipAssetPie=true: NÃO recria nenhuma pie. A animação de
+        // ocultar a fatia já rolou nativamente; aqui só atualizamos cards/tabela/KPIs.
+        renderInvestimentos(true, true);
     }
 
     function renderInvTopBar(latestRows, invKey, fmtK) {
@@ -4152,15 +4117,36 @@
         return tipoRegistry.isQtyBased(t);
     }
     // Casa o filtro de tipo (pill toggle) com o _tipo da movimentação.
-    // 'ALL' → tudo elegível; 'AÇÃO' cobre legado + 'RENDA VARIÁVEL'; 'AÇÃO EXTERIOR' idem.
+    // 'ALL' → tudo elegível; senão comparação direta case-insensitive.
     function irMatchTipoFilter(tipo, filter) {
         if (filter === 'ALL') return true;
-        const t = String(tipo||'').toUpperCase().trim();
-        if (filter === 'AÇÃO')          return t === 'AÇÃO' || t === 'RENDA VARIÁVEL';
-        if (filter === 'AÇÃO EXTERIOR') return t === 'AÇÃO EXTERIOR' || t === 'ACAO EXTERIOR' || t === 'RENDA VARIÁVEL EXTERIOR';
-        if (filter === 'FII')           return t === 'FII';
-        if (filter === 'CRIPTO')        return t === 'CRIPTO';
-        return t === filter;
+        return String(tipo||'').toUpperCase().trim() === String(filter||'').toUpperCase().trim();
+    }
+
+    // Popula as pills de tipo dinamicamente com os tipos elegíveis que o usuário
+    // realmente tem nas movimentações. Mantém "Todos" sempre como primeiro botão.
+    function populateIrTypeFilter() {
+        const container = document.getElementById('irAssetTypeFilter');
+        if (!container) return;
+        // Tipos elegíveis presentes nas movimentações, dedup case-insensitive
+        const tiposPresentes = new Map(); // upper → original
+        movimentacoesData.forEach(m => {
+            const t = m._tipo;
+            if (t && irElegivel(t)) {
+                const k = t.toUpperCase().trim();
+                if (!tiposPresentes.has(k)) tiposPresentes.set(k, t);
+            }
+        });
+        const tipos = [...tiposPresentes.values()].sort((a,b)=>a.localeCompare(b));
+        // Reconstrói os botões: "Todos" + um por tipo presente
+        container.innerHTML = '<button data-tipo="ALL">Todos</button>' +
+            tipos.map(t => `<button data-tipo="${t.replace(/"/g,'&quot;')}">${t}</button>`).join('');
+        // Restaura o filtro ativo (ou cai pra ALL se o tipo não existe mais)
+        const exists = currentIrTypeFilter === 'ALL' || tipos.some(t => t.toUpperCase().trim() === currentIrTypeFilter.toUpperCase().trim());
+        if (!exists) currentIrTypeFilter = 'ALL';
+        container.querySelectorAll('button').forEach(b => {
+            b.classList.toggle('active', b.dataset.tipo.toUpperCase().trim() === currentIrTypeFilter.toUpperCase().trim());
+        });
     }
 
     function renderIR() {
@@ -4173,6 +4159,7 @@
         }
         content.style.display = 'block';
         noData.style.display = 'none';
+        populateIrTypeFilter();
 
         const year = Number(document.getElementById('yearFilter').value);
         const dispCcy = currentIrCcy;
