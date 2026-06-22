@@ -1160,7 +1160,7 @@
                             <th>Código</th>
                             <th>Tipo</th>
                             <th>Moeda</th>
-                            <th>Qtde</th>
+                            <th style="min-width:105px">Qtde</th>
                             <th>Preço Unit.</th>
                             <th class="calc">Valor Bruto</th>
                             <th>Div / JCP</th>
@@ -1212,7 +1212,7 @@
                             <th>Código</th>
                             <th>Tipo</th>
                             <th>Operação</th>
-                            <th>Qtde</th>
+                            <th style="min-width:105px">Qtde</th>
                             <th>Preço Unit.</th>
                             <th>Montante</th>
                             <th>Moeda</th>
@@ -5310,7 +5310,7 @@
             const precoCell = isRF ? dash : `<input type="text" data-id="${r.id}" data-key="preco" value="${iiFmtInput(r.preco)}" style="${editStyle}">`;
             const montCell  = isRF
                 ? `<input type="text" data-id="${r.id}" data-key="montante" value="${iiFmtInput(r.montante)}" style="${editStyle};font-weight:600">`
-                : `${iiFmtNum(r.montante)}`;
+                : `${iiFmtInput(r.montante)}`;
             tr.innerHTML = `
                 <td>${r.data}</td>
                 <td><strong>${r.codigo}</strong></td>
@@ -5521,11 +5521,6 @@
             catch (syncErr) { console.warn('Auto-sync investimento falhou (não-bloqueante):', syncErr.message); }
 
             closeModal(); await iiReloadAll();
-            // Garante que a movimentação recém-gravada fique visível mesmo se a data
-            // não for do mês selecionado na ribbon.
-            movShowAll = true;
-            const tgl = document.getElementById('movHistToggle');
-            tgl.textContent = 'Mostrar só o mês selecionado'; tgl.classList.add('active');
             renderMov();
             if (syncCount) console.log(`✓ ${syncCount} posição(ões) em Investimentos sincronizada(s)`);
         } catch (err) { console.error(err); alert('Erro ao salvar movimentação: ' + (err.message||err)); }
@@ -5572,7 +5567,7 @@
         // Atualiza a célula calculada Montante na mesma linha (só p/ linhas não-RF,
         // onde o montante é derivado; em RF o próprio input já mostra o valor)
         const tr = e.target.closest('tr');
-        if (tr && key !== 'montante') { const mt = tr.querySelector('.mov-mont'); if (mt && !mt.querySelector('input')) mt.textContent = iiFmtNum(row.montante); }
+        if (tr && key !== 'montante') { const mt = tr.querySelector('.mov-mont'); if (mt && !mt.querySelector('input')) mt.textContent = iiFmtInput(row.montante); }
         movUpdateSaveBtn();
         movRenderKpis();
     }
