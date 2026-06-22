@@ -4834,7 +4834,7 @@
         return parseFloat(str) || 0;
     }
     function iiFmtNum(v) { if (!v) return '0'; return Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 2 }); }
-    function iiFmtInput(v) { if (!v && v !== 0) return ''; return Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+    function iiFmtInput(v) { if (!v && v !== 0) return ''; return Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:4}); }
 
     /* ── Máscara numérica brasileira (milhar com ponto, decimal com vírgula, 2 casas) ── */
     function iiMaskNumeric(inp) {
