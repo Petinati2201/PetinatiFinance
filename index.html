@@ -3902,9 +3902,16 @@
         if (!activeFilters.investimentos) activeFilters.investimentos = {};
         activeFilters.investimentos['_tipo'] = hiddenSet;
         // skipPie=true: preserva a animação nativa do toggle de fatia da pie de TIPO.
-        // skipAssetPie=false: recria a pie de ATIVO, que depende do filtro de tipo (se o
-        // usuário oculta um tipo, os ativos daquele tipo somem da pie por ativo).
-        renderInvestimentos(true, false);
+        // skipAssetPie=true: evita destroy+create da pie de ativo no mesmo frame,
+        // o que causaria reflow e interromperia a animação do tipo.
+        renderInvestimentos(true, true);
+        // Defere a recriação da pie de ativo para depois da animação (~400ms).
+        setTimeout(() => {
+            const hiddenTipos = activeFilters.investimentos['_tipo'] || new Set();
+            const latestKey = investimentosData.map(r=>r._k).filter(Boolean).sort().pop() || '';
+            const latestRowsForBar = investimentosData.filter(r => r._k === latestKey && r._dispBruto > 0 && !hiddenTipos.has(r._tipo));
+            renderInvAssetPie(latestRowsForBar, '_dispInv', fmtCcy);
+        }, 400);
     }
 
     // Estado da pie por ativo:
