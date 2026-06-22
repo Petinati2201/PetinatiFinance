@@ -876,6 +876,7 @@
        tem overflow-x:auto, então em telas estreitas a tabela rola na horizontal
        em vez de espremer e comer as palavras. Não afeta a tabela de câmbio. */
     .ii-table:not(.dolar-table) { min-width: 880px; }
+    .ii-table:not(.dolar-table) th:nth-child(1), .ii-table:not(.dolar-table) td:nth-child(1) { min-width: 120px; } /* Data */
     .ii-table:not(.dolar-table) th:nth-child(2), .ii-table:not(.dolar-table) td:nth-child(2) { min-width: 150px; } /* Código */
     .ii-table:not(.dolar-table) th:nth-child(3), .ii-table:not(.dolar-table) td:nth-child(3) { min-width: 170px; } /* Tipo */
     .ii-table:not(.dolar-table) th:nth-child(4), .ii-table:not(.dolar-table) td:nth-child(4) { min-width: 80px; }  /* Moeda */
