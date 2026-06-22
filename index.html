@@ -3907,41 +3907,57 @@
         renderInvestimentos(true, false);
     }
 
-    // Guarda os códigos agrupados na fatia "Outros" da pie por ativo — usado
-    // pelo handler de clique pra expandir/sincronizar o filtro corretamente.
+    // Estado da pie por ativo:
+    //   invAssetPieOthersCodigos  = códigos agrupados na fatia "Outros" no render atual
+    //   invAssetPieOthersDetail   = mesmos códigos com valores (para tooltip detalhado)
     let invAssetPieOthersCodigos = [];
+    let invAssetPieOthersDetail  = [];
     const INV_ASSET_PIE_TOP_N = 8;
 
     function renderInvAssetPie(latestRows, invKey, fmt) {
+        const hiddenCodigos = (activeFilters.investimentos || {})['_codigo'] || new Set();
+
         // Agrega por código (latestRows já está filtrado por tipo via hiddenTipos)
         const agg = {};
         latestRows.forEach(r => {
             agg[r._codigo] = (agg[r._codigo] || 0) + r[invKey];
         });
-        // Ordena descendente por valor
-        const sorted = Object.entries(agg).sort((a, b) => b[1] - a[1]);
 
-        // Top N + Outros (só agrupa se houver excesso)
-        let labels, data;
-        if (sorted.length <= INV_ASSET_PIE_TOP_N) {
-            labels = sorted.map(([k]) => k);
-            data   = sorted.map(([, v]) => v);
+        // Separa visíveis vs filtrados, ambos ordenados desc por valor
+        const allSorted     = Object.entries(agg).sort((a, b) => b[1] - a[1]);
+        const visibleSorted = allSorted.filter(([k]) => !hiddenCodigos.has(k));
+        const hiddenEntries = allSorted.filter(([k]) =>  hiddenCodigos.has(k));
+
+        // REAGRUPAMENTO DINÂMICO: Top N + Outros calculado entre os VISÍVEIS.
+        // Se você filtra um do Top N, um do Outros sobe automaticamente.
+        const labels = [];
+        const data   = [];
+        if (visibleSorted.length <= INV_ASSET_PIE_TOP_N) {
+            visibleSorted.forEach(([k, v]) => { labels.push(k); data.push(v); });
             invAssetPieOthersCodigos = [];
+            invAssetPieOthersDetail  = [];
         } else {
-            const top  = sorted.slice(0, INV_ASSET_PIE_TOP_N);
-            const rest = sorted.slice(INV_ASSET_PIE_TOP_N);
-            labels = top.map(([k]) => k);
-            data   = top.map(([, v]) => v);
+            const top  = visibleSorted.slice(0, INV_ASSET_PIE_TOP_N);
+            const rest = visibleSorted.slice(INV_ASSET_PIE_TOP_N);
+            top.forEach(([k, v]) => { labels.push(k); data.push(v); });
             const othersSum = rest.reduce((a, [, v]) => a + v, 0);
             labels.push('Outros');
             data.push(othersSum);
             invAssetPieOthersCodigos = rest.map(([k]) => k);
+            invAssetPieOthersDetail  = rest.map(([k, v]) => ({ codigo: k, valor: v }));
         }
 
-        // Cores: palette global; "Outros" recebe cinza neutro.
-        const colors = labels.map((label, i) =>
-            label === 'Outros' ? '#94A3B8' : palette[i % palette.length]
-        );
+        // Fatias-fantasma dos filtrados: presentes na legenda (para permitir
+        // reativar via clique) mas ocultas no doughnut via toggleDataVisibility.
+        const ghostStartIdx = labels.length;
+        hiddenEntries.forEach(([k, v]) => { labels.push(k); data.push(v); });
+
+        // Cores: palette para Top N; cinza neutro para "Outros" e fantasmas.
+        const colors = labels.map((label, i) => {
+            if (i >= ghostStartIdx)   return '#94A3B8';
+            if (label === 'Outros')   return '#94A3B8';
+            return palette[i % palette.length];
+        });
 
         if (charts.invAssetPie) charts.invAssetPie.destroy();
         const tc = isDarkMode ? '#6B6966' : '#8A8880';
@@ -3959,14 +3975,26 @@
                     },
                     tooltip: {
                         callbacks: {
+                            // Total considera só fatias visíveis (fantasmas não contam pro %)
                             label: ctx => {
-                                const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+                                const total = ctx.dataset.data.reduce(
+                                    (sum, val, i) => ctx.chart.getDataVisibility(i) ? sum + val : sum, 0
+                                );
                                 const v = ctx.parsed;
                                 const p = total > 0 ? ((v/total)*100).toFixed(1) : 0;
-                                const suffix = ctx.label === 'Outros' && invAssetPieOthersCodigos.length > 0
-                                    ? ` — ${invAssetPieOthersCodigos.length} ativos`
+                                const suffix = ctx.label === 'Outros' && invAssetPieOthersDetail.length > 0
+                                    ? ` — ${invAssetPieOthersDetail.length} ativos`
                                     : '';
                                 return `${ctx.label}: ${fmt(v)} (${p}%)${suffix}`;
+                            },
+                            // Tooltip de "Outros": expande lista detalhada (código, valor, % do grupo)
+                            afterLabel: ctx => {
+                                if (ctx.label !== 'Outros' || invAssetPieOthersDetail.length === 0) return undefined;
+                                const totalOutros = invAssetPieOthersDetail.reduce((a, x) => a + x.valor, 0);
+                                return invAssetPieOthersDetail.map(({codigo, valor}) => {
+                                    const p = totalOutros > 0 ? ((valor/totalOutros)*100).toFixed(1) : 0;
+                                    return `  ${codigo}: ${fmt(valor)} (${p}%)`;
+                                });
                             }
                         }
                     }
@@ -3981,22 +4009,11 @@
             }
         });
 
-        // Restaura estado hidden baseado em activeFilters.investimentos['_codigo']
-        const hiddenCodigosCurrent = (activeFilters.investimentos || {})['_codigo'] || new Set();
-        if (hiddenCodigosCurrent.size > 0) {
-            labels.forEach((label, i) => {
-                let shouldHide = false;
-                if (label === 'Outros') {
-                    // Só oculta "Outros" se TODOS os códigos do grupo estiverem hidden
-                    shouldHide = invAssetPieOthersCodigos.length > 0
-                        && invAssetPieOthersCodigos.every(c => hiddenCodigosCurrent.has(c));
-                } else {
-                    shouldHide = hiddenCodigosCurrent.has(label);
-                }
-                if (shouldHide && charts.invAssetPie.getDataVisibility(i)) {
-                    charts.invAssetPie.toggleDataVisibility(i);
-                }
-            });
+        // Marca as fatias-fantasma como hidden (visíveis na legenda apenas)
+        if (ghostStartIdx < labels.length) {
+            for (let i = ghostStartIdx; i < labels.length; i++) {
+                charts.invAssetPie.toggleDataVisibility(i);
+            }
             charts.invAssetPie.update('none');
         }
     }
@@ -4005,36 +4022,30 @@
         const chart = charts['invAssetPie'];
         if (!chart) return;
         const labels = chart.data.labels;
-        const hiddenLabels = new Set();
-        labels.forEach((label, i) => {
-            if (!chart.getDataVisibility(i)) hiddenLabels.add(label);
-        });
 
         if (!activeFilters.investimentos) activeFilters.investimentos = {};
 
-        // Preserva códigos no filtro atual que NÃO estão representados na pie atual
-        // (caso edge: filtro veio de outra fonte ou tipo do ativo está oculto agora).
-        const representedSet = new Set([
-            ...labels.filter(l => l !== 'Outros'),
-            ...invAssetPieOthersCodigos
-        ]);
+        // Códigos representados na pie atual (Top N + Outros expandido + fantasmas)
+        const representedSet = new Set();
+        labels.forEach(l => { if (l !== 'Outros') representedSet.add(l); });
+        invAssetPieOthersCodigos.forEach(c => representedSet.add(c));
+
+        // Preserva códigos no filtro que NÃO estão na pie (ex.: tipo do ativo oculto)
         const current = activeFilters.investimentos['_codigo'] || new Set();
         const next = new Set();
         current.forEach(c => { if (!representedSet.has(c)) next.add(c); });
 
-        // Aplica o estado hidden da pie ao filtro
-        hiddenLabels.forEach(label => {
-            if (label === 'Outros') {
-                invAssetPieOthersCodigos.forEach(c => next.add(c));
-            } else {
-                next.add(label);
-            }
+        // Aplica visibilidade da pie ao filtro
+        labels.forEach((label, i) => {
+            if (chart.getDataVisibility(i)) return;
+            if (label === 'Outros') invAssetPieOthersCodigos.forEach(c => next.add(c));
+            else                    next.add(label);
         });
 
         activeFilters.investimentos['_codigo'] = next;
-        // skipPie=false: recria a pie de TIPO (valores agregados mudam quando ativos somem).
-        // skipAssetPie=true: preserva a animação nativa do clique na pie de ativo.
-        renderInvestimentos(false, true);
+        // Recria TUDO incluindo a pie de ativo — necessário para o reagrupamento
+        // dinâmico (um ativo do Outros sobe pro Top N quando outro é filtrado).
+        renderInvestimentos(false, false);
     }
 
     function renderInvTopBar(latestRows, invKey, fmtK) {
@@ -4834,14 +4845,22 @@
         return parseFloat(str) || 0;
     }
     function iiFmtNum(v) { if (!v) return '0'; return Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 2 }); }
-    function iiFmtInput(v) { if (!v && v !== 0) return ''; return Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:4}); }
+    function iiFmtInput(v) { if (!v && v !== 0) return ''; return Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+    function iiFmtQtde(v) {
+        if (!v && v !== 0) return '';
+        const n = Number(v);
+        // Formata com até 5 casas, depois remove zeros à direita e vírgula órfã
+        const s = n.toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:5});
+        return s;
+    }
 
-    /* ── Máscara numérica brasileira (milhar com ponto, decimal com vírgula, 2 casas) ── */
-    function iiMaskNumeric(inp) {
+    /* ── Máscara numérica brasileira (milhar com ponto, decimal com vírgula) ── */
+    function iiMaskNumeric(inp, maxDecimals) {
+        const maxDec = maxDecimals || 2;
         inp.addEventListener('input', function() {
             let v = inp.value.replace(/[^\d,]/g, '');
             const ci = v.indexOf(',');
-            if (ci !== -1) v = v.slice(0, ci + 1) + v.slice(ci + 1).replace(/,/g, '').slice(0, 2);
+            if (ci !== -1) v = v.slice(0, ci + 1) + v.slice(ci + 1).replace(/,/g, '').slice(0, maxDec);
             const parts = v.split(',');
             let intPart = parts[0].replace(/^0+(?=\d)/, '') || '';
             intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
@@ -5005,11 +5024,11 @@
                     td.appendChild(sel);
                 } else {
                     const inp = document.createElement('input'); inp.type='text';
-                    inp.value = f.type==='num' ? iiFmtInput(row[f.key]) : (f.type==='date' ? isoToBR(row[f.key]) : (row[f.key]||''));
+                    inp.value = f.type==='num' ? (f.key==='qtde' ? iiFmtQtde(row[f.key]) : iiFmtInput(row[f.key])) : (f.type==='date' ? isoToBR(row[f.key]) : (row[f.key]||''));
                     inp.style.textAlign = f.type==='num' ? 'right' : 'left';
                     inp.dataset.id=row.id||row._tmp; inp.dataset.key=f.key; inp.dataset.kind=f.type;
                     inp.addEventListener('input', iiOnField);
-                    if (f.type==='num') iiMaskNumeric(inp);
+                    if (f.type==='num') iiMaskNumeric(inp, f.key==='qtde' ? 5 : 2);
                     td.appendChild(inp);
                 }
                 tr.appendChild(td);
@@ -5287,7 +5306,7 @@
             // RF: aporte por VALOR. Qtde e Preço viram "—"; o Montante (valor
             // aportado) é o campo editável. RV/cripto/etc: qtde e preço editáveis,
             // montante calculado.
-            const qtdeCell  = isRF ? dash : `<input type="text" data-id="${r.id}" data-key="qtde" value="${iiFmtInput(r.qtde)}" style="${editStyle}">`;
+            const qtdeCell  = isRF ? dash : `<input type="text" data-id="${r.id}" data-key="qtde" value="${iiFmtQtde(r.qtde)}" style="${editStyle}">`;
             const precoCell = isRF ? dash : `<input type="text" data-id="${r.id}" data-key="preco" value="${iiFmtInput(r.preco)}" style="${editStyle}">`;
             const montCell  = isRF
                 ? `<input type="text" data-id="${r.id}" data-key="montante" value="${iiFmtInput(r.montante)}" style="${editStyle};font-weight:600">`
@@ -5306,7 +5325,7 @@
                     : '—'}</td>
                 <td class="row-actions"></td>`;
             // Listeners de edição inline para qtde/preco/ptax/montante
-            tr.querySelectorAll('input[data-key]').forEach(inp => { inp.addEventListener('input', movOnEdit); iiMaskNumeric(inp); });
+            tr.querySelectorAll('input[data-key]').forEach(inp => { inp.addEventListener('input', movOnEdit); iiMaskNumeric(inp, inp.dataset.key==='qtde' ? 5 : 2); });
             // Botão excluir
             const tdAct = tr.querySelector('.row-actions');
             const btn = document.createElement('button'); btn.className='act-discard'; btn.textContent='✕'; btn.title='Excluir';
@@ -6135,7 +6154,10 @@
         }
     });
     // Máscaras numéricas nos inputs estáticos
-    ['modalQtde','modalPreco','modalMontante','modalPtax','dolarInputPtax'].forEach(id => iiMaskNumeric(document.getElementById(id)));
+    ['modalQtde','modalPreco','modalMontante','modalPtax','dolarInputPtax'].forEach(id => {
+        const el = document.getElementById(id);
+        iiMaskNumeric(el, id === 'modalQtde' ? 5 : 2);
+    });
     document.getElementById('modalData').addEventListener('input', function(e){
         let v=e.target.value.replace(/\D/g,''); if(v.length>8)v=v.slice(0,8);
         if(v.length>4)v=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4);
