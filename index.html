@@ -5380,27 +5380,28 @@
             label.textContent = 'Código';
         }
     }
-    // Popula o select de Código com ativos existentes (mov + invest) filtrados pelo Tipo escolhido.
-    // Dedup case-insensitive, mas preserva a capitalização original do primeiro registro encontrado.
+    // Popula o select de Código com ativos que o usuário ATUALMENTE possui
+    // (posição com valor bruto > 0 no mês mais recente), filtrados pelo Tipo.
     function modalRefreshCodigoSelect() {
         const sel = document.getElementById('modalCodigoSelect');
         const prev = sel.value;
         const tipoFiltro = (document.getElementById('modalTipo').value || '').trim().toUpperCase();
-        const dedup = new Map(); // key: codigo.toLowerCase() → value: { codigo (original case), tipo, moeda }
-        const consider = (r) => {
+        const dedup = new Map();
+        // Usa apenas o snapshot mais recente de investimentos com posição viva
+        const latestKey = iiAllMonths().slice(-1)[0] || '';
+        iiRows.forEach(r => {
             if (!r || !r.codigo) return;
+            if (r._k !== latestKey) return;
+            if ((r.bruto || 0) <= 0 && (r.qtde || 0) <= 0) return;
             if (tipoFiltro && (r.tipo||'').trim().toUpperCase() !== tipoFiltro) return;
             const k = r.codigo.trim().toLowerCase();
             if (!dedup.has(k)) dedup.set(k, { codigo: r.codigo, tipo: r.tipo, moeda: r.moeda });
-        };
-        movRows.forEach(consider);
-        iiRows.forEach(consider);
+        });
         sel.innerHTML = '<option value="">Selecione o ativo…</option>';
         [...dedup.values()].sort((a,b)=>a.codigo.localeCompare(b.codigo)).forEach(item => {
             const o = document.createElement('option'); o.value = item.codigo; o.textContent = item.codigo;
             sel.appendChild(o);
         });
-        // Restaura seleção anterior se ainda existir
         if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
         if (!dedup.size && tipoFiltro) {
             sel.innerHTML = `<option value="">Nenhum ativo de tipo ${tipoFiltro}</option>`;
