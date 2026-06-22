@@ -817,6 +817,9 @@
         .data-table td { padding:.68rem 1rem; vertical-align:middle; }
         .data-table td.muted { color:var(--muted); font-size:12px; }
         .data-table td:last-child { text-align:right; font-weight:600; }
+        /* Tabelas de Carteira e IR: tudo numérico à direita; colunas de texto marcadas com .txt */
+        .num-table th, .num-table td { text-align:right; }
+        .num-table th.txt, .num-table td.txt { text-align:left; }
 
         .badge {
             display:inline-flex; align-items:center;
@@ -1680,11 +1683,11 @@
                 <div class="card-title" style="margin-bottom:.15rem">Posições do Mês Mais Recente</div>
                 <div class="card-sub">Ordenadas por valor investido</div>
                 <div style="overflow-x:auto">
-                    <table class="data-table">
+                    <table class="data-table num-table">
                         <thead>
                             <tr>
-                                <th>Ativo</th>
-                                <th>Tipo</th>
+                                <th class="txt">Ativo</th>
+                                <th class="txt">Tipo</th>
                                 <th>Investido</th>
                                 <th>Rendimento</th>
                                 <th>Rentab.</th>
@@ -1758,17 +1761,17 @@
                 <div class="card-title" style="margin-bottom:.15rem">Vendas do Ano Selecionado</div>
                 <div class="card-sub">Preço médio calculado com base em todas as compras anteriores à data da venda</div>
                 <div style="overflow-x:auto">
-                    <table class="data-table">
+                    <table class="data-table num-table">
                         <thead>
                             <tr>
-                                <th>Data</th>
-                                <th>Ativo</th>
-                                <th>Tipo</th>
+                                <th class="txt">Data</th>
+                                <th class="txt">Ativo</th>
+                                <th class="txt">Tipo</th>
                                 <th>Qty</th>
                                 <th>P. Venda</th>
                                 <th>P. Médio</th>
                                 <th>Lucro</th>
-                                <th>Isento?</th>
+                                <th class="txt">Isento?</th>
                                 <th>IR Est.</th>
                             </tr>
                         </thead>
@@ -1824,11 +1827,11 @@
                     <div class="card-title" style="margin-top:1.5rem;margin-bottom:.15rem">Histórico de Movimentações</div>
                     <div class="card-sub">Em ordem cronológica, com preço médio recalculado a cada operação</div>
                     <div style="overflow-x:auto">
-                        <table class="data-table">
+                        <table class="data-table num-table">
                             <thead>
                                 <tr>
-                                    <th>Data</th>
-                                    <th>Operação</th>
+                                    <th class="txt">Data</th>
+                                    <th class="txt">Operação</th>
                                     <th>Qty</th>
                                     <th>Preço</th>
                                     <th>Valor</th>
@@ -4066,8 +4069,8 @@
             const rendDisplay = hasInv ? `<span style="color:${rendColor}">${fmt(r[rendKey])}</span>` : '<span style="color:var(--muted)">—</span>';
             const rentDisplay = rentab !== null ? `<span style="color:${rendColor}">${rentab.toFixed(2)}%</span>` : '<span style="color:var(--muted)">—</span>';
             return `<tr>
-                <td style="font-weight:500">${r._codigo}</td>
-                <td class="muted">${r._tipo}</td>
+                <td class="txt" style="font-weight:500">${r._codigo}</td>
+                <td class="txt muted">${r._tipo}</td>
                 <td>${invDisplay}</td>
                 <td>${rendDisplay}</td>
                 <td>${rentDisplay}</td>
@@ -4284,14 +4287,14 @@
                 ? '<span style="color:var(--muted)">N/A</span>'
                 : (r._isento ? '<span style="color:#10B981;font-weight:600">Sim</span>' : '<span style="color:var(--muted)">Não</span>');
             return `<tr>
-                <td class="muted">${dataStr}</td>
-                <td style="font-weight:500">${r._codigo}</td>
-                <td>${tipoLabel}</td>
+                <td class="txt muted">${dataStr}</td>
+                <td class="txt" style="font-weight:500">${r._codigo}</td>
+                <td class="txt">${tipoLabel}</td>
                 <td>${r._qty.toLocaleString('pt-BR', {maximumFractionDigits:4})}</td>
                 <td>${fmt(pu)}</td>
                 <td class="muted">${fmt(avg)}</td>
                 <td style="color:${lucroColor};font-weight:600">${fmt(lucro)}</td>
-                <td style="text-align:center">${isentoLabel}</td>
+                <td class="txt" style="text-align:center">${isentoLabel}</td>
                 <td>${fmt(r._irEst)}</td>
             </tr>`;
         }).join('');
@@ -4414,8 +4417,8 @@
                 ? `<td style="color:${lucro > 0 ? '#10B981' : (lucro < 0 ? '#DC2626' : 'var(--muted)')};font-weight:600">${fmt(lucro)}</td>`
                 : `<td class="muted">—</td>`;
             return `<tr>
-                <td class="muted">${r._date.toLocaleDateString('pt-BR')}</td>
-                <td>${opLabel}</td>
+                <td class="txt muted">${r._date.toLocaleDateString('pt-BR')}</td>
+                <td class="txt">${opLabel}</td>
                 <td>${r._qty.toLocaleString('pt-BR', {maximumFractionDigits:4})}</td>
                 <td>${fmt(pu)}</td>
                 <td>${fmt(valor)}</td>
