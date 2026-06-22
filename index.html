@@ -5310,7 +5310,7 @@
             const precoCell = isRF ? dash : `<input type="text" data-id="${r.id}" data-key="preco" value="${iiFmtInput(r.preco)}" style="${editStyle}">`;
             const montCell  = isRF
                 ? `<input type="text" data-id="${r.id}" data-key="montante" value="${iiFmtInput(r.montante)}" style="${editStyle};font-weight:600">`
-                : `${iiFmtInput(r.montante)}`;
+                : `<span style="display:block;text-align:right;padding:.35rem .45rem;font-variant-numeric:tabular-nums">${iiFmtInput(r.montante)}</span>`;
             tr.innerHTML = `
                 <td>${r.data}</td>
                 <td><strong>${r.codigo}</strong></td>
@@ -5567,7 +5567,7 @@
         // Atualiza a célula calculada Montante na mesma linha (só p/ linhas não-RF,
         // onde o montante é derivado; em RF o próprio input já mostra o valor)
         const tr = e.target.closest('tr');
-        if (tr && key !== 'montante') { const mt = tr.querySelector('.mov-mont'); if (mt && !mt.querySelector('input')) mt.textContent = iiFmtInput(row.montante); }
+        if (tr && key !== 'montante') { const mt = tr.querySelector('.mov-mont'); if (mt) { const sp = mt.querySelector('span'); if (sp) sp.textContent = iiFmtInput(row.montante); else if (!mt.querySelector('input')) mt.textContent = iiFmtInput(row.montante); } }
         movUpdateSaveBtn();
         movRenderKpis();
     }
