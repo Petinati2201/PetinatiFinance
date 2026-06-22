@@ -1079,10 +1079,6 @@
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
                     <span class="sb-link-label">Câmbio</span>
                 </div>
-                <div class="sb-link" data-view="inputytd" onclick="switchView('inputytd')">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
-                    <span class="sb-link-label">Input de Despesas</span>
-                </div>
                 <div class="sb-link" data-view="download" onclick="switchView('download')">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     <span class="sb-link-label">Download</span>
@@ -1315,76 +1311,6 @@
                     Exportar .xlsx
                 </button>
                 <span id="dlStatus" style="font-size:12px;color:var(--muted)"></span>
-            </div>
-        </div>
-    </div>
-
-    <!-- VIEW: INPUT YTD / YTG -->
-    <div id="view-inputytd" class="view">
-        <div class="view-header">
-            <div>
-                <h1 class="view-title">Input de Despesas</h1>
-                <div class="view-subtitle">Projeção (YTG) editável + upload CSV de realizado (YTD) por mês</div>
-            </div>
-        </div>
-
-        <!-- SEÇÃO 1: YTG editável -->
-        <div class="card mb3">
-            <div class="card-title" style="margin-bottom:.15rem">Projeção YTG</div>
-            <div class="card-sub">Linhas da tabela <code>projecao_ytg</code> — edite os campos ou adicione novas linhas</div>
-
-            <div class="ii-toolbar" style="margin-top:1rem">
-                <div id="ytgKpis" style="display:flex;gap:1rem;font-size:13px;color:var(--muted)"></div>
-                <div class="spacer"></div>
-                <button id="ytgBtnAdd">+ Adicionar linha</button>
-                <button id="ytgBtnSave" class="primary" disabled>Gravar</button>
-            </div>
-            <div class="ii-status" id="ytgStatus"></div>
-
-            <div style="overflow-x:auto;margin-top:1rem">
-                <table class="ii-table">
-                    <thead>
-                        <tr>
-                            <th>Data início</th>
-                            <th>Data fim</th>
-                            <th>Tipo</th>
-                            <th>Grupo</th>
-                            <th>Subgrupo 1</th>
-                            <th>Subgrupo 2</th>
-                            <th>Lançamento</th>
-                            <th>Origem</th>
-                            <th>Evento</th>
-                            <th class="calc" style="text-align:right">Valor BRL</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ytgBody"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- SEÇÃO 2: Upload Realizado YTD -->
-        <div class="card mb3">
-            <div class="card-title" style="margin-bottom:.15rem">Upload Realizado YTD (CSV)</div>
-            <div class="card-sub">Substitui TODAS as linhas do mês selecionado pelas do CSV (DELETE + INSERT)</div>
-
-            <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:1rem">
-                <label style="font-size:13px;color:var(--muted);font-weight:600">Mês de competência:</label>
-                <input type="month" id="ytdMonth" style="font-family:'Inter',sans-serif;font-size:13px;padding:.45rem .65rem;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)">
-            </div>
-
-            <div id="ytdDropZone" style="margin-top:1rem;border:2px dashed var(--border);border-radius:10px;padding:2rem;text-align:center;cursor:pointer;transition:all .2s;background:transparent">
-                <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:.5;margin-bottom:.5rem"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                <div style="font-size:14px;color:var(--text);font-weight:600">Arraste o CSV aqui ou clique para escolher</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:.4rem;line-height:1.5">Colunas esperadas: TIPO, DATA, DATA COMPETENCIA, LANÇAMENTO, VALOR BRL,<br>ORIGEM DA COMPRA, EVENTO, GRUPO, SUBGRUPO 1, SUBGRUPO 2</div>
-                <input type="file" id="ytdFileInput" accept=".csv,text/csv" style="display:none">
-            </div>
-
-            <div id="ytdPreview" style="margin-top:1rem"></div>
-
-            <div style="display:flex;gap:1rem;align-items:center;margin-top:1rem;flex-wrap:wrap">
-                <button id="ytdConfirmBtn" disabled style="font-family:'Inter',sans-serif;font-size:13px;border-radius:8px;padding:.55rem 1.2rem;border:1px solid #dc2626;background:#dc2626;color:#fff;font-weight:600;cursor:pointer;opacity:.5">Confirmar substituição</button>
-                <button id="ytdResetBtn" style="font-family:'Inter',sans-serif;font-size:13px;border-radius:8px;padding:.5rem 1rem;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer">Limpar</button>
-                <div class="ii-status" id="ytdStatus" style="margin-left:.5rem"></div>
             </div>
         </div>
     </div>
@@ -1737,10 +1663,16 @@
                     <div style="height:300px"><canvas id="invTypePie"></canvas></div>
                 </div>
                 <div class="card">
-                    <div class="card-title">Top Posições</div>
-                    <div class="card-sub">Maiores ativos por valor investido</div>
-                    <div style="height:300px"><canvas id="invTopBar"></canvas></div>
+                    <div class="card-title">Por Ativo</div>
+                    <div class="card-sub">Top 8 + Outros — clique para filtrar (depende do tipo)</div>
+                    <div style="height:300px"><canvas id="invAssetPie"></canvas></div>
                 </div>
+            </div>
+
+            <div class="card mb2">
+                <div class="card-title">Top Posições</div>
+                <div class="card-sub">Maiores ativos por valor investido</div>
+                <div style="height:300px"><canvas id="invTopBar"></canvas></div>
             </div>
 
             <div class="section-label">Detalhamento</div>
@@ -1856,8 +1788,9 @@
                 <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:1.25rem">
                     <div class="pill-toggle" id="irAssetTypeFilter">
                         <button class="active" data-tipo="ALL">Todos</button>
-                        <button data-tipo="AÇÃO">Renda Variável</button>
-                        <button data-tipo="AÇÃO EXTERIOR">Renda Variável Exterior</button>
+                        <button data-tipo="AÇÃO">Ações</button>
+                        <button data-tipo="FII">FIIs</button>
+                        <button data-tipo="AÇÃO EXTERIOR">Ações Ext.</button>
                         <button data-tipo="CRIPTO">Cripto</button>
                     </div>
                     <select id="irAssetSelect" class="ctrl-select" style="max-width:320px;flex:1;min-width:220px"></select>
@@ -2459,7 +2392,7 @@
         // Tabela de detalhamento só aparece nas views de análise (exceto as que têm tabelas próprias)
         const detalhamento = document.getElementById('detalhamentoWrap');
         if (detalhamento) {
-            const semDetalhe = ['inputinv', 'movimentacoes', 'holerite', 'investimentos', 'ir', 'dolar', 'download', 'inputytd'];
+            const semDetalhe = ['inputinv', 'movimentacoes', 'holerite', 'investimentos', 'ir', 'dolar', 'download'];
             detalhamento.style.display = semDetalhe.includes(viewName) ? 'none' : 'block';
         }
         // Em mobile, fecha a sidebar ao navegar
@@ -2471,7 +2404,6 @@
         if (viewName === 'movimentacoes') { renderMov(); return; }
         if (viewName === 'dolar') { renderDolar(); return; }
         if (viewName === 'download') { renderDownload(); return; }
-        if (viewName === 'inputytd') { renderInputYtd(); return; }
         renderAll();
     }
 
@@ -2736,10 +2668,6 @@
                     row._avgNativeBefore = avg;
                     row._lucroNative = (m._preco - avg) * m._qty;
                     realized += row._lucroNative;
-                    // Para tipo MOEDA: preço E avg são PTAX (BRL/USD), então _lucroNative
-                    // já está em BRL — é o ganho/perda cambial realizado. Replicamos no
-                    // campo _lucroBRL pra ficar explícito na renderização.
-                    if (m._tipo === 'MOEDA') row._lucroBRL = row._lucroNative;
                     totalCost -= avg * m._qty;
                     qty -= m._qty;
                     if (qty < 0.0001) { qty = 0; totalCost = 0; }
@@ -3692,7 +3620,7 @@
     }
 
     /* ──────── INVESTIMENTOS ──────── */
-    function renderInvestimentos(skipPie = false) {
+    function renderInvestimentos(skipPie = false, skipAssetPie = false) {
         const content = document.getElementById('invContent');
         const noData = document.getElementById('invNoData');
         if (investimentosData.length === 0) {
@@ -3712,13 +3640,9 @@
         // _dispBruto = valor bruto (posição viva = preço × qtde, tabela Investimentos);
         // _dispRend = NÃO-realizado (bruto − custo) por ativo. Os dividendos acumulados
         //             (permanentes, inclusive de ativos vendidos) são somados à parte no byMonth.
-        // CONVENÇÃO MOEDA: para tipo === 'MOEDA', preço é a PTAX (BRL/USD) e o montante
-        // (qtde × preço) já está em BRL — mesmo que moeda='USD'. Tratamos como BRL-efetivo
-        // na conversão pra não multiplicar PTAX duas vezes.
         investimentosData.forEach(r => {
-            const effCcy = r._tipo === 'MOEDA' ? 'BRL' : r._moeda;
-            r._dispInv   = convert(invValorInvestido(r), effCcy, r._k);
-            r._dispBruto = convert(invBruto(r),          effCcy, r._k);
+            r._dispInv   = convert(invValorInvestido(r), r._moeda, r._k);
+            r._dispBruto = convert(invBruto(r),          r._moeda, r._k);
             r._dispRend  = r._dispBruto - r._dispInv;
         });
 
@@ -3813,7 +3737,13 @@
             const latestRowsAllTypes = investimentosData.filter(r => r._k === latestKey && r._dispBruto > 0 && !hiddenCodigos.has(r._codigo));
             renderInvTypePie(latestRowsAllTypes, '_dispInv', fmt);
         }
+        // Pie por Ativo: respeita filtro de tipo (dependente), mas mostra TODOS os ativos
+        // dos tipos visíveis — inclusive os escondidos via hiddenCodigos (eles aparecem
+        // como fatia "hidden" da própria pie, que é a UI de filtro deles).
         const latestRowsForBar = investimentosData.filter(r => r._k === latestKey && r._dispBruto > 0 && !hiddenTipos.has(r._tipo));
+        if (!skipAssetPie) {
+            renderInvAssetPie(latestRowsForBar, '_dispInv', fmt);
+        }
         renderInvTopBar(latestRowsForBar, '_dispInv', fmtK);
         renderInvTable(latestRows, '_dispInv', '_dispRend', fmt);
     }
@@ -3971,8 +3901,140 @@
         });
         if (!activeFilters.investimentos) activeFilters.investimentos = {};
         activeFilters.investimentos['_tipo'] = hiddenSet;
-        // skipPie=true: preserva a animação nativa do toggle de fatia (já aplicado por makeLegendSyncOnClick)
-        renderInvestimentos(true);
+        // skipPie=true: preserva a animação nativa do toggle de fatia da pie de TIPO.
+        // skipAssetPie=false: recria a pie de ATIVO, que depende do filtro de tipo (se o
+        // usuário oculta um tipo, os ativos daquele tipo somem da pie por ativo).
+        renderInvestimentos(true, false);
+    }
+
+    // Guarda os códigos agrupados na fatia "Outros" da pie por ativo — usado
+    // pelo handler de clique pra expandir/sincronizar o filtro corretamente.
+    let invAssetPieOthersCodigos = [];
+    const INV_ASSET_PIE_TOP_N = 8;
+
+    function renderInvAssetPie(latestRows, invKey, fmt) {
+        // Agrega por código (latestRows já está filtrado por tipo via hiddenTipos)
+        const agg = {};
+        latestRows.forEach(r => {
+            agg[r._codigo] = (agg[r._codigo] || 0) + r[invKey];
+        });
+        // Ordena descendente por valor
+        const sorted = Object.entries(agg).sort((a, b) => b[1] - a[1]);
+
+        // Top N + Outros (só agrupa se houver excesso)
+        let labels, data;
+        if (sorted.length <= INV_ASSET_PIE_TOP_N) {
+            labels = sorted.map(([k]) => k);
+            data   = sorted.map(([, v]) => v);
+            invAssetPieOthersCodigos = [];
+        } else {
+            const top  = sorted.slice(0, INV_ASSET_PIE_TOP_N);
+            const rest = sorted.slice(INV_ASSET_PIE_TOP_N);
+            labels = top.map(([k]) => k);
+            data   = top.map(([, v]) => v);
+            const othersSum = rest.reduce((a, [, v]) => a + v, 0);
+            labels.push('Outros');
+            data.push(othersSum);
+            invAssetPieOthersCodigos = rest.map(([k]) => k);
+        }
+
+        // Cores: palette global; "Outros" recebe cinza neutro.
+        const colors = labels.map((label, i) =>
+            label === 'Outros' ? '#94A3B8' : palette[i % palette.length]
+        );
+
+        if (charts.invAssetPie) charts.invAssetPie.destroy();
+        const tc = isDarkMode ? '#6B6966' : '#8A8880';
+
+        charts.invAssetPie = new Chart(document.getElementById('invAssetPie'), {
+            type: 'doughnut',
+            data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { color: tc, font: {size:11,family:'Inter'}, boxWidth: 10, usePointStyle: true },
+                        onClick: makeLegendSyncOnClick(syncInvCodigoFilter)
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+                                const v = ctx.parsed;
+                                const p = total > 0 ? ((v/total)*100).toFixed(1) : 0;
+                                const suffix = ctx.label === 'Outros' && invAssetPieOthersCodigos.length > 0
+                                    ? ` — ${invAssetPieOthersCodigos.length} ativos`
+                                    : '';
+                                return `${ctx.label}: ${fmt(v)} (${p}%)${suffix}`;
+                            }
+                        }
+                    }
+                },
+                onClick: (evt, elements, chart) => {
+                    if (elements && elements.length > 0) {
+                        chart.toggleDataVisibility(elements[0].index);
+                        chart.update();
+                    }
+                    setTimeout(() => syncInvCodigoFilter(), 0);
+                }
+            }
+        });
+
+        // Restaura estado hidden baseado em activeFilters.investimentos['_codigo']
+        const hiddenCodigosCurrent = (activeFilters.investimentos || {})['_codigo'] || new Set();
+        if (hiddenCodigosCurrent.size > 0) {
+            labels.forEach((label, i) => {
+                let shouldHide = false;
+                if (label === 'Outros') {
+                    // Só oculta "Outros" se TODOS os códigos do grupo estiverem hidden
+                    shouldHide = invAssetPieOthersCodigos.length > 0
+                        && invAssetPieOthersCodigos.every(c => hiddenCodigosCurrent.has(c));
+                } else {
+                    shouldHide = hiddenCodigosCurrent.has(label);
+                }
+                if (shouldHide && charts.invAssetPie.getDataVisibility(i)) {
+                    charts.invAssetPie.toggleDataVisibility(i);
+                }
+            });
+            charts.invAssetPie.update('none');
+        }
+    }
+
+    function syncInvCodigoFilter() {
+        const chart = charts['invAssetPie'];
+        if (!chart) return;
+        const labels = chart.data.labels;
+        const hiddenLabels = new Set();
+        labels.forEach((label, i) => {
+            if (!chart.getDataVisibility(i)) hiddenLabels.add(label);
+        });
+
+        if (!activeFilters.investimentos) activeFilters.investimentos = {};
+
+        // Preserva códigos no filtro atual que NÃO estão representados na pie atual
+        // (caso edge: filtro veio de outra fonte ou tipo do ativo está oculto agora).
+        const representedSet = new Set([
+            ...labels.filter(l => l !== 'Outros'),
+            ...invAssetPieOthersCodigos
+        ]);
+        const current = activeFilters.investimentos['_codigo'] || new Set();
+        const next = new Set();
+        current.forEach(c => { if (!representedSet.has(c)) next.add(c); });
+
+        // Aplica o estado hidden da pie ao filtro
+        hiddenLabels.forEach(label => {
+            if (label === 'Outros') {
+                invAssetPieOthersCodigos.forEach(c => next.add(c));
+            } else {
+                next.add(label);
+            }
+        });
+
+        activeFilters.investimentos['_codigo'] = next;
+        // skipPie=false: recria a pie de TIPO (valores agregados mudam quando ativos somem).
+        // skipAssetPie=true: preserva a animação nativa do clique na pie de ativo.
+        renderInvestimentos(false, true);
     }
 
     function renderInvTopBar(latestRows, invKey, fmtK) {
@@ -4072,15 +4134,13 @@
         return tipoRegistry.isQtyBased(t);
     }
     // Casa o filtro de tipo (pill toggle) com o _tipo da movimentação.
-    // 'ALL' → tudo elegível. 'AÇÃO' (rótulo "Renda Variável" na UI) agora
-    // engloba tudo de RV — ações + FIIs no mesmo grupo visual. A distinção
-    // tributária de FII (20% sem isenção) continua sendo aplicada por ticker
-    // no cálculo de IR mais abaixo, independente desse filtro visual.
-    function irMatchTipoFilter(tipo, filter, codigo) {
+    // 'ALL' → tudo elegível; 'AÇÃO' cobre legado + 'RENDA VARIÁVEL'; 'AÇÃO EXTERIOR' idem.
+    function irMatchTipoFilter(tipo, filter) {
         if (filter === 'ALL') return true;
         const t = String(tipo||'').toUpperCase().trim();
-        if (filter === 'AÇÃO')          return t === 'AÇÃO' || t === 'RENDA VARIÁVEL' || t === 'FII';
+        if (filter === 'AÇÃO')          return t === 'AÇÃO' || t === 'RENDA VARIÁVEL';
         if (filter === 'AÇÃO EXTERIOR') return t === 'AÇÃO EXTERIOR' || t === 'ACAO EXTERIOR' || t === 'RENDA VARIÁVEL EXTERIOR';
+        if (filter === 'FII')           return t === 'FII';
         if (filter === 'CRIPTO')        return t === 'CRIPTO';
         return t === filter;
     }
@@ -4106,7 +4166,7 @@
             r._op === 'VENDA'
             && r._y === year
             && irElegivel(r._tipo)
-            && irMatchTipoFilter(r._tipo, currentIrTypeFilter, r._codigo)
+            && irMatchTipoFilter(r._tipo, currentIrTypeFilter)
         );
 
         // Vendas totais por mês/tipo para regra de isenção — sempre em BRL (regra da Receita)
@@ -4114,16 +4174,12 @@
         vendasDoAno.forEach(r => {
             const k = `${r._m}|${r._tipo}`;
             if (!vendasPorMesTipo[k]) vendasPorMesTipo[k] = { totalVendidoBRL: 0 };
-            // Venda bruta na moeda nativa convertida p/ BRL.
-            // MOEDA: preço já é PTAX, então preço × qtde já está em BRL — efetivo 'BRL'.
-            const effCcy = r._tipo === 'MOEDA' ? 'BRL' : r._moeda;
-            vendasPorMesTipo[k].totalVendidoBRL += convert(r._preco * r._qty, effCcy, r._k, 'BRL');
+            // venda bruta na moeda nativa convertida p/ BRL
+            vendasPorMesTipo[k].totalVendidoBRL += convert(r._preco * r._qty, r._moeda, r._k, 'BRL');
         });
 
         // Regras de IR:
-        // - FII: 20% sobre lucro, sem isenção (detectado por tipo legado 'FII' OU
-        //   ticker que case com padrão FII brasileiro de 4 letras + 11, caso o
-        //   ativo tenha sido cadastrado como 'RENDA VARIÁVEL' no esquema novo).
+        // - FII: 20% sobre lucro, sem isenção
         // - AÇÃO EXTERIOR / RV EXTERIOR: 15% sobre lucro, sem isenção
         // - CRIPTO: 15% sobre lucro, isento se vendas totais do mês ≤ R$35k (regra Receita)
         // - AÇÃO NACIONAL / RENDA VARIÁVEL: 15%, isento se vendas totais do mês ≤ R$20k
@@ -4131,12 +4187,10 @@
             const k = `${r._m}|${r._tipo}`;
             const totalMesTipoBRL = vendasPorMesTipo[k].totalVendidoBRL;
             const t = String(r._tipo||'').toUpperCase().trim();
-            const c = String(r._codigo||'').toUpperCase().trim();
-            const isFIITicker = /^[A-Z]{4}11$/.test(c);
-            const isFII = t === 'FII' || ((t === 'RENDA VARIÁVEL' || !t) && isFIITicker);
+            const isFII = t === 'FII';
             const isAcaoExterior = t === 'AÇÃO EXTERIOR' || t === 'ACAO EXTERIOR' || t === 'RENDA VARIÁVEL EXTERIOR';
             const isCripto = t === 'CRIPTO';
-            const isAcaoNacional = (t === 'AÇÃO' || t === 'RENDA VARIÁVEL') && !isFII;
+            const isAcaoNacional = t === 'AÇÃO' || t === 'RENDA VARIÁVEL';
             let isento = false, isentoAplica = false, aliquota = 0.15;
             if (isAcaoNacional) { isentoAplica = true; isento = totalMesTipoBRL <= 20000; }
             else if (isCripto)  { isentoAplica = true; isento = totalMesTipoBRL <= 35000; }
@@ -4256,11 +4310,10 @@
 
     function renderIRAssetSelector() {
         const snapAll = getAssetSnapshot();
-        // Aplica filtro de tipo usando a mesma função que filtra as vendas,
-        // pra reconhecer 'RENDA VARIÁVEL'/'RENDA VARIÁVEL EXTERIOR' e FII por ticker.
+        // Aplica filtro de tipo
         const snap = currentIrTypeFilter === 'ALL'
             ? snapAll
-            : snapAll.filter(a => irMatchTipoFilter(a.tipo, currentIrTypeFilter, a.codigo));
+            : snapAll.filter(a => a.tipo === currentIrTypeFilter);
         const sel = document.getElementById('irAssetSelect');
         const prev = currentIrAsset;
         const opts = ['<option value="">— Selecione um ativo —</option>']
@@ -4844,13 +4897,7 @@
 
     /* ════════════════ INPUT INVESTIMENTOS ════════════════ */
     let iiShowAll = false;
-    function iiCalcBruto(row){
-        if (row.brutoManual) return row.bruto;
-        const calc = (row.qtde||0)*(row.preco||0);
-        // Fallback: tipos non-qty (MOEDA, Imóvel) após auto-reconcile ficam com
-        // qtde=0 e preço=0, mas o valor_bruto salvo é o correto. Usa direto.
-        return calc || (row.bruto || 0);
-    }
+    function iiCalcBruto(row){ return row.brutoManual ? row.bruto : (row.qtde||0)*(row.preco||0); }
     function iiAllMonths(){ return [...new Set(iiRows.map(r => r._k))].sort(); }
     function iiRowByAnyId(id){ return iiRows.find(r => (r.id && String(r.id)===String(id)) || r._tmp===id); }
     function iiTipos(){ return [...new Set(iiRows.map(r=>r.tipo).filter(Boolean))].sort(); }
@@ -5144,13 +5191,9 @@
             if (!(m.preco > 0)) errors.push('Preço deve ser maior que zero.');
         }
         if (m.moeda === 'USD') {
-            // MOEDA: preço já é a PTAX por convenção, então PTAX separado é redundante.
-            // Para outros tipos USD (ações, ETFs no exterior), PTAX continua obrigatório.
-            const isMoedaTipo = String(m.tipo||'').toUpperCase().trim() === 'MOEDA';
-            if (!isMoedaTipo && !(m.ptax > 0)) errors.push('PTAX obrigatório para moeda USD.');
-            const ptaxCheck = isMoedaTipo ? (m.ptax > 0 ? m.ptax : m.preco) : m.ptax;
-            if (ptaxCheck > 0 && (ptaxCheck < 2 || ptaxCheck > 10))
-                warnings.push(`PTAX ${iiFmtNum(ptaxCheck)} fora da faixa usual (2–10). Confirma?`);
+            if (!(m.ptax > 0)) errors.push('PTAX obrigatório para moeda USD.');
+            else if (m.ptax < 2 || m.ptax > 10)
+                warnings.push(`PTAX ${iiFmtNum(m.ptax)} fora da faixa usual (2–10). Confirma?`);
         }
         return { errors, warnings };
     }
@@ -5680,438 +5723,6 @@
         return count;
     }
 
-    /* ════════════════ INPUT YTD / YTG ════════════════
-       Aba unificada para gerenciar projecao_ytg (editável) e upload de
-       realizado_ytd (CSV → DELETE+INSERT por mês de competência).
-
-       YTG: tabela editável com add/edit (sem delete por design — usuário
-       decidiu evitar exclusões pontuais).
-       YTD: drag-and-drop de CSV no padrão BR (cabeçalho em português).
-            Estratégia: DELETE WHERE data_competencia no mês selecionado +
-            INSERT das linhas do CSV. Destrutivo, irrecuperável. */
-    let ytgRawRows = [];
-    let ytgRows = [];
-    let ytgTmpCounter = 0;
-    let ytdCsvParsed = null;
-
-    function ytgTmpId() { return 'YTG_TMP_' + (++ytgTmpCounter); }
-    function ytgRowByAnyId(id) {
-        return ytgRows.find(r => (r.id && String(r.id) === String(id)) || r._tmp === id);
-    }
-    // Converte string DD/MM/AAAA ou YYYY-MM-DD para ISO YYYY-MM-DD; vazio se inválido
-    function brToIsoFlexible(s) {
-        if (!s) return '';
-        s = String(s).trim();
-        if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
-            const [d,m,y] = s.split('/');
-            return `${y}-${m}-${d}`;
-        }
-        return '';
-    }
-
-    async function loadYtgRaw() {
-        const { data, error } = await sbClient
-            .from('projecao_ytg')
-            .select('*')
-            .order('data_inicio', { ascending: true })
-            .limit(10000);
-        if (error) throw error;
-        ytgRawRows = data || [];
-    }
-
-    function ytgSyncFromRaw() {
-        ytgRows = ytgRawRows.map(r => ({
-            id: r.id,
-            tipo: r.tipo || '',
-            lancamento: r.lancamento || '',
-            origem_da_compra: r.origem_da_compra || '',
-            evento: r.evento || '',
-            valor_brl: Number(r.valor_brl) || 0,
-            data_inicio: String(r.data_inicio || '').slice(0,10),
-            data_fim:    String(r.data_fim    || '').slice(0,10),
-            grupo: r.grupo || '',
-            subgrupo_1: r.subgrupo_1 || '',
-            subgrupo_2: r.subgrupo_2 || '',
-            _dirty: false, _new: false
-        }));
-    }
-
-    async function renderInputYtd() {
-        // Reseta status visual de qualquer execução anterior
-        const st = document.getElementById('ytgStatus'); if (st) { st.textContent = ''; st.className = 'ii-status'; }
-        try {
-            await loadYtgRaw();
-            ytgSyncFromRaw();
-        } catch (err) {
-            console.error('Erro carregando YTG:', err);
-            if (st) { st.textContent = 'Erro ao carregar YTG: ' + (err.message||err); st.className = 'ii-status err'; }
-        }
-        renderYtgTable();
-        setupYtdUpload();
-    }
-
-    function renderYtgTable() {
-        const tbody = document.getElementById('ytgBody');
-        if (!tbody) return;
-        tbody.innerHTML = '';
-        const sortedRows = [...ytgRows].sort((a,b) =>
-            (a.data_inicio || '').localeCompare(b.data_inicio || '') ||
-            (a.tipo || '').localeCompare(b.tipo || '')
-        );
-        if (!sortedRows.length) {
-            tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Nenhuma projeção cadastrada. Clique em "+ Adicionar linha".</td></tr>';
-        } else {
-            sortedRows.forEach(row => tbody.appendChild(buildYtgRow(row)));
-        }
-        ytgUpdateKpis();
-        ytgUpdateSaveBtn();
-    }
-
-    function buildYtgRow(row) {
-        const tr = document.createElement('tr');
-        if (row._dirty || row._new) tr.classList.add('dirty-row');
-        const txtCss = 'width:100%;box-sizing:border-box;font-family:Inter,sans-serif;font-size:13px;padding:.35rem .45rem;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--text);transition:.15s';
-        const numCss = txtCss + ';text-align:right;font-variant-numeric:tabular-nums';
-
-        const fields = [
-            {key:'data_inicio', type:'date'},
-            {key:'data_fim',    type:'date'},
-            {key:'tipo',        type:'text'},
-            {key:'grupo',       type:'text'},
-            {key:'subgrupo_1',  type:'text'},
-            {key:'subgrupo_2',  type:'text'},
-            {key:'lancamento',  type:'text'},
-            {key:'origem_da_compra', type:'text'},
-            {key:'evento',      type:'text'},
-            {key:'valor_brl',   type:'num'}
-        ];
-
-        fields.forEach(f => {
-            const td = document.createElement('td');
-            const inp = document.createElement('input');
-            if (f.type === 'date') { inp.type = 'date'; inp.value = row[f.key] || ''; inp.style.cssText = txtCss; }
-            else if (f.type === 'num') { inp.type = 'text'; inp.value = iiFmtInput(row[f.key] || 0); inp.style.cssText = numCss; }
-            else { inp.type = 'text'; inp.value = row[f.key] || ''; inp.style.cssText = txtCss; }
-            inp.dataset.id = row.id || row._tmp;
-            inp.dataset.key = f.key;
-            inp.dataset.kind = f.type;
-            inp.addEventListener('input', ytgOnEdit);
-            if (f.type === 'date') inp.addEventListener('change', ytgOnEdit);
-            td.appendChild(inp);
-            tr.appendChild(td);
-        });
-        return tr;
-    }
-
-    function ytgOnEdit(e) {
-        const row = ytgRowByAnyId(e.target.dataset.id); if (!row) return;
-        const key = e.target.dataset.key, kind = e.target.dataset.kind, val = e.target.value;
-        if (kind === 'num') row[key] = iiParseNum(val);
-        else row[key] = val;
-        row._dirty = true;
-        e.target.classList.add('changed');
-        ytgUpdateKpis();
-        ytgUpdateSaveBtn();
-    }
-
-    function ytgAddRow() {
-        const today = new Date().toISOString().slice(0,10);
-        ytgRows.push({
-            _tmp: ytgTmpId(),
-            tipo: '', lancamento: '', origem_da_compra: '', evento: '',
-            valor_brl: 0,
-            data_inicio: today, data_fim: today,
-            grupo: '', subgrupo_1: '', subgrupo_2: '',
-            _dirty: true, _new: true
-        });
-        renderYtgTable();
-        const tb = document.getElementById('ytgBody');
-        const last = tb.querySelector('tr:last-child input');
-        if (last) last.focus();
-    }
-
-    function ytgUpdateKpis() {
-        const total = ytgRows.reduce((a,r) => a + (Number(r.valor_brl) || 0), 0);
-        const linhas = ytgRows.length;
-        const pend = ytgRows.filter(r => r._dirty || r._new).length;
-        const el = document.getElementById('ytgKpis');
-        if (el) el.innerHTML =
-            `<div>Linhas: <strong style="color:var(--text)">${linhas}</strong></div>
-             <div>Soma valor BRL: <strong style="color:var(--text)">${iiFmtNum(total)}</strong></div>
-             <div>Pendentes: <strong style="color:var(--text)">${pend}</strong></div>`;
-    }
-    function ytgUpdateSaveBtn() {
-        const btn = document.getElementById('ytgBtnSave');
-        if (btn) btn.disabled = ytgRows.filter(r => r._dirty || r._new).length === 0;
-    }
-
-    function ytgToPayload(r, uid) {
-        return {
-            user_id: uid,
-            tipo: r.tipo || '',
-            lancamento: r.lancamento || '',
-            origem_da_compra: r.origem_da_compra || '',
-            evento: r.evento || '',
-            valor_brl: Number(r.valor_brl) || 0,
-            data_inicio: r.data_inicio || null,
-            data_fim:    r.data_fim    || null,
-            grupo: r.grupo || '',
-            subgrupo_1: r.subgrupo_1 || '',
-            subgrupo_2: r.subgrupo_2 || ''
-        };
-    }
-
-    async function ytgSave() {
-        const btn = document.getElementById('ytgBtnSave');
-        const status = document.getElementById('ytgStatus');
-        btn.disabled = true;
-        status.textContent = 'Salvando...'; status.className = 'ii-status';
-        try {
-            const uid = await iiCurrentUserId();
-            const novos = ytgRows.filter(r => r._new);
-            const editados = ytgRows.filter(r => r._dirty && !r._new && r.id);
-            // Validação leve: datas devem existir
-            const errors = [];
-            [...novos, ...editados].forEach((r,i) => {
-                if (!r.data_inicio) errors.push(`Linha ${i+1}: data início vazia`);
-                if (!r.data_fim) errors.push(`Linha ${i+1}: data fim vazia`);
-                if (r.data_inicio && r.data_fim && r.data_inicio > r.data_fim) errors.push(`Linha ${i+1}: data início > data fim`);
-            });
-            if (errors.length) {
-                alert('Corrija antes de salvar:\n\n• ' + errors.join('\n• '));
-                btn.disabled = false; status.textContent = ''; return;
-            }
-            if (novos.length) {
-                const payloads = novos.map(r => ytgToPayload(r, uid));
-                const { error } = await sbClient.from('projecao_ytg').insert(payloads);
-                if (error) throw error;
-            }
-            for (const r of editados) {
-                const { error } = await sbClient.from('projecao_ytg').update(ytgToPayload(r, uid)).eq('id', r.id);
-                if (error) throw error;
-            }
-            await loadYtgRaw();
-            ytgSyncFromRaw();
-            renderYtgTable();
-            status.textContent = `✓ ${novos.length} criada(s), ${editados.length} atualizada(s).`;
-            status.className = 'ii-status ok';
-            setTimeout(() => { if (status.textContent.startsWith('✓')) { status.textContent = ''; status.className = 'ii-status'; } }, 4000);
-        } catch (err) {
-            console.error(err);
-            status.textContent = 'Erro: ' + (err.message || err);
-            status.className = 'ii-status err';
-            btn.disabled = false;
-        }
-    }
-
-    /* ── YTD upload ── */
-    function setupYtdUpload() {
-        const dz = document.getElementById('ytdDropZone');
-        const inp = document.getElementById('ytdFileInput');
-        const resetBtn = document.getElementById('ytdResetBtn');
-        if (!dz || !inp) return;
-        if (!dz.dataset.bound) {
-            dz.dataset.bound = '1';
-            dz.addEventListener('dragover', e => {
-                e.preventDefault();
-                dz.style.borderColor = 'var(--accent2)';
-                dz.style.background = 'rgba(0,0,0,.02)';
-            });
-            dz.addEventListener('dragleave', () => {
-                dz.style.borderColor = 'var(--border)';
-                dz.style.background = 'transparent';
-            });
-            dz.addEventListener('drop', e => {
-                e.preventDefault();
-                dz.style.borderColor = 'var(--border)';
-                dz.style.background = 'transparent';
-                const f = e.dataTransfer.files[0];
-                if (f) ytdHandleFile(f);
-            });
-            dz.addEventListener('click', () => inp.click());
-            inp.addEventListener('change', e => {
-                const f = e.target.files[0];
-                if (f) ytdHandleFile(f);
-            });
-            resetBtn.addEventListener('click', ytdReset);
-        }
-        ytdReset();
-        // Default month: corrente
-        const now = new Date();
-        document.getElementById('ytdMonth').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    }
-    function ytdReset() {
-        ytdCsvParsed = null;
-        document.getElementById('ytdPreview').innerHTML = '';
-        const btn = document.getElementById('ytdConfirmBtn');
-        btn.disabled = true; btn.style.opacity = '.5';
-        const st = document.getElementById('ytdStatus'); st.textContent = ''; st.className = 'ii-status';
-        document.getElementById('ytdFileInput').value = '';
-    }
-    function ytdHandleFile(file) {
-        const status = document.getElementById('ytdStatus');
-        status.textContent = `Lendo "${file.name}"...`; status.className = 'ii-status';
-        Papa.parse(file, {
-            header: true,
-            skipEmptyLines: true,
-            complete: results => {
-                if (results.errors.length) {
-                    status.textContent = `Erro no CSV: ${results.errors[0].message}`;
-                    status.className = 'ii-status err';
-                    return;
-                }
-                ytdProcessCsv(results.data, file.name);
-            },
-            error: err => {
-                status.textContent = `Erro ao ler arquivo: ${err.message}`;
-                status.className = 'ii-status err';
-            }
-        });
-    }
-    function ytdProcessCsv(rows, fileName) {
-        const status = document.getElementById('ytdStatus');
-        const preview = document.getElementById('ytdPreview');
-        if (!rows.length) {
-            status.textContent = 'CSV vazio.';
-            status.className = 'ii-status err';
-            return;
-        }
-        const required = ['TIPO','DATA','DATA COMPETENCIA','LANÇAMENTO','VALOR BRL'];
-        const headers = Object.keys(rows[0] || {}).map(h => h.toUpperCase().trim());
-        const missing = required.filter(c => !headers.includes(c));
-        if (missing.length) {
-            status.textContent = `Colunas faltando: ${missing.join(', ')}`;
-            status.className = 'ii-status err';
-            preview.innerHTML = `<div style="color:#dc2626;font-size:13px">CSV inválido. Cabeçalho deve ter exatamente: <code>${required.join(', ')}</code> (e opcionalmente ORIGEM DA COMPRA, EVENTO, GRUPO, SUBGRUPO 1, SUBGRUPO 2)</div>`;
-            return;
-        }
-        // Lookup case-insensitive para tolerar variações de casing
-        const getVal = (r, key) => {
-            const keyU = key.toUpperCase().trim();
-            for (const k of Object.keys(r)) {
-                if (k.toUpperCase().trim() === keyU) return r[k];
-            }
-            return '';
-        };
-        const parsed = rows.map((r, i) => ({
-            _idx: i + 2, // +2 = +1 (humano) +1 (header)
-            tipo: String(getVal(r,'TIPO') || '').trim(),
-            data: brToIsoFlexible(getVal(r,'DATA')),
-            data_competencia: brToIsoFlexible(getVal(r,'DATA COMPETENCIA')),
-            lancamento: String(getVal(r,'LANÇAMENTO') || '').trim(),
-            valor_brl: parseNumber(getVal(r,'VALOR BRL')),
-            origem_da_compra: String(getVal(r,'ORIGEM DA COMPRA') || '').trim(),
-            evento: String(getVal(r,'EVENTO') || '').trim(),
-            grupo: String(getVal(r,'GRUPO') || '').trim(),
-            subgrupo_1: String(getVal(r,'SUBGRUPO 1') || '').trim(),
-            subgrupo_2: String(getVal(r,'SUBGRUPO 2') || '').trim()
-        }));
-        // Validações
-        const errors = [];
-        parsed.forEach(p => {
-            if (!p.data) errors.push(`Linha ${p._idx}: DATA inválida`);
-            if (!p.data_competencia) errors.push(`Linha ${p._idx}: DATA COMPETENCIA inválida`);
-            if (isNaN(p.valor_brl)) errors.push(`Linha ${p._idx}: VALOR BRL inválido`);
-        });
-        if (errors.length > 5) errors.splice(5, errors.length, `... e mais ${errors.length - 5} erro(s) — verifique o CSV`);
-        if (errors.length) {
-            status.textContent = `CSV com problemas`;
-            status.className = 'ii-status err';
-            preview.innerHTML = `<div style="color:#dc2626;font-size:13px;line-height:1.7"><strong>Erros encontrados:</strong><br>${errors.join('<br>')}</div>`;
-            const btn = document.getElementById('ytdConfirmBtn');
-            btn.disabled = true; btn.style.opacity = '.5';
-            return;
-        }
-        ytdCsvParsed = parsed;
-        const sel = document.getElementById('ytdMonth').value;
-        const monthMatch    = parsed.filter(p => p.data_competencia.startsWith(sel)).length;
-        const monthMismatch = parsed.length - monthMatch;
-        ytdCountExistingForMonth(sel).then(existing => {
-            let html = `<div style="font-size:13px;line-height:1.7;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem">
-                <div><strong>Arquivo:</strong> ${fileName}</div>
-                <div><strong>Mês selecionado:</strong> ${sel}</div>
-                <div><strong>Linhas no CSV:</strong> ${parsed.length}</div>
-                <div style="color:var(--muted)">↳ com data_competencia em ${sel}: ${monthMatch}</div>`;
-            if (monthMismatch) {
-                html += `<div style="color:#dc2626">↳ com data_competencia em OUTRO mês: ${monthMismatch} ⚠️</div>`;
-            }
-            html += `<div><strong>Linhas existentes a substituir:</strong> ${existing}</div>
-                <div style="margin-top:.5rem;color:var(--muted);font-style:italic">Ao confirmar: <strong>DELETE</strong> de ${existing} linha(s) em ${sel}, depois <strong>INSERT</strong> de ${parsed.length} linha(s) do CSV.</div>
-            </div>`;
-            preview.innerHTML = html;
-            const btn = document.getElementById('ytdConfirmBtn');
-            btn.disabled = false; btn.style.opacity = '1';
-            status.textContent = `CSV pronto — ${parsed.length} linha(s) detectada(s).`;
-            status.className = 'ii-status ok';
-        });
-    }
-    async function ytdCountExistingForMonth(yyyyMm) {
-        const [y, m] = yyyyMm.split('-');
-        const start = `${y}-${m}-01`;
-        const nextMo = (m === '12') ? `${Number(y)+1}-01-01` : `${y}-${String(Number(m)+1).padStart(2,'0')}-01`;
-        const { count, error } = await sbClient
-            .from('realizado_ytd')
-            .select('*', { count: 'exact', head: true })
-            .gte('data_competencia', start)
-            .lt('data_competencia', nextMo);
-        if (error) { console.warn('YTD count failed:', error); return '?'; }
-        return count || 0;
-    }
-    async function ytdConfirmReplace() {
-        if (!ytdCsvParsed) return;
-        const yyyyMm = document.getElementById('ytdMonth').value;
-        if (!yyyyMm) { alert('Selecione o mês de competência.'); return; }
-        const existing = await ytdCountExistingForMonth(yyyyMm);
-        if (!confirm(`Vai EXCLUIR ${existing} linha(s) de ${yyyyMm} e INSERIR ${ytdCsvParsed.length} do CSV.\n\nAção irreversível. Confirmar?`)) return;
-        const btn = document.getElementById('ytdConfirmBtn');
-        const status = document.getElementById('ytdStatus');
-        btn.disabled = true; btn.style.opacity = '.5';
-        status.textContent = 'Excluindo linhas do mês...'; status.className = 'ii-status';
-        try {
-            const uid = await iiCurrentUserId();
-            const [y, m] = yyyyMm.split('-');
-            const start = `${y}-${m}-01`;
-            const nextMo = (m === '12') ? `${Number(y)+1}-01-01` : `${y}-${String(Number(m)+1).padStart(2,'0')}-01`;
-            const { error: delErr } = await sbClient
-                .from('realizado_ytd')
-                .delete()
-                .gte('data_competencia', start)
-                .lt('data_competencia', nextMo);
-            if (delErr) throw delErr;
-            status.textContent = `Inserindo ${ytdCsvParsed.length} linha(s)...`;
-            const payloads = ytdCsvParsed.map(p => ({
-                user_id: uid,
-                tipo: p.tipo,
-                data: p.data,
-                data_competencia: p.data_competencia,
-                lancamento: p.lancamento,
-                valor_brl: p.valor_brl,
-                origem_da_compra: p.origem_da_compra,
-                evento: p.evento,
-                grupo: p.grupo,
-                subgrupo_1: p.subgrupo_1,
-                subgrupo_2: p.subgrupo_2
-            }));
-            // Insert em chunks de 500 (limite seguro do Supabase)
-            for (let i = 0; i < payloads.length; i += 500) {
-                const chunk = payloads.slice(i, i + 500);
-                const { error: insErr } = await sbClient.from('realizado_ytd').insert(chunk);
-                if (insErr) throw insErr;
-            }
-            status.textContent = `✓ ${ytdCsvParsed.length} linha(s) inserida(s) em ${yyyyMm}. Recarregue o dashboard para refletir nas análises.`;
-            status.className = 'ii-status ok';
-            ytdCsvParsed = null;
-            document.getElementById('ytdPreview').innerHTML = '';
-            document.getElementById('ytdFileInput').value = '';
-        } catch (err) {
-            console.error(err);
-            status.textContent = 'Erro: ' + (err.message || err);
-            status.className = 'ii-status err';
-            btn.disabled = false; btn.style.opacity = '1';
-        }
-    }
-
     /* ════════════════ DÓLAR (PTAX) ════════════════
        Aba para gerenciar a cotação mensal BRL/USD. Padrão idêntico ao Input
        Investimentos: edição inline + gravar em lote. Upsert por mês: ao
@@ -6532,19 +6143,6 @@
         e.target.value=v;
     });
     document.getElementById('modalMovOverlay').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
-    // Listeners da aba Input YTD/YTG
-    document.getElementById('ytgBtnAdd').addEventListener('click', ytgAddRow);
-    document.getElementById('ytgBtnSave').addEventListener('click', ytgSave);
-    document.getElementById('ytdConfirmBtn').addEventListener('click', ytdConfirmReplace);
-    // Re-validar preview quando muda o mês selecionado (recalcula match/mismatch)
-    document.getElementById('ytdMonth').addEventListener('change', function(){
-        if (ytdCsvParsed) ytdProcessCsv(ytdCsvParsed.map(p => ({
-            'TIPO':p.tipo, 'DATA':p.data, 'DATA COMPETENCIA':p.data_competencia,
-            'LANÇAMENTO':p.lancamento, 'VALOR BRL':String(p.valor_brl),
-            'ORIGEM DA COMPRA':p.origem_da_compra, 'EVENTO':p.evento,
-            'GRUPO':p.grupo, 'SUBGRUPO 1':p.subgrupo_1, 'SUBGRUPO 2':p.subgrupo_2
-        })), 'CSV em memória');
-    });
     // Listener da aba Download
     document.getElementById('dlBtnExport').addEventListener('click', dlExport);
 </script>
