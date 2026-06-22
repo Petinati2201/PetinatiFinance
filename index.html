@@ -4876,7 +4876,7 @@
         inp.addEventListener('blur', function() {
             const val = iiParseNum(inp.value);
             if (val || inp.value.trim()) {
-                inp.value = val.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+                inp.value = val.toLocaleString('pt-BR', {minimumFractionDigits: maxDec <= 2 ? 2 : 0, maximumFractionDigits: maxDec});
             }
         });
     }
