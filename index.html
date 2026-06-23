@@ -1394,6 +1394,18 @@
                 <div style="height:280px"><canvas id="sub2Chart"></canvas></div>
             </div>
         </div>
+        <div class="card" style="margin-top:1rem">
+            <div class="card-title">Transações do mês</div>
+            <div class="card-sub">Realizado e projeção, ordenado por valor</div>
+            <div style="overflow-x:auto">
+                <table class="data-table">
+                    <thead><tr>
+                        <th>Data</th><th>Lançamento</th><th>Origem</th><th>Grupo</th><th style="text-align:right">Valor</th>
+                    </tr></thead>
+                    <tbody id="tableBodyVisao"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <!-- VIEW: ANÁLISE DE ORIGEM -->
@@ -2828,6 +2840,8 @@
         // Conversor local: valores de despesa são nativos em BRL, convertidos pela PTAX do mês `key`
         const cv = v => convert(v, 'BRL', key);
         const fmtD = v => fmtCcy(v);
+        // Converte um objeto agregado {label: valorBRL} para a moeda de exibição
+        const cvAgg = obj => { const o={}; for (const kk in obj) o[kk]=cv(obj[kk]); return o; };
 
         /* KPIs — também refletem os filtros */
         const txCount = filteredReal.length;
@@ -2851,11 +2865,11 @@
         if (currentView==='visao') {
             renderMainChart();
             // Pie recebe TODOS os grupos (sem filtro aplicado) — Chart.js gerencia hidden internamente
-            renderGroupPie(aggregate([...allReal, ...allProj], 'GRUPO'));
+            renderGroupPie(cvAgg(aggregate([...allReal, ...allProj], 'GRUPO')));
             // Restaura estado hidden após recriar a pie (ex: quando filtros persistem entre renders)
             restoreHiddenFromFilter('groupChart', (activeFilters.visao || {})['GRUPO']);
-            renderBar('sub1Chart', aggregate(combined, 'SUBGRUPO 1'));
-            renderBar('sub2Chart', aggregate(combined, 'SUBGRUPO 2'));
+            renderBar('sub1Chart', cvAgg(aggregate(combined, 'SUBGRUPO 1')));
+            renderBar('sub2Chart', cvAgg(aggregate(combined, 'SUBGRUPO 2')));
         }
 
         if (currentView==='origem') {
@@ -2865,16 +2879,16 @@
             });
             const financedVal=financedData.reduce((a,b)=>a+b._v,0);
             const percFinanced=sumR>0?(financedVal/sumR)*100:0;
-            document.getElementById('kpiFinancedVal').innerText=financedVal.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+            document.getElementById('kpiFinancedVal').innerText=fmtD(cv(financedVal));
             document.getElementById('kpiFinanced').innerText=percFinanced.toFixed(1)+'%';
             // Pie de Origem também recebe dados completos
-            renderOriginPie(aggregate(allReal,'ORIGEM DA COMPRA'));
+            renderOriginPie(cvAgg(aggregate(allReal,'ORIGEM DA COMPRA')));
             restoreHiddenFromFilter('originChart', (activeFilters.origem || {})['ORIGEM DA COMPRA']);
-            renderBar('originBarChart', aggregate(filteredReal, 'LANÇAMENTO'));
+            renderBar('originBarChart', cvAgg(aggregate(filteredReal, 'LANÇAMENTO')));
         }
 
         if (currentView==='fluxo') {
-            const fmt = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+            // Fluxo: tudo convertido pela PTAX do mês para o saldo (líquido − despesa) fazer sentido na moeda exibida
             const remMes = remuneracaoData.find(r => r._k === key);
             const bruto   = remMes ? remMes._bruto   : 0;
             const liquido = remMes ? remMes._liquido : 0;
@@ -2882,22 +2896,22 @@
             const saldo   = liquido - despesa;
             const poupanca = liquido > 0 ? (saldo / liquido) * 100 : 0;
 
-            document.getElementById('kpiBruto').innerText    = fmt(bruto);
-            document.getElementById('kpiLiquido').innerText  = fmt(liquido);
-            document.getElementById('kpiDespesa').innerText  = fmt(despesa);
-            document.getElementById('kpiSaldo').innerText    = fmt(saldo);
+            document.getElementById('kpiBruto').innerText    = fmtD(cv(bruto));
+            document.getElementById('kpiLiquido').innerText  = fmtD(cv(liquido));
+            document.getElementById('kpiDespesa').innerText  = fmtD(cv(despesa));
+            document.getElementById('kpiSaldo').innerText    = fmtD(cv(saldo));
             document.getElementById('kpiPoupanca').innerText = poupanca.toFixed(1) + '%';
 
-            // YTD no ano selecionado
+            // YTD no ano selecionado (convertido pela PTAX do mês de cada parcela)
             const remYear = remuneracaoData.filter(r => r._y === year && r._m <= month);
-            const brutoYTD   = remYear.reduce((a,b)=>a+b._bruto, 0);
-            const liquidoYTD = remYear.reduce((a,b)=>a+b._liquido, 0);
+            const brutoYTD   = remYear.reduce((a,b)=>a+convert(b._bruto,'BRL',b._k), 0);
+            const liquidoYTD = remYear.reduce((a,b)=>a+convert(b._liquido,'BRL',b._k), 0);
             const despesaYTD = [...realizadoData, ...projecaoData]
                 .filter(r => r._y === year && r._m <= month)
-                .reduce((a,b)=>a+b._v, 0);
-            document.getElementById('ytdBruto').innerText   = fmt(brutoYTD);
-            document.getElementById('ytdLiquido').innerText = fmt(liquidoYTD);
-            document.getElementById('ytdSaldo').innerText   = fmt(liquidoYTD - despesaYTD);
+                .reduce((a,b)=>a+convert(b._v,'BRL',b._k), 0);
+            document.getElementById('ytdBruto').innerText   = fmtD(brutoYTD);
+            document.getElementById('ytdLiquido').innerText = fmtD(liquidoYTD);
+            document.getElementById('ytdSaldo').innerText   = fmtD(liquidoYTD - despesaYTD);
 
             renderFluxoChart();
         }
@@ -3062,12 +3076,12 @@
     }
 
     function renderTableWithData(combined) {
-        const tBody=document.getElementById('tableBody');
         const sorted=[...combined].sort((a,b)=>b._v-a._v);
+        let html;
         if (sorted.length===0) {
-            tBody.innerHTML=`<tr><td colspan="5" style="padding:2rem;text-align:center;color:var(--muted)">Nenhum dado para este período.</td></tr>`;
+            html=`<tr><td colspan="5" style="padding:2rem;text-align:center;color:var(--muted)">Nenhum dado para este período.</td></tr>`;
         } else {
-            tBody.innerHTML=sorted.map(r=>{
+            html=sorted.map(r=>{
                 const dataStr=r['DATA']||r['DATA COMPETENCIA']||r['DATA INICIO']||'-';
                 const badge=r._type==='REAL'
                     ?`<span class="badge badge-real">Real</span>`
@@ -3077,10 +3091,11 @@
                     <td style="font-weight:500">${r['LANÇAMENTO']||'-'}${badge}</td>
                     <td class="muted">${r['ORIGEM DA COMPRA']||'-'}</td>
                     <td class="muted">${r['GRUPO']||'-'}</td>
-                    <td>${r._v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td>
+                    <td style="text-align:right">${fmtCcy(convert(r._v,'BRL',r._k))}</td>
                 </tr>`;
             }).join('');
         }
+        ['tableBody','tableBodyVisao'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=html; });
     }
 
     function renderOriginPie(data) {
@@ -3163,17 +3178,17 @@
         const allKeys=[...new Set([...realizadoData,...projecaoData].map(r=>r._k))].sort();
         const lastRealKey=[...new Set(realizadoData.map(r=>r._k))].sort().pop();
 
-        // Linha realizado
+        // Linha realizado (convertida pela PTAX do mês de cada ponto)
         const realLine=allKeys.map(k=>{
             const val=realizadoData.filter(r=>r._k===k).reduce((a,b)=>a+b._v,0);
-            return k<=lastRealKey ? val : null;
+            return k<=lastRealKey ? convert(val,'BRL',k) : null;
         });
 
         // Linha projeção manual
         const projLine=allKeys.map(k=>{
             const val=projecaoData.filter(r=>r._k===k).reduce((a,b)=>a+b._v,0);
-            if(k===lastRealKey) return realizadoData.filter(r=>r._k===k).reduce((a,b)=>a+b._v,0);
-            return k>=lastRealKey ? val : null;
+            if(k===lastRealKey) return convert(realizadoData.filter(r=>r._k===k).reduce((a,b)=>a+b._v,0),'BRL',k);
+            return k>=lastRealKey ? convert(val,'BRL',k) : null;
         });
 
         // Média móvel YTD: para cada mês realizado, calcula a média dos meses realizados
@@ -3198,9 +3213,9 @@
             if (k < lastRealKey) return null; // só exibe a partir do ponto de encontro
             if (k === lastRealKey) {
                 // ancora no valor real do último mês
-                return realizadoData.filter(r=>r._k===k).reduce((a,b)=>a+b._v,0);
+                return convert(realizadoData.filter(r=>r._k===k).reduce((a,b)=>a+b._v,0),'BRL',k);
             }
-            return ytdAvg; // projeta a média para todos os meses futuros
+            return ytdAvg!=null ? convert(ytdAvg,'BRL',k) : null; // projeta a média (convertida) para meses futuros
         });
 
         const tc=isDarkMode?'#6B6966':'#8A8880';
@@ -3242,17 +3257,17 @@
 
         const brutoLine   = allKeys.map(k => {
             const rem = remuneracaoData.find(r => r._k === k);
-            return rem ? rem._bruto : null;
+            return rem ? convert(rem._bruto,'BRL',k) : null;
         });
         const liquidoLine = allKeys.map(k => {
             const rem = remuneracaoData.find(r => r._k === k);
-            return rem ? rem._liquido : null;
+            return rem ? convert(rem._liquido,'BRL',k) : null;
         });
         const despesaLine = allKeys.map(k => {
             const r = realizadoData.filter(x => x._k === k).reduce((a,b)=>a+b._v, 0);
             const p = projecaoData .filter(x => x._k === k).reduce((a,b)=>a+b._v, 0);
             const total = r + p;
-            return total > 0 ? total : null;
+            return total > 0 ? convert(total,'BRL',k) : null;
         });
 
         const tc = isDarkMode ? '#6B6966' : '#8A8880';
@@ -3273,12 +3288,12 @@
                 responsive: true, maintainAspectRatio: false,
                 interaction: { mode:'index', intersect:false },
                 scales: {
-                    y: { beginAtZero:true, grid:{color:gc}, ticks:{ color:tc, font:{family:'Inter',size:11}, callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' } },
+                    y: { beginAtZero:true, grid:{color:gc}, ticks:{ color:tc, font:{family:'Inter',size:11}, callback: v => (currentCcy==='BRL'?'R$ ':'$ ') + (v/1000).toFixed(0) + 'k' } },
                     x: { grid:{display:false}, ticks:{color:tc, font:{family:'Inter',size:11}} }
                 },
                 plugins: {
                     legend:  { labels:{ color:tc, font:{family:'Inter',size:11}, boxWidth:10, usePointStyle:true } },
-                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}` } }
+                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtCcy(ctx.parsed.y)}` } }
                 }
             }
         });
@@ -3811,7 +3826,7 @@
                     }
                 },
                 scales: {
-                    y: { beginAtZero: true, stacked: true, grid: { color: gc }, ticks: { color: tc, font: {family:'Inter',size:11}, callback: v => fmtK(v) } },
+                    y: { beginAtZero: true, stacked: true, grid: { color: gc }, afterFit: a => { a.width = 64; }, ticks: { color: tc, font: {family:'Inter',size:11}, callback: v => fmtK(v) } },
                     x: { stacked: true, grid: { display: false }, ticks: { color: tc, font: {family:'Inter',size:10} } }
                 }
             }
