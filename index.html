@@ -566,20 +566,32 @@
             background: var(--text);
             color: var(--bg);
         }
-        /* Variante compacta para a ribbon: segmented control de 2 células iguais */
+        /* Variante da ribbon: alinhada aos selects de Ano/Mês (mesma altura, radius e bordas) */
         .pill-toggle.sb-ccy {
             display: flex;
             width: 100%;
-            padding: 2px;
-            border-radius: 7px;
+            padding: 3px;
+            border-radius: 8px;
+            background: var(--sb-surface);
+            border: 1px solid var(--sb-border);
+            gap: 3px;
         }
         .pill-toggle.sb-ccy button {
             flex: 1;
-            padding: .3rem 0;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: .02em;
+            padding: .42rem 0;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: .01em;
             text-align: center;
+            color: var(--sb-muted, var(--muted));
+            border-radius: 6px;
+            transition: background .2s, color .2s;
+        }
+        .pill-toggle.sb-ccy button:hover { color: var(--sb-text); background: rgba(255,255,255,.04); }
+        .pill-toggle.sb-ccy button.active {
+            background: color-mix(in srgb, var(--sb-accent) 18%, transparent);
+            color: var(--sb-text);
+            font-weight: 600;
         }
 
         /* ── KPI GRID ── */
