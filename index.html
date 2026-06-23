@@ -3956,10 +3956,12 @@
         });
         if (!activeFilters.investimentos) activeFilters.investimentos = {};
         activeFilters.investimentos['_tipo'] = hiddenSet;
-        // Não recria nenhuma pie: a animação de ocultar a fatia da pie de TIPO já
-        // rolou nativamente. A pie de ATIVO permanece intacta (não muda de posição).
-        // Apenas cards, tabela e KPIs são atualizados.
-        renderInvestimentos(true, true);
+        // Excluir um tipo agora RECOMPÕE a pie de Ativo: latestRowsForBar já remove
+        // hiddenTipos, e renderInvAssetPie recalcula Top 8 + Outros do zero — logo os
+        // ativos do tipo excluído saem e os 8 maiores entre os restantes reagrupam.
+        // skipPie=true (não recria a pie de TIPO, preservando sua animação nativa);
+        // skipAssetPie=false (recria só a pie de ATIVO).
+        renderInvestimentos(true, false);
     }
 
     // Estado da pie por ativo:
@@ -4047,6 +4049,21 @@
                 }
             }
         });
+        // Restaura estado hidden por código após recriar a pie (ex.: quando excluir um
+        // tipo recompõe o Top 8). Um código segue oculto se estava no filtro; a fatia
+        // "Outros" oculta se todos os seus códigos estavam ocultos.
+        const hiddenCodigosCurrent = (activeFilters.investimentos || {})['_codigo'] || new Set();
+        if (hiddenCodigosCurrent.size > 0) {
+            charts.invAssetPie.data.labels.forEach((label, i) => {
+                const shouldHide = label === 'Outros'
+                    ? (invAssetPieOthersCodigos.length > 0 && invAssetPieOthersCodigos.every(c => hiddenCodigosCurrent.has(c)))
+                    : hiddenCodigosCurrent.has(label);
+                if (shouldHide && charts.invAssetPie.getDataVisibility(i)) {
+                    charts.invAssetPie.toggleDataVisibility(i);
+                }
+            });
+            charts.invAssetPie.update('none');
+        }
     }
 
     function syncInvCodigoFilter() {
