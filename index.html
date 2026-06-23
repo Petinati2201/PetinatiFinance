@@ -566,6 +566,21 @@
             background: var(--text);
             color: var(--bg);
         }
+        /* Variante compacta para a ribbon: segmented control de 2 células iguais */
+        .pill-toggle.sb-ccy {
+            display: flex;
+            width: 100%;
+            padding: 2px;
+            border-radius: 7px;
+        }
+        .pill-toggle.sb-ccy button {
+            flex: 1;
+            padding: .3rem 0;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: .02em;
+            text-align: center;
+        }
 
         /* ── KPI GRID ── */
         .kpi-grid {
@@ -590,6 +605,8 @@
             padding: 1.4rem 1.6rem;
             display: flex; flex-direction: column; gap: .4rem;
             position: relative; overflow: hidden;
+            min-height: 7.5rem;
+            justify-content: flex-start;
         }
         .kpi-cell::after {
             content: '';
@@ -1104,9 +1121,9 @@
             </div>
             <div>
                 <span class="sb-ctrl-label">Moeda</span>
-                <div class="pill-toggle" id="sbCurrencyToggle" style="display:flex;width:100%">
-                    <button class="active" data-ccy="BRL" style="flex:1">R$ BRL</button>
-                    <button data-ccy="USD" style="flex:1">US$ USD</button>
+                <div class="pill-toggle sb-ccy" id="sbCurrencyToggle">
+                    <button class="active" data-ccy="BRL">R$</button>
+                    <button data-ccy="USD">US$</button>
                 </div>
             </div>
         </div>
@@ -1626,10 +1643,6 @@
                 <h1 class="view-title">Investimentos</h1>
                 <div class="view-subtitle">Aportes, rendimento e composição da carteira ao longo do tempo</div>
             </div>
-            <div class="pill-toggle" id="currencyToggle">
-                <button class="active" data-ccy="BRL">R$ BRL</button>
-                <button data-ccy="USD">US$ USD</button>
-            </div>
         </div>
 
         <div id="invNoData" class="card mb2" style="display:none;text-align:center;padding:2.5rem">
@@ -1729,10 +1742,6 @@
             <div>
                 <h1 class="view-title">Imposto de Renda</h1>
                 <div class="view-subtitle">Lucros realizados e estimativa de IR sobre vendas de renda variável</div>
-            </div>
-            <div class="pill-toggle" id="irCurrencyToggle">
-                <button class="active" data-ccy="BRL">R$ BRL</button>
-                <button data-ccy="USD">US$ USD</button>
             </div>
         </div>
 
@@ -2930,22 +2939,14 @@
         if (ccy !== 'BRL' && ccy !== 'USD') return;
         currentCcy = ccy;
         currentIrCcy = ccy;
-        ['#sbCurrencyToggle','#currencyToggle','#irCurrencyToggle'].forEach(sel => {
-            document.querySelectorAll(sel + ' button').forEach(b => {
-                b.classList.toggle('active', b.dataset.ccy === ccy);
-            });
+        document.querySelectorAll('#sbCurrencyToggle button').forEach(b => {
+            b.classList.toggle('active', b.dataset.ccy === ccy);
         });
         renderAll();
     }
 
-    // Toggle de moeda na ribbon (controle global)
+    // Toggle de moeda na ribbon (controle global único)
     document.getElementById('sbCurrencyToggle').addEventListener('click', e => {
-        const btn = e.target.closest('button[data-ccy]');
-        if (btn) setGlobalCcy(btn.dataset.ccy);
-    });
-
-    // Toggle BRL/USD da Carteira — agora apenas delega ao controle global
-    document.getElementById('currencyToggle').addEventListener('click', e => {
         const btn = e.target.closest('button[data-ccy]');
         if (btn) setGlobalCcy(btn.dataset.ccy);
     });
@@ -2974,7 +2975,7 @@
                                 const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
                                 const v = ctx.parsed;
                                 const p = total > 0 ? ((v/total)*100).toFixed(1) : 0;
-                                return `${ctx.label}: ${v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} (${p}%)`;
+                                return `${ctx.label}: ${fmtCcy(convert(v,'BRL',rem._k))} (${p}%)`;
                             }
                         }
                     }
@@ -3120,7 +3121,7 @@
                                 const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
                                 const v = ctx.parsed;
                                 const p = total > 0 ? ((v/total)*100).toFixed(1) : 0;
-                                return `${ctx.label}: ${v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} (${p}%)`;
+                                return `${ctx.label}: ${fmtCcy(convert(v,'BRL',rem._k))} (${p}%)`;
                             }
                         }
                     }
@@ -3321,7 +3322,8 @@
         content.style.display = 'block';
         noDetail.style.display = 'none';
 
-        const fmt = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+        // Holerite é mono-mês: conversão uniforme pela PTAX do mês ativo
+        const fmt = v => fmtCcy(convert(v, 'BRL', key));
         const pct = (v, total) => total > 0 ? ((v/total)*100).toFixed(1) + '%' : '0%';
 
         // KPIs
@@ -3403,7 +3405,11 @@
         const gc = isDarkMode ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
         if (charts.waterfall) charts.waterfall.destroy();
 
-        const fmtBRL = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+        // Converte os valores das barras pela PTAX do mês deste holerite
+        const _r = v => convert(v, 'BRL', rem._k);
+        steps.forEach(s => { s.start=_r(s.start); s.end=_r(s.end); s.delta=_r(s.delta); });
+        const fmtBRL = v => fmtCcy(v); // já recebe valor convertido
+        const _brutoC = _r(rem._bruto), _fixoC = _r(rem._fixo), _varC = _r(rem._variavel);
 
         charts.waterfall = new Chart(document.getElementById('waterfallChart'), {
             type: 'bar',
@@ -3443,15 +3449,15 @@
                                 const lines = [];
                                 if (step.kind === 'up') {
                                     lines.push(`Acumulado até aqui: ${fmtBRL(step.end)}`);
-                                    lines.push(`${((step.delta / rem._bruto) * 100).toFixed(1)}% do bruto`);
+                                    lines.push(`${((step.delta / _brutoC) * 100).toFixed(1)}% do bruto`);
                                 } else if (step.kind === 'down') {
                                     lines.push(`Sobra após: ${fmtBRL(step.start)}`);
-                                    lines.push(`${((step.delta / rem._bruto) * 100).toFixed(1)}% do bruto`);
+                                    lines.push(`${((step.delta / _brutoC) * 100).toFixed(1)}% do bruto`);
                                 } else if (step.label === 'Bruto') {
-                                    lines.push(`Fixo: ${fmtBRL(rem._fixo)}`);
-                                    lines.push(`Variável: ${fmtBRL(rem._variavel)}`);
+                                    lines.push(`Fixo: ${fmtBRL(_fixoC)}`);
+                                    lines.push(`Variável: ${fmtBRL(_varC)}`);
                                 } else if (step.label === 'Líquido') {
-                                    lines.push(`${((step.delta / rem._bruto) * 100).toFixed(1)}% do bruto`);
+                                    lines.push(`${((step.delta / _brutoC) * 100).toFixed(1)}% do bruto`);
                                 }
                                 return lines;
                             }
@@ -3462,7 +3468,7 @@
                     y: {
                         beginAtZero: true,
                         grid: { color: gc },
-                        ticks: { color: tc, font: {family:'Inter',size:11}, callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' }
+                        ticks: { color: tc, font: {family:'Inter',size:11}, callback: v => (currentCcy==='BRL'?'R$ ':'$ ') + (v/1000).toFixed(0) + 'k' }
                     },
                     x: {
                         grid: { display: false },
@@ -3501,7 +3507,7 @@
                                 const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
                                 const v = ctx.parsed;
                                 const p = total > 0 ? ((v/total)*100).toFixed(1) : 0;
-                                return `${ctx.label}: ${v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} (${p}%)`;
+                                return `${ctx.label}: ${fmtCcy(convert(v,'BRL',rem._k))} (${p}%)`;
                             }
                         }
                     }
@@ -3523,20 +3529,20 @@
             data: {
                 labels,
                 datasets: [
-                    { label: 'Folha (fixo)', data: withDetail.map(r => r._folha),  backgroundColor: '#65A30D', borderWidth: 0, borderRadius: 3 },
-                    { label: 'Férias',       data: withDetail.map(r => r._ferias), backgroundColor: '#DB2777', borderWidth: 0, borderRadius: 3 },
-                    { label: '13º',          data: withDetail.map(r => r._decimo), backgroundColor: '#7C3AED', borderWidth: 0, borderRadius: 3 },
-                    { label: 'PLR',          data: withDetail.map(r => r._plr),    backgroundColor: '#F59E0B', borderWidth: 0, borderRadius: 3 }
+                    { label: 'Folha (fixo)', data: withDetail.map(r => convert(r._folha,'BRL',r._k)),  backgroundColor: '#65A30D', borderWidth: 0, borderRadius: 3 },
+                    { label: 'Férias',       data: withDetail.map(r => convert(r._ferias,'BRL',r._k)), backgroundColor: '#DB2777', borderWidth: 0, borderRadius: 3 },
+                    { label: '13º',          data: withDetail.map(r => convert(r._decimo,'BRL',r._k)), backgroundColor: '#7C3AED', borderWidth: 0, borderRadius: 3 },
+                    { label: 'PLR',          data: withDetail.map(r => convert(r._plr,'BRL',r._k)),    backgroundColor: '#F59E0B', borderWidth: 0, borderRadius: 3 }
                 ]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 plugins: {
                     legend: { position: 'bottom', labels: { color: tc, font: {size:10,family:'Inter'}, boxWidth: 10, usePointStyle: true, padding: 12 } },
-                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}` } }
+                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtCcy(ctx.parsed.y)}` } }
                 },
                 scales: {
-                    y: { beginAtZero: true, stacked: true, grid: { color: gc }, ticks: { color: tc, font: {family:'Inter',size:10}, callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' } },
+                    y: { beginAtZero: true, stacked: true, grid: { color: gc }, ticks: { color: tc, font: {family:'Inter',size:10}, callback: v => (currentCcy==='BRL'?'R$ ':'$ ') + (v/1000).toFixed(0) + 'k' } },
                     x: { stacked: true, grid: { display: false }, ticks: { color: tc, font: {family:'Inter',size:10} } }
                 }
             }
@@ -3566,7 +3572,7 @@
                                 const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
                                 const v = ctx.parsed;
                                 const p = total > 0 ? ((v/total)*100).toFixed(1) : 0;
-                                return `${ctx.label}: ${v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} (${p}%)`;
+                                return `${ctx.label}: ${fmtCcy(convert(v,'BRL',rem._k))} (${p}%)`;
                             }
                         }
                     }
@@ -3600,16 +3606,16 @@
             type: 'bar',
             data: {
                 labels: items.map(e => e.l),
-                datasets: [{ data: items.map(e => e.v), backgroundColor: isDarkMode ? 'rgba(220,38,38,.65)' : 'rgba(220,38,38,.8)', borderRadius: 5 }]
+                datasets: [{ data: items.map(e => convert(e.v,'BRL',rem._k)), backgroundColor: isDarkMode ? 'rgba(220,38,38,.65)' : 'rgba(220,38,38,.8)', borderRadius: 5 }]
             },
             options: {
                 indexAxis: 'y', responsive: true, maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
-                    tooltip: { callbacks: { label: ctx => ctx.parsed.x.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}) } }
+                    tooltip: { callbacks: { label: ctx => fmtCcy(ctx.parsed.x) } }
                 },
                 scales: {
-                    x: { grid: { color: gc }, ticks: { color: tc, font: {size:10,family:'Inter'}, callback: v => 'R$ ' + (v/1000).toFixed(1) + 'k' } },
+                    x: { grid: { color: gc }, ticks: { color: tc, font: {size:10,family:'Inter'}, callback: v => (currentCcy==='BRL'?'R$ ':'$ ') + (v/1000).toFixed(1) + 'k' } },
                     y: { grid: { display: false }, ticks: { color: tc, font: {size:10,family:'Inter'} } }
                 }
             }
@@ -3617,7 +3623,7 @@
     }
 
     function renderHoleriteTable(rem) {
-        const fmt = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+        const fmt = v => fmtCcy(convert(v,'BRL',rem._k));
         const rows = [
             { cat: 'Bruto — Fixo',     item: 'Folha',            v: rem._folha },
             { cat: 'Bruto — Variável', item: 'Férias',           v: rem._ferias },
@@ -4117,17 +4123,6 @@
     }
 
     /* ──────── IMPOSTO DE RENDA ──────── */
-
-    // Handler do toggle BRL/USD da view IR
-    document.getElementById('irCurrencyToggle').addEventListener('click', e => {
-        const btn = e.target.closest('button[data-ccy]');
-        if (!btn) return;
-        currentIrCcy = btn.dataset.ccy;
-        document.querySelectorAll('#irCurrencyToggle button').forEach(b => {
-            b.classList.toggle('active', b === btn);
-        });
-        if (currentView === 'ir') renderIR();
-    });
 
     // Handler do seletor de ativo
     document.getElementById('irAssetSelect').addEventListener('change', e => {
