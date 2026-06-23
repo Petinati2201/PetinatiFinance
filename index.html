@@ -3950,16 +3950,32 @@
     function syncInvTipoFilter() {
         const chart = charts['invTypePie'];
         if (!chart) return;
-        const hiddenSet = new Set();
+
+        // Tipos VISÍVEIS no pie (fatias não-ocultas)
+        const visiveis = new Set();
+        let algumOculto = false;
         chart.data.labels.forEach((label, i) => {
-            if (!chart.getDataVisibility(i)) hiddenSet.add(label);
+            if (chart.getDataVisibility(i)) visiveis.add(label);
+            else algumOculto = true;
         });
+
         if (!activeFilters.investimentos) activeFilters.investimentos = {};
+
+        // Universo completo de tipos (inclui os sem posição no mês atual, que não
+        // aparecem no pie). Sem isso, um tipo já zerado — ex.: RV vendida — escapa do
+        // filtro e seus meses históricos vazam nos gráficos ao isolar outro tipo.
+        const todosTipos = new Set(investimentosData.map(r => r._tipo));
+
+        // Oculto = todo tipo que NÃO está visível no pie — mas só quando há filtro ativo.
+        // Sem filtro (todas as fatias visíveis), nada é ocultado, preservando o histórico.
+        const hiddenSet = new Set();
+        if (algumOculto) {
+            todosTipos.forEach(t => { if (!visiveis.has(t)) hiddenSet.add(t); });
+        }
         activeFilters.investimentos['_tipo'] = hiddenSet;
-        // Excluir um tipo RECOMPÕE a pie de Ativo (Top 8 + Outros) só com os tipos
-        // visíveis. skipPie=true preserva a animação nativa da pie de TIPO;
-        // skipAssetPie=false recria a pie de ATIVO — que não "anda" porque a largura
-        // da legenda está travada pelo plugin fixedLegendWidth.
+
+        // skipPie=true preserva a animação nativa da pie de TIPO; skipAssetPie=false
+        // recria a pie de ATIVO (não "anda": largura da legenda travada).
         renderInvestimentos(true, false);
     }
 
