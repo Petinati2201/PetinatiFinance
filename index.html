@@ -1102,6 +1102,13 @@
                 <span class="sb-ctrl-label">Mês</span>
                 <select id="monthFilter" class="ctrl-select"></select>
             </div>
+            <div>
+                <span class="sb-ctrl-label">Moeda</span>
+                <div class="pill-toggle" id="sbCurrencyToggle" style="display:flex;width:100%">
+                    <button class="active" data-ccy="BRL" style="flex:1">R$ BRL</button>
+                    <button data-ccy="USD" style="flex:1">US$ USD</button>
+                </div>
+            </div>
         </div>
 
         <div class="sb-bottom">
@@ -1290,12 +1297,15 @@
         </div>
 
         <div class="card mb2" style="max-width:680px">
-            <div class="card-title" style="margin-bottom:.7rem">Período</div>
+            <div class="card-title" style="margin-bottom:.3rem">Período <span style="font-weight:400;color:var(--muted)">(Data competência)</span></div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:.7rem">O filtro de Realizado YTD usa a <b>data de competência</b>, não a data de pagamento.</div>
             <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:1.2rem">
                 <label style="font-size:13px;color:var(--muted)">De:</label>
-                <select id="dlFrom" class="ctrl-select" style="min-width:140px"></select>
-                <label style="font-size:13px;color:var(--muted)">Até:</label>
-                <select id="dlTo" class="ctrl-select" style="min-width:140px"></select>
+                <select id="dlFromYear" class="ctrl-select" style="min-width:90px"></select>
+                <select id="dlFromMonth" class="ctrl-select" style="min-width:120px"></select>
+                <label style="font-size:13px;color:var(--muted);margin-left:.5rem">Até:</label>
+                <select id="dlToYear" class="ctrl-select" style="min-width:90px"></select>
+                <select id="dlToMonth" class="ctrl-select" style="min-width:120px"></select>
             </div>
 
             <div class="card-title" style="margin-bottom:.5rem">Bases para incluir</div>
@@ -2897,21 +2907,33 @@
         }
     }
 
-    // Handler do toggle BRL/USD
+    // Define a moeda global de exibição e sincroniza TODOS os toggles
+    // (ribbon, Carteira e IR), depois re-renderiza o dashboard.
+    // Escopo: Carteira, Realizado e Projeção respeitam currentCcy.
+    // Câmbio e Remuneração ficam sempre em BRL nativo; o IR mantém sua
+    // própria regra fiscal mas espelha visualmente a moeda escolhida.
+    function setGlobalCcy(ccy) {
+        if (ccy !== 'BRL' && ccy !== 'USD') return;
+        currentCcy = ccy;
+        currentIrCcy = ccy;
+        ['#sbCurrencyToggle','#currencyToggle','#irCurrencyToggle'].forEach(sel => {
+            document.querySelectorAll(sel + ' button').forEach(b => {
+                b.classList.toggle('active', b.dataset.ccy === ccy);
+            });
+        });
+        renderAll();
+    }
+
+    // Toggle de moeda na ribbon (controle global)
+    document.getElementById('sbCurrencyToggle').addEventListener('click', e => {
+        const btn = e.target.closest('button[data-ccy]');
+        if (btn) setGlobalCcy(btn.dataset.ccy);
+    });
+
+    // Toggle BRL/USD da Carteira — agora apenas delega ao controle global
     document.getElementById('currencyToggle').addEventListener('click', e => {
         const btn = e.target.closest('button[data-ccy]');
-        if (!btn) return;
-        currentCcy = btn.dataset.ccy;
-        document.querySelectorAll('#currencyToggle button').forEach(b => {
-            b.classList.toggle('active', b === btn);
-        });
-        // Espelha no toggle de IR para manter consistência visual entre abas
-        currentIrCcy = currentCcy;
-        document.querySelectorAll('#irCurrencyToggle button').forEach(b => {
-            b.classList.toggle('active', b.dataset.ccy === currentCcy);
-        });
-        // Moeda afeta o dashboard inteiro agora
-        renderAll();
+        if (btn) setGlobalCcy(btn.dataset.ccy);
     });
 
     function renderGroupPie(data) {
@@ -5890,7 +5912,7 @@
 
     /* ════════════════ DOWNLOAD / EXPORT ════════════════ */
     const dlTableMeta = {
-        realizado_ytd:    { label:'Realizado YTD',    dateCol:'data',      order:'data' },
+        realizado_ytd:    { label:'Realizado YTD',    dateCol:'data_competencia', order:'data_competencia' },
         projecao_ytg:     { label:'Projeção YTG',     dateCol:'data_inicio', order:'data_inicio' },
         remuneracao:      { label:'Remuneração',      dateCol:'mes',       order:'mes' },
         investimentos:    { label:'Investimentos',    dateCol:'data_ref',  order:'data_ref' },
@@ -5900,28 +5922,28 @@
     };
 
     function dlPopulateMonths() {
-        const selFrom = document.getElementById('dlFrom');
-        const selTo   = document.getElementById('dlTo');
-        if (!selFrom || !selTo) return;
-        const prevFrom = selFrom.value, prevTo = selTo.value;
-        selFrom.innerHTML = ''; selTo.innerHTML = '';
+        const fY = document.getElementById('dlFromYear'), fM = document.getElementById('dlFromMonth');
+        const tY = document.getElementById('dlToYear'),   tM = document.getElementById('dlToMonth');
+        if (!fY || !fM || !tY || !tM) return;
+        const prev = { fY:fY.value, fM:fM.value, tY:tY.value, tM:tM.value };
+        [fY,fM,tY,tM].forEach(s => s.innerHTML = '');
         const now = new Date(); const yNow = now.getFullYear();
-        const mAbr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-        const opts = [];
+        const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+        // Anos: do ano seguinte até 5 anos atrás (mais recente no topo)
         for (let y = yNow + 1; y >= yNow - 5; y--) {
-            for (let m = 12; m >= 1; m--) opts.push(`${y}-${String(m).padStart(2,'0')}`);
+            [fY,tY].forEach(sel => { const o = document.createElement('option'); o.value = String(y); o.textContent = String(y); sel.appendChild(o); });
         }
-        opts.forEach(k => {
-            const [y,m] = k.split('-');
-            const label = `${mAbr[parseInt(m,10)-1]}/${y}`;
-            const oF = document.createElement('option'); oF.value = k; oF.textContent = label; selFrom.appendChild(oF);
-            const oT = document.createElement('option'); oT.value = k; oT.textContent = label; selTo.appendChild(oT);
+        // Meses 1..12
+        meses.forEach((nome, i) => {
+            const mm = String(i+1).padStart(2,'0');
+            [fM,tM].forEach(sel => { const o = document.createElement('option'); o.value = mm; o.textContent = nome; sel.appendChild(o); });
         });
-        // Default: jan do ano corrente → mês corrente
-        const curKey = `${yNow}-${String(now.getMonth()+1).padStart(2,'0')}`;
-        const janKey = `${yNow}-01`;
-        selFrom.value = prevFrom || janKey;
-        selTo.value   = prevTo || curKey;
+        // Default: De = Jan do ano corrente; Até = mês corrente
+        const curM = String(now.getMonth()+1).padStart(2,'0');
+        fY.value = prev.fY || String(yNow);
+        fM.value = prev.fM || '01';
+        tY.value = prev.tY || String(yNow);
+        tM.value = prev.tM || curM;
     }
 
     function renderDownload() { dlPopulateMonths(); }
@@ -5929,8 +5951,8 @@
     async function dlExport() {
         const status = document.getElementById('dlStatus');
         const btn = document.getElementById('dlBtnExport');
-        const from = document.getElementById('dlFrom').value; // YYYY-MM
-        const to   = document.getElementById('dlTo').value;
+        const from = document.getElementById('dlFromYear').value + '-' + document.getElementById('dlFromMonth').value; // YYYY-MM
+        const to   = document.getElementById('dlToYear').value   + '-' + document.getElementById('dlToMonth').value;
         if (from > to) { status.textContent = 'O período "De" deve ser anterior ou igual a "Até".'; status.style.color='#DC2626'; return; }
         const checks = document.querySelectorAll('#dlTableList input[type="checkbox"]:checked');
         const tables = [...checks].map(c => c.value);
