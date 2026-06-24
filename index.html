@@ -1701,9 +1701,17 @@
             </div>
 
             <div class="card mb2">
-                <div class="card-title">Rentabilidade Acumulada</div>
-                <div class="card-sub">Rendimento acumulado sobre total investido, mês a mês</div>
-                <div style="height:300px"><canvas id="invRentChart"></canvas></div>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap">
+                    <div>
+                        <div class="card-title">Rentabilidade Acumulada</div>
+                        <div class="card-sub">Rendimento acumulado sobre total investido, mês a mês</div>
+                    </div>
+                    <div class="pill-toggle" id="invRentDivToggle" style="flex-shrink:0">
+                        <button class="active" data-div="com">Com dividendos</button>
+                        <button data-div="sem">Sem dividendos</button>
+                    </div>
+                </div>
+                <div style="height:300px;margin-top:.5rem"><canvas id="invRentChart"></canvas></div>
             </div>
 
             <div class="section-label">Composição da carteira</div>
@@ -3733,13 +3741,13 @@
             const custo    = rows.reduce((a,b) => a + b._dispInv, 0);
             const rendDiv  = divAcumAteMes(k);
             const invested = custo - rendDiv;
-            const rend     = bruto - invested;
+            // Snap de ruído de ponto flutuante: diferenças < 1 centavo são zero real
+            // (ex.: imóvel sem valorização gerava 0.0000004 que o eixo % ampliava).
+            const snap = v => Math.abs(v) < 0.01 ? 0 : v;
+            const rend     = snap(bruto - invested);   // COM dividendos (valorização + proventos)
+            const valoriz  = snap(bruto - custo);      // SEM dividendos (só valorização de preço)
             const total    = bruto;
-            // Decomposição do rendimento (verde) p/ o tooltip:
-            //   valorização = bruto − custo de aquisição cheio; dividendos = rendDiv.
-            //   valorização + dividendos = rend.
-            const valoriz  = bruto - custo;
-            return { k, invested, rend, total, valoriz, rendDiv };
+            return { k, invested, custo, rend, total, valoriz, rendDiv };
         });
 
         if (byMonth.length === 0) {
@@ -3856,7 +3864,13 @@
         const gc = isDarkMode ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
         if (charts.invRent) charts.invRent.destroy();
 
-        const rentabData = byMonth.map(r => r.invested > 0 ? (r.rend / r.invested * 100) : 0);
+        // Toggle dividendos: COM = rendimento total (valorização + proventos) sobre
+        // capital próprio; SEM = só valorização de preço sobre custo de aquisição cheio.
+        const comDiv = invRentComDividendos;
+        const rentabData = byMonth.map(r => {
+            if (comDiv) return r.invested > 0 ? (r.rend / r.invested * 100) : 0;
+            return r.custo > 0 ? (r.valoriz / r.custo * 100) : 0;
+        });
 
         charts.invRent = new Chart(document.getElementById('invRentChart'), {
             type: 'line',
@@ -3888,6 +3902,17 @@
             }
         });
     }
+
+    // Toggle Com/Sem dividendos do gráfico de Rentabilidade
+    document.getElementById('invRentDivToggle').addEventListener('click', e => {
+        const btn = e.target.closest('button[data-div]');
+        if (!btn) return;
+        invRentComDividendos = (btn.dataset.div === 'com');
+        document.querySelectorAll('#invRentDivToggle button').forEach(b => {
+            b.classList.toggle('active', b === btn);
+        });
+        if (currentView === 'investimentos') renderInvestimentos(true, true);
+    });
 
     function renderInvTypePie(latestRows, invKey, fmt) {
         const agg = {};
@@ -3985,6 +4010,8 @@
     let invAssetPieOthersCodigos = [];
     let invAssetPieOthersDetail  = [];
     const INV_ASSET_PIE_TOP_N = 8;
+    // Estado do toggle de dividendos no gráfico de Rentabilidade (true = com dividendos)
+    let invRentComDividendos = true;
 
     function renderInvAssetPie(latestRows, invKey, fmt) {
         // Agrega por código (latestRows já está filtrado por tipo via hiddenTipos)
