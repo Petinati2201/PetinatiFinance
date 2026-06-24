@@ -2341,7 +2341,14 @@
         let qtde = 0, investido = 0;
         for (const m of mvs) {
             if (m._op === 'COMPRA') { qtde += m._qty; investido += m._montante; }
-            else if (m._op === 'VENDA') { qtde -= m._qty; investido -= m._montante; }
+            else if (m._op === 'VENDA') {
+                // Baixa pelo CUSTO MÉDIO da parcela vendida (não pelo valor de venda).
+                // Assim `investido` reflete só dinheiro do bolso; o lucro da venda é tratado
+                // à parte como crédito (lucroRealizadoPositivo), evitando dupla contagem.
+                const custoMedio = qtde > 0.000001 ? (investido / qtde) : 0;
+                qtde -= m._qty;
+                investido -= custoMedio * m._qty;
+            }
             if (qtyBased && qtde <= 0.001) { qtde = 0; investido = 0; }
         }
         // Para non-qty (RF/Imóvel/Moeda), evita investido negativo — significa que as
@@ -2349,6 +2356,31 @@
         // saldo veio de antes do início do histórico de movimentações. Custo mínimo 0.
         if (!qtyBased && investido < 0) investido = 0;
         return investido;
+    }
+
+    // CRÉDITO DE LUCRO REALIZADO positivo, acumulado por ativo até o mês (moeda nativa).
+    // Para cada venda: lucro = valor de venda − custo médio × qtde vendida. Só lucro
+    // positivo conta (prejuízo não vira aporte — dinheiro do bolso é o que é). Esse crédito
+    // reduz o aporte: o ganho que financiou a próxima compra entra como rendimento, não
+    // como dinheiro novo. Mesma mecânica do dividendo reinvestido, com limite = lucro.
+    function lucroRealizadoPositivo(codigo, limitKey) {
+        const cLc = (codigo||'').trim().toLowerCase();
+        const mvs = movimentacoesData
+            .filter(m => (m._codigo||'').trim().toLowerCase() === cLc && m._k <= limitKey)
+            .sort((a,b) => a._date - b._date);
+        let qtde = 0, custo = 0, lucro = 0;
+        for (const m of mvs) {
+            if (m._op === 'COMPRA') { qtde += m._qty; custo += m._montante; }
+            else if (m._op === 'VENDA') {
+                const custoMedio = qtde > 0.000001 ? (custo / qtde) : 0;
+                const custoParcela = custoMedio * m._qty;
+                const ganho = m._montante - custoParcela;
+                if (ganho > 0) lucro += ganho;
+                qtde -= m._qty; custo -= custoParcela;
+                if (qtde <= 0.000001) { qtde = 0; custo = 0; }
+            }
+        }
+        return lucro;
     }
 
     // dividendos/JCP acumulados de um ativo até o mês informado (moeda nativa).
@@ -2366,11 +2398,13 @@
     }
 
     // CAPITAL PRÓPRIO investido (moeda nativa) — usado só na aba Carteira.
-    // = custo de aquisição − dividendos reinvestidos. Como os dividendos viram
-    // compras (entram no custo) mas não são dinheiro novo do investidor, descontá-los
-    // separa "quanto eu pus do bolso" de "quanto rendeu via proventos reinvestidos".
+    // = custo de aquisição − dividendos − lucro realizado positivo. Os dois últimos NÃO
+    // são dinheiro do bolso: dividendo reinvestido e lucro de venda viram combustível das
+    // próximas compras. Descontá-los separa "quanto pus do bolso" de "quanto rendeu".
     function invCapitalProprio(row) {
-        return invValorInvestido(row) - dividendosAcumulados(row._codigo, row._k);
+        return invValorInvestido(row)
+             - dividendosAcumulados(row._codigo, row._k)
+             - lucroRealizadoPositivo(row._codigo, row._k);
     }
 
 
@@ -3733,6 +3767,16 @@
             if (hiddenTipos.has(r._tipo) || hiddenCodigos.has(r._codigo)) return acc;
             return acc + convert(r._divJcp || 0, r._moeda, r._k);
         }, 0);
+        // Crédito de lucro realizado positivo acumulado até k. Varre TODO o histórico de
+        // movimentações (inclui ativos já 100% vendidos, que somem dos snapshots), para
+        // que o ganho de uma venda não evapore do gráfico ao reinvestir em outro ativo.
+        const codigosUnicos = [...new Set(investimentosData.map(r => r._codigo))];
+        const lucroRealAcumAteMes = k => codigosUnicos.reduce((acc, cod) => {
+            const ref = investimentosData.find(r => r._codigo === cod);
+            if (!ref) return acc;
+            if (hiddenTipos.has(ref._tipo) || hiddenCodigos.has(cod)) return acc;
+            return acc + convert(lucroRealizadoPositivo(cod, k), ref._moeda, k);
+        }, 0);
         const byMonth = months.map(k => {
             const rows = filteredData.filter(r => r._k === k);
             // bruto    = posição real (Σ valor_bruto da tabela Investimentos).
@@ -3744,12 +3788,14 @@
             const bruto    = rows.reduce((a,b) => a + b._dispBruto, 0);
             const custo    = rows.reduce((a,b) => a + b._dispInv, 0);
             const rendDiv  = divAcumAteMes(k);
-            const invested = custo - rendDiv;
+            const lucroReal = lucroRealAcumAteMes(k);  // crédito de lucro de venda, carregado
+            // investido (azul) = custo − dividendos − lucro realizado → só dinheiro do bolso.
+            const invested = custo - rendDiv - lucroReal;
             // Snap de ruído de ponto flutuante: diferenças < 1 centavo são zero real
             // (ex.: imóvel sem valorização gerava 0.0000004 que o eixo % ampliava).
             const snap = v => Math.abs(v) < 0.01 ? 0 : v;
-            const rend     = snap(bruto - invested);   // COM dividendos (valorização + proventos)
-            const valoriz  = snap(bruto - custo);      // SEM dividendos (só valorização de preço)
+            const rend     = snap(bruto - invested);   // valorização + dividendos + lucro realizado
+            const valoriz  = snap(bruto - custo);      // só valorização de preço da posição atual
             const total    = bruto;
             // Retorno mensal time-weighted: rendimento do mês (já neutraliza aportes via
             // invRendMes) sobre o valor bruto no INÍCIO do mês (= bruto do mês anterior dos
@@ -6252,6 +6298,22 @@
             check('invRendTotal Fev',             invRendTotal(fev),                    320);
             check('dividendosAcumulados Fev',     dividendosAcumulados('TEST','2025-02'),20);
             check('invCapitalProprio Fev',        invCapitalProprio(fev),               1580); // 1600-20
+
+            // — LUCRO REALIZADO CARREGADO (venda lucrativa, baixa por custo médio) —
+            // Compra 10@100 (custo 1000). Vende 4@150 (recebe 600). Custo médio 100 →
+            // custo da parcela 400, lucro realizado 200. Custo remanescente 600 (6×100).
+            // Capital próprio = custo 600 − lucro 200 = 400 (só o dinheiro do bolso ainda alocado).
+            movimentacoesData = [
+                { _codigo:'SELL', _op:'COMPRA', _date:new Date(2025,0,10), _k:'2025-01', _qty:10, _preco:100, _montante:1000, _moeda:'BRL' },
+                { _codigo:'SELL', _op:'VENDA',  _date:new Date(2025,2,10), _k:'2025-03', _qty:4,  _preco:150, _montante:600,  _moeda:'BRL' }
+            ];
+            investimentosData = [
+                { _codigo:'SELL', _k:'2025-03', _qtde:6, _preco:160, _bruto:960, _divJcp:0, _moeda:'BRL' }
+            ];
+            const sell = investimentosData[0];
+            check('lucroRealizadoPositivo = 200',         Math.round(lucroRealizadoPositivo('SELL','2025-03')), 200);
+            check('invValorInvestido custo médio = 600',  Math.round(invValorInvestido(sell)),                 600);
+            check('invCapitalProprio carrega lucro = 400',Math.round(invCapitalProprio(sell)),                 400);
         } finally {
             movimentacoesData = _bkpMov; investimentosData = _bkpInv; rendBaseData = _bkpBase;
         }
