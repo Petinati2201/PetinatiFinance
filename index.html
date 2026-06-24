@@ -2344,7 +2344,7 @@
             else if (m._op === 'VENDA') {
                 // Baixa pelo CUSTO MÉDIO da parcela vendida (não pelo valor de venda).
                 // Assim `investido` reflete só dinheiro do bolso; o lucro da venda é tratado
-                // à parte como crédito (lucroRealizadoPositivo), evitando dupla contagem.
+                // à parte como crédito (lucroRealizadoLiquido), evitando dupla contagem.
                 const custoMedio = qtde > 0.000001 ? (investido / qtde) : 0;
                 qtde -= m._qty;
                 investido -= custoMedio * m._qty;
@@ -2358,29 +2358,29 @@
         return investido;
     }
 
-    // CRÉDITO DE LUCRO REALIZADO positivo, acumulado por ativo até o mês (moeda nativa).
-    // Para cada venda: lucro = valor de venda − custo médio × qtde vendida. Só lucro
-    // positivo conta (prejuízo não vira aporte — dinheiro do bolso é o que é). Esse crédito
-    // reduz o aporte: o ganho que financiou a próxima compra entra como rendimento, não
-    // como dinheiro novo. Mesma mecânica do dividendo reinvestido, com limite = lucro.
-    function lucroRealizadoPositivo(codigo, limitKey) {
+    // CRÉDITO DE RESULTADO REALIZADO LÍQUIDO, acumulado por ativo até o mês (moeda nativa).
+    // Para cada venda: resultado = valor de venda − custo médio × qtde vendida. Soma COM
+    // SINAL (lucro positivo, prejuízo negativo) — o saldo líquido. Isso preserva a
+    // invariância: vender e recomprar não altera o rendimento total da carteira. Esse
+    // crédito reduz o aporte; o ganho que financiou a próxima compra entra como rendimento,
+    // não como dinheiro novo. Mesma mecânica do dividendo reinvestido.
+    function lucroRealizadoLiquido(codigo, limitKey) {
         const cLc = (codigo||'').trim().toLowerCase();
         const mvs = movimentacoesData
             .filter(m => (m._codigo||'').trim().toLowerCase() === cLc && m._k <= limitKey)
             .sort((a,b) => a._date - b._date);
-        let qtde = 0, custo = 0, lucro = 0;
+        let qtde = 0, custo = 0, resultado = 0;
         for (const m of mvs) {
             if (m._op === 'COMPRA') { qtde += m._qty; custo += m._montante; }
             else if (m._op === 'VENDA') {
                 const custoMedio = qtde > 0.000001 ? (custo / qtde) : 0;
                 const custoParcela = custoMedio * m._qty;
-                const ganho = m._montante - custoParcela;
-                if (ganho > 0) lucro += ganho;
+                resultado += (m._montante - custoParcela); // com sinal: lucro soma, prejuízo subtrai
                 qtde -= m._qty; custo -= custoParcela;
                 if (qtde <= 0.000001) { qtde = 0; custo = 0; }
             }
         }
-        return lucro;
+        return resultado;
     }
 
     // dividendos/JCP acumulados de um ativo até o mês informado (moeda nativa).
@@ -2404,7 +2404,7 @@
     function invCapitalProprio(row) {
         return invValorInvestido(row)
              - dividendosAcumulados(row._codigo, row._k)
-             - lucroRealizadoPositivo(row._codigo, row._k);
+             - lucroRealizadoLiquido(row._codigo, row._k);
     }
 
 
@@ -3775,7 +3775,7 @@
             const ref = investimentosData.find(r => r._codigo === cod);
             if (!ref) return acc;
             if (hiddenTipos.has(ref._tipo) || hiddenCodigos.has(cod)) return acc;
-            return acc + convert(lucroRealizadoPositivo(cod, k), ref._moeda, k);
+            return acc + convert(lucroRealizadoLiquido(cod, k), ref._moeda, k);
         }, 0);
         const byMonth = months.map(k => {
             const rows = filteredData.filter(r => r._k === k);
@@ -6311,9 +6311,24 @@
                 { _codigo:'SELL', _k:'2025-03', _qtde:6, _preco:160, _bruto:960, _divJcp:0, _moeda:'BRL' }
             ];
             const sell = investimentosData[0];
-            check('lucroRealizadoPositivo = 200',         Math.round(lucroRealizadoPositivo('SELL','2025-03')), 200);
+            check('lucroRealizadoLiquido = 200',         Math.round(lucroRealizadoLiquido('SELL','2025-03')), 200);
             check('invValorInvestido custo médio = 600',  Math.round(invValorInvestido(sell)),                 600);
             check('invCapitalProprio carrega lucro = 400',Math.round(invCapitalProprio(sell)),                 400);
+
+            // — RESULTADO LÍQUIDO COM PREJUÍZO (invariância vender+recomprar) —
+            // GANHA: compra 10@100, vende tudo 10@110 → lucro +100.
+            // PERDE: compra 20@100 (2000), vende tudo 20@96.5 (1930) → prejuízo −70.
+            // Saldo líquido = +100 − 70 = +30. Vender tudo não pode inflar para +100.
+            movimentacoesData = [
+                { _codigo:'GANHA', _op:'COMPRA', _date:new Date(2025,0,5), _k:'2025-01', _qty:10, _preco:100, _montante:1000, _moeda:'BRL' },
+                { _codigo:'GANHA', _op:'VENDA',  _date:new Date(2025,2,5), _k:'2025-03', _qty:10, _preco:110, _montante:1100, _moeda:'BRL' },
+                { _codigo:'PERDE', _op:'COMPRA', _date:new Date(2025,0,5), _k:'2025-01', _qty:20, _preco:100, _montante:2000, _moeda:'BRL' },
+                { _codigo:'PERDE', _op:'VENDA',  _date:new Date(2025,2,5), _k:'2025-03', _qty:20, _preco:96.5, _montante:1930, _moeda:'BRL' }
+            ];
+            check('resultado GANHA = +100', Math.round(lucroRealizadoLiquido('GANHA','2025-03')), 100);
+            check('resultado PERDE = -70',  Math.round(lucroRealizadoLiquido('PERDE','2025-03')), -70);
+            const saldoLiq = lucroRealizadoLiquido('GANHA','2025-03') + lucroRealizadoLiquido('PERDE','2025-03');
+            check('saldo líquido carteira = +30', Math.round(saldoLiq), 30);
         } finally {
             movimentacoesData = _bkpMov; investimentosData = _bkpInv; rendBaseData = _bkpBase;
         }
