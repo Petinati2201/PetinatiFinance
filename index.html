@@ -1704,11 +1704,19 @@
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap">
                     <div>
                         <div class="card-title">Rentabilidade Acumulada</div>
-                        <div class="card-sub">Rendimento acumulado sobre total investido, mês a mês</div>
+                        <div class="card-sub">Retorno encadeado (time-weighted), parte de 0% no início da janela</div>
                     </div>
-                    <div class="pill-toggle" id="invRentDivToggle" style="flex-shrink:0">
-                        <button class="active" data-div="com">Com dividendos</button>
-                        <button data-div="sem">Sem dividendos</button>
+                    <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;flex-shrink:0">
+                        <select id="invRentJanela" class="ctrl-select" style="min-width:130px">
+                            <option value="all">Desde o início</option>
+                            <option value="3">Últimos 3 meses</option>
+                            <option value="12">Últimos 12 meses</option>
+                            <option value="24">Últimos 24 meses</option>
+                        </select>
+                        <div class="pill-toggle" id="invRentDivToggle">
+                            <button class="active" data-div="com">Com dividendos</button>
+                            <button data-div="sem">Sem dividendos</button>
+                        </div>
                     </div>
                 </div>
                 <div style="height:300px;margin-top:.5rem"><canvas id="invRentChart"></canvas></div>
@@ -3747,7 +3755,21 @@
             const rend     = snap(bruto - invested);   // COM dividendos (valorização + proventos)
             const valoriz  = snap(bruto - custo);      // SEM dividendos (só valorização de preço)
             const total    = bruto;
-            return { k, invested, custo, rend, total, valoriz, rendDiv };
+            // Retorno mensal time-weighted: rendimento do mês (já neutraliza aportes via
+            // invRendMes) sobre o valor bruto no INÍCIO do mês (= bruto do mês anterior dos
+            // mesmos ativos). Encadeado depois para rebasear janelas. Respeita o filtro de
+            // tipo porque opera só sobre `rows` (que vêm de filteredData).
+            const pk = prevMonthKey(k);
+            const rendMesTotal = rows.reduce((a, r) => a + convert(invRendMes(r), r._moeda, r._k), 0);
+            // Variante sem dividendos: subtrai o provento do mês do rendimento mensal
+            const rendMesSemDiv = rows.reduce((a, r) => a + convert(invRendMes(r) - (r._divJcp || 0), r._moeda, r._k), 0);
+            const brutoInicio = rows.reduce((a, r) => {
+                const prev = filteredData.find(x => x._k === pk && x._codigo === r._codigo);
+                return a + (prev ? prev._dispBruto : 0);
+            }, 0);
+            const retMes       = brutoInicio > 0 ? (rendMesTotal  / brutoInicio) : 0;
+            const retMesSemDiv = brutoInicio > 0 ? (rendMesSemDiv / brutoInicio) : 0;
+            return { k, invested, custo, rend, total, valoriz, rendDiv, retMes, retMesSemDiv };
         });
 
         if (byMonth.length === 0) {
@@ -3864,18 +3886,32 @@
         const gc = isDarkMode ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
         if (charts.invRent) charts.invRent.destroy();
 
-        // Toggle dividendos: COM = rendimento total (valorização + proventos) sobre
-        // capital próprio; SEM = só valorização de preço sobre custo de aquisição cheio.
+        // Janela selecionada: 'all' (desde o início) ou N meses (3/12/24).
+        // Recorta byMonth aos últimos N+1 pontos (o ponto-base ancora em 0%) e encadeia
+        // os retornos mensais time-weighted a partir daí — assim a janela parte de 0%.
+        const jan = invRentJanela;
+        let serie = byMonth;
+        if (jan !== 'all') {
+            const n = Number(jan);
+            serie = byMonth.slice(Math.max(0, byMonth.length - (n + 1)));
+        }
+        // TWR encadeado: cada ponto = (Π(1+retMes) − 1)·100, começando no início da série.
+        // O primeiro ponto da janela é o marco 0%. Quando "all", o retMes do 1º mês também
+        // ancora em 0 (não há mês anterior dentro da série).
+        let acc = 1;
         const comDiv = invRentComDividendos;
-        const rentabData = byMonth.map(r => {
-            if (comDiv) return r.invested > 0 ? (r.rend / r.invested * 100) : 0;
-            return r.custo > 0 ? (r.valoriz / r.custo * 100) : 0;
+        const rentabData = serie.map((r, i) => {
+            if (i === 0) { acc = 1; return 0; }
+            const rm = comDiv ? (r.retMes || 0) : (r.retMesSemDiv || 0);
+            acc *= (1 + rm);
+            return (acc - 1) * 100;
         });
+        const labels = serie.map(r => { const [y,m] = r.k.split('-'); return `${monthNames[Number(m)-1]}/${y.slice(2)}`; });
 
         charts.invRent = new Chart(document.getElementById('invRentChart'), {
             type: 'line',
             data: {
-                labels: byMonth.map(r => { const [y,m] = r.k.split('-'); return `${monthNames[Number(m)-1]}/${y.slice(2)}`; }),
+                labels: labels,
                 datasets: [{
                     label: 'Rentabilidade Acumulada',
                     data: rentabData,
@@ -3911,6 +3947,12 @@
         document.querySelectorAll('#invRentDivToggle button').forEach(b => {
             b.classList.toggle('active', b === btn);
         });
+        if (currentView === 'investimentos') renderInvestimentos(true, true);
+    });
+
+    // Seletor de janela do gráfico de Rentabilidade
+    document.getElementById('invRentJanela').addEventListener('change', e => {
+        invRentJanela = e.target.value;
         if (currentView === 'investimentos') renderInvestimentos(true, true);
     });
 
@@ -4012,6 +4054,8 @@
     const INV_ASSET_PIE_TOP_N = 8;
     // Estado do toggle de dividendos no gráfico de Rentabilidade (true = com dividendos)
     let invRentComDividendos = true;
+    // Janela do gráfico de Rentabilidade: 'all' | '3' | '12' | '24' (meses)
+    let invRentJanela = 'all';
 
     function renderInvAssetPie(latestRows, invKey, fmt) {
         // Agrega por código (latestRows já está filtrado por tipo via hiddenTipos)
