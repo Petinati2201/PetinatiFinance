@@ -1713,10 +1713,6 @@
                             <option value="12">Últimos 12 meses</option>
                             <option value="24">Últimos 24 meses</option>
                         </select>
-                        <div class="pill-toggle" id="invRentDivToggle">
-                            <button class="active" data-div="com">Com dividendos</button>
-                            <button data-div="sem">Sem dividendos</button>
-                        </div>
                     </div>
                 </div>
                 <div style="height:300px;margin-top:.5rem"><canvas id="invRentChart"></canvas></div>
@@ -3898,23 +3894,23 @@
             const n = Number(jan);
             serie = byMonth.slice(Math.max(0, byMonth.length - (n + 1)));
         }
-        // TWR encadeado: cada ponto = (Π(1+retMes) − 1)·100, começando no início da série.
-        // O primeiro ponto da janela é o marco 0%. Quando "all", o retMes do 1º mês também
-        // ancora em 0 (não há mês anterior dentro da série).
-        let acc = 1;
-        const comDiv = invRentComDividendos;
-        const rentabData = serie.map((r, i) => {
-            if (i === 0) { acc = 1; return 0; }
-            const rm = comDiv ? (r.retMes || 0) : (r.retMesSemDiv || 0);
-            acc *= (1 + rm);
-            return (acc - 1) * 100;
-        });
+        // Duas séries TWR encadeadas no mesmo eixo: o impacto dos dividendos é a
+        // distância vertical entre elas. Ambas partem de 0% no início da janela.
+        const chain = key => {
+            let acc = 1;
+            return serie.map((r, i) => {
+                if (i === 0) { acc = 1; return 0; }
+                acc *= (1 + (r[key] || 0));
+                return (acc - 1) * 100;
+            });
+        };
+        const dataComDiv = chain('retMes');
+        const dataSemDiv = chain('retMesSemDiv');
         const labels = serie.map(r => { const [y,m] = r.k.split('-'); return `${monthNames[Number(m)-1]}/${y.slice(2)}`; });
 
         // Linha praticamente plana (ex.: só imóvel, retorno 0): força escala ±1% para o
-        // eixo não ampliar ruído residual e não repetir rótulos "0,0%". Quando há variação
-        // real, deixa o Chart.js autoajustar.
-        const maxAbs = Math.max(0, ...rentabData.map(v => Math.abs(v)));
+        // eixo não ampliar ruído residual. Considera AMBAS as séries para a detecção.
+        const maxAbs = Math.max(0, ...dataComDiv.map(v => Math.abs(v)), ...dataSemDiv.map(v => Math.abs(v)));
         const flat = maxAbs < 0.05;
         const ySuggMin = flat ? -1 : undefined;
         const ySuggMax = flat ?  1 : undefined;
@@ -3923,22 +3919,44 @@
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'Rentabilidade Acumulada',
-                    data: rentabData,
-                    borderColor: '#DB2777',
-                    backgroundColor: 'rgba(219,39,119,.08)',
-                    fill: true, tension: .35, borderWidth: 2.5,
-                    pointRadius: 3.5, pointBackgroundColor: '#DB2777'
-                }]
+                datasets: [
+                    {
+                        label: 'Com dividendos',
+                        data: dataComDiv,
+                        borderColor: '#DB2777',
+                        backgroundColor: 'rgba(219,39,119,.08)',
+                        fill: true, tension: .35, borderWidth: 2.5,
+                        pointRadius: 3, pointBackgroundColor: '#DB2777'
+                    },
+                    {
+                        label: 'Sem dividendos',
+                        data: dataSemDiv,
+                        borderColor: isDarkMode ? '#9CA3AF' : '#6B7280',
+                        backgroundColor: 'transparent',
+                        borderDash: [6, 4],
+                        fill: false, tension: .35, borderWidth: 2,
+                        pointRadius: 2.5, pointBackgroundColor: isDarkMode ? '#9CA3AF' : '#6B7280'
+                    }
+                ]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
                 plugins: {
-                    legend: { display: false },
+                    legend: {
+                        display: true, position: 'top', align: 'end',
+                        labels: { color: tc, font: {family:'Inter',size:11}, boxWidth: 24, usePointStyle: false }
+                    },
                     tooltip: {
                         callbacks: {
-                            label: ctx => `${ctx.parsed.y.toFixed(2)}%`
+                            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%`,
+                            afterBody: items => {
+                                if (items.length < 2) return '';
+                                const com = items.find(i => i.dataset.label === 'Com dividendos')?.parsed.y;
+                                const sem = items.find(i => i.dataset.label === 'Sem dividendos')?.parsed.y;
+                                if (com == null || sem == null) return '';
+                                return `Impacto dividendos: ${(com - sem).toFixed(2)} p.p.`;
+                            }
                         }
                     }
                 },
@@ -3949,17 +3967,6 @@
             }
         });
     }
-
-    // Toggle Com/Sem dividendos do gráfico de Rentabilidade
-    document.getElementById('invRentDivToggle').addEventListener('click', e => {
-        const btn = e.target.closest('button[data-div]');
-        if (!btn) return;
-        invRentComDividendos = (btn.dataset.div === 'com');
-        document.querySelectorAll('#invRentDivToggle button').forEach(b => {
-            b.classList.toggle('active', b === btn);
-        });
-        if (currentView === 'investimentos') renderInvestimentos(true, true);
-    });
 
     // Seletor de janela do gráfico de Rentabilidade
     document.getElementById('invRentJanela').addEventListener('change', e => {
@@ -4063,8 +4070,6 @@
     let invAssetPieOthersCodigos = [];
     let invAssetPieOthersDetail  = [];
     const INV_ASSET_PIE_TOP_N = 8;
-    // Estado do toggle de dividendos no gráfico de Rentabilidade (true = com dividendos)
-    let invRentComDividendos = true;
     // Janela do gráfico de Rentabilidade: 'all' | '3' | '12' | '24' (meses)
     let invRentJanela = 'all';
 
