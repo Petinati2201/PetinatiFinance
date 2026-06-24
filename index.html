@@ -3760,9 +3760,12 @@
             // mesmos ativos). Encadeado depois para rebasear janelas. Respeita o filtro de
             // tipo porque opera só sobre `rows` (que vêm de filteredData).
             const pk = prevMonthKey(k);
-            const rendMesTotal = rows.reduce((a, r) => a + convert(invRendMes(r), r._moeda, r._k), 0);
+            // snap: rendimento mensal < 1 centavo é ruído de float → zero (mesma correção
+            // aplicada a rend/valoriz; aqui no numerador do retorno time-weighted).
+            const snapM = v => Math.abs(v) < 0.01 ? 0 : v;
+            const rendMesTotal  = snapM(rows.reduce((a, r) => a + convert(invRendMes(r), r._moeda, r._k), 0));
             // Variante sem dividendos: subtrai o provento do mês do rendimento mensal
-            const rendMesSemDiv = rows.reduce((a, r) => a + convert(invRendMes(r) - (r._divJcp || 0), r._moeda, r._k), 0);
+            const rendMesSemDiv = snapM(rows.reduce((a, r) => a + convert(invRendMes(r) - (r._divJcp || 0), r._moeda, r._k), 0));
             const brutoInicio = rows.reduce((a, r) => {
                 const prev = filteredData.find(x => x._k === pk && x._codigo === r._codigo);
                 return a + (prev ? prev._dispBruto : 0);
@@ -3908,6 +3911,14 @@
         });
         const labels = serie.map(r => { const [y,m] = r.k.split('-'); return `${monthNames[Number(m)-1]}/${y.slice(2)}`; });
 
+        // Linha praticamente plana (ex.: só imóvel, retorno 0): força escala ±1% para o
+        // eixo não ampliar ruído residual e não repetir rótulos "0,0%". Quando há variação
+        // real, deixa o Chart.js autoajustar.
+        const maxAbs = Math.max(0, ...rentabData.map(v => Math.abs(v)));
+        const flat = maxAbs < 0.05;
+        const ySuggMin = flat ? -1 : undefined;
+        const ySuggMax = flat ?  1 : undefined;
+
         charts.invRent = new Chart(document.getElementById('invRentChart'), {
             type: 'line',
             data: {
@@ -3932,7 +3943,7 @@
                     }
                 },
                 scales: {
-                    y: { grid: { color: gc }, ticks: { color: tc, font: {family:'Inter',size:11}, callback: v => v.toFixed(1) + '%' } },
+                    y: { grid: { color: gc }, suggestedMin: ySuggMin, suggestedMax: ySuggMax, ticks: { color: tc, font: {family:'Inter',size:11}, callback: v => { const n = Math.abs(v) < 0.05 ? 0 : v; return n.toFixed(1) + '%'; } } },
                     x: { grid: { display: false }, ticks: { color: tc, font: {family:'Inter',size:10} } }
                 }
             }
