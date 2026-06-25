@@ -3860,7 +3860,10 @@
         document.getElementById('invAssets').innerText = latestRows.length;
         const [y,m] = latestKey.split('-');
         document.getElementById('invTotalInvSub').innerText = `Posição em ${monthNames[Number(m)-1]}/${y.slice(2)}`;
-        const lucroRealTxt = Math.abs(picked.lucroReal || 0) >= 0.01 ? ` + Lucro real. ${fmt(picked.lucroReal)}` : '';
+        const lr = picked.lucroReal || 0;
+        const lucroRealTxt = Math.abs(lr) >= 0.01
+            ? ` ${lr < 0 ? '−' : '+'} Result. real. ${fmt(Math.abs(lr))}`
+            : '';
         document.getElementById('invTotalRendSub').innerText = `Valoriz. ${fmt(picked.valoriz)} + Div. ${fmt(picked.rendDiv)}${lucroRealTxt}`;
 
         renderInvStackChart(byMonth, fmtK, fmt);
@@ -3911,7 +3914,7 @@
                                         `  • Dividendos: ${fmt(r.rendDiv)}`
                                     ];
                                     if (Math.abs(r.lucroReal || 0) >= 0.01) {
-                                        linhas.push(`  • Lucro realizado: ${fmt(r.lucroReal)}`);
+                                        linhas.push(`  • Resultado realizado: ${fmt(r.lucroReal)}`);
                                     }
                                     return linhas;
                                 }
