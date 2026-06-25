@@ -3814,7 +3814,7 @@
             }, 0);
             const retMes       = brutoInicio > 0 ? (rendMesTotal  / brutoInicio) : 0;
             const retMesSemDiv = brutoInicio > 0 ? (rendMesSemDiv / brutoInicio) : 0;
-            return { k, invested, custo, rend, total, valoriz, rendDiv, retMes, retMesSemDiv };
+            return { k, invested, custo, rend, total, valoriz, rendDiv, lucroReal, retMes, retMesSemDiv };
         });
 
         if (byMonth.length === 0) {
@@ -3842,10 +3842,11 @@
         const _bruto    = pickedRows.reduce((a,b) => a + b._dispBruto, 0);
         const _custo    = pickedRows.reduce((a,b) => a + b._dispInv, 0);
         const _rendDiv  = divAcumAteMes(pickedKey);
-        const _invested = _custo - _rendDiv;
-        const _rend     = _bruto - _invested;
+        const _lucroReal = lucroRealAcumAteMes(pickedKey);      // crédito de lucro realizado
+        const _invested = _custo - _rendDiv - _lucroReal;       // mesma fórmula do byMonth
+        const _rend     = _bruto - _invested;                   // = valoriz + rendDiv + lucroReal
         const _valoriz  = _bruto - _custo;
-        const picked = { k: pickedKey, invested: _invested, rend: _rend, total: _bruto, valoriz: _valoriz, rendDiv: _rendDiv };
+        const picked = { k: pickedKey, invested: _invested, rend: _rend, total: _bruto, valoriz: _valoriz, rendDiv: _rendDiv, lucroReal: _lucroReal };
 
         const latestKey = picked.k;
         const latestRows = filteredData.filter(r => r._k === latestKey && r._dispBruto > 0);
@@ -3859,7 +3860,8 @@
         document.getElementById('invAssets').innerText = latestRows.length;
         const [y,m] = latestKey.split('-');
         document.getElementById('invTotalInvSub').innerText = `Posição em ${monthNames[Number(m)-1]}/${y.slice(2)}`;
-        document.getElementById('invTotalRendSub').innerText = `Valoriz. ${fmt(picked.valoriz)} + Div. ${fmt(picked.rendDiv)}`;
+        const lucroRealTxt = Math.abs(picked.lucroReal || 0) >= 0.01 ? ` + Lucro real. ${fmt(picked.lucroReal)}` : '';
+        document.getElementById('invTotalRendSub').innerText = `Valoriz. ${fmt(picked.valoriz)} + Div. ${fmt(picked.rendDiv)}${lucroRealTxt}`;
 
         renderInvStackChart(byMonth, fmtK, fmt);
         renderInvRentChart(byMonth);
@@ -3903,11 +3905,15 @@
                                 // Na faixa de Rendimento, decompõe em Valorização + Dividendos.
                                 if (ctx.dataset.label === 'Rendimento') {
                                     const r = byMonth[ctx.dataIndex];
-                                    return [
+                                    const linhas = [
                                         `Rendimento: ${fmt(ctx.parsed.y)}`,
                                         `  • Valorização: ${fmt(r.valoriz)}`,
                                         `  • Dividendos: ${fmt(r.rendDiv)}`
                                     ];
+                                    if (Math.abs(r.lucroReal || 0) >= 0.01) {
+                                        linhas.push(`  • Lucro realizado: ${fmt(r.lucroReal)}`);
+                                    }
+                                    return linhas;
                                 }
                                 return `${ctx.dataset.label}: ${fmt(ctx.parsed.y)}`;
                             },
