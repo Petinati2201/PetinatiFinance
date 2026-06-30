@@ -1112,6 +1112,10 @@
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
                     <span class="sb-link-label">Câmbio</span>
                 </div>
+                <div class="sb-link" data-view="inputytd" onclick="switchView('inputytd')">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>
+                    <span class="sb-link-label">Input de Despesas</span>
+                </div>
                 <div class="sb-link" data-view="download" onclick="switchView('download')">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     <span class="sb-link-label">Download</span>
@@ -1312,6 +1316,143 @@
                 <span><span class="swatch edit"></span> <b>Editável</b> — clique e digite o novo valor</span>
                 <span>Linhas em destaque têm alterações não salvas.</span>
                 <span>Data gravada no Supabase: primeiro dia do mês (YYYY-MM-01).</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW: INPUT DE DESPESAS (YTD/YTG) -->
+    <div id="view-inputytd" class="view">
+        <div class="view-header">
+            <div>
+                <h1 class="view-title">Input de Despesas</h1>
+                <div class="view-subtitle">Projeção (YTG) editável + upload CSV de realizado (YTD) por mês</div>
+            </div>
+        </div>
+
+        <!-- SEÇÃO 1: YTG editável -->
+        <div class="card mb3">
+            <div class="card-title" style="margin-bottom:.15rem">Projeção YTG</div>
+            <div class="card-sub">Linhas da tabela <code>projecao_ytg</code> — edite os campos ou adicione novas linhas</div>
+
+            <div class="ii-toolbar" style="margin-top:1rem">
+                <div id="ytgKpis" style="display:flex;gap:1rem;font-size:13px;color:var(--muted)"></div>
+                <div class="spacer"></div>
+                <button id="ytgBtnAdd">+ Adicionar linha</button>
+                <button id="ytgBtnSave" class="primary" disabled>Gravar</button>
+            </div>
+            <div class="ii-status" id="ytgStatus"></div>
+
+            <div style="overflow-x:auto;margin-top:1rem">
+                <table class="ii-table">
+                    <thead>
+                        <tr>
+                            <th>Data início</th>
+                            <th>Data fim</th>
+                            <th>Tipo</th>
+                            <th>Grupo</th>
+                            <th>Subgrupo 1</th>
+                            <th>Subgrupo 2</th>
+                            <th>Lançamento</th>
+                            <th>Origem</th>
+                            <th>Evento</th>
+                            <th class="calc" style="text-align:right">Valor BRL</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ytgBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- SEÇÃO 2: Upload Realizado YTD -->
+        <div class="card mb3">
+            <div class="card-title" style="margin-bottom:.15rem">Upload Realizado YTD (CSV)</div>
+            <div class="card-sub">Substitui TODAS as linhas do mês selecionado pelas do CSV (DELETE + INSERT)</div>
+
+            <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:1rem">
+                <label style="font-size:13px;color:var(--muted);font-weight:600">Mês de competência:</label>
+                <input type="month" id="ytdMonth" style="font-family:'Inter',sans-serif;font-size:13px;padding:.45rem .65rem;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)">
+            </div>
+
+            <div id="ytdDropZone" style="margin-top:1rem;border:2px dashed var(--border);border-radius:10px;padding:2rem;text-align:center;cursor:pointer;transition:all .2s;background:transparent">
+                <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:.5;margin-bottom:.5rem"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <div style="font-size:14px;color:var(--text);font-weight:600">Arraste o CSV aqui ou clique para escolher</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:.4rem;line-height:1.5">Colunas esperadas: TIPO, DATA, DATA COMPETENCIA, LANÇAMENTO, VALOR BRL,<br>ORIGEM DA COMPRA, EVENTO, GRUPO, SUBGRUPO 1, SUBGRUPO 2</div>
+                <input type="file" id="ytdFileInput" accept=".csv,text/csv" style="display:none">
+            </div>
+
+            <div id="ytdPreview" style="margin-top:1rem"></div>
+
+            <div style="display:flex;gap:1rem;align-items:center;margin-top:1rem;flex-wrap:wrap">
+                <button id="ytdConfirmBtn" disabled style="font-family:'Inter',sans-serif;font-size:13px;border-radius:8px;padding:.55rem 1.2rem;border:1px solid #dc2626;background:#dc2626;color:#fff;font-weight:600;cursor:pointer;opacity:.5">Confirmar substituição</button>
+                <button id="ytdResetBtn" style="font-family:'Inter',sans-serif;font-size:13px;border-radius:8px;padding:.5rem 1rem;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer">Limpar</button>
+                <div class="ii-status" id="ytdStatus" style="margin-left:.5rem"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-visao" class="view active">
+        <div class="view-header">
+            <div>
+                <h1 class="view-title">Visão Geral</h1>
+                <div class="view-subtitle">KPIs, evolução e composição de despesas do mês</div>
+            </div>
+        </div>
+
+        <div class="kpi-grid kpi-grid-6 mb2">
+            <div class="kpi-cell c-blue">
+                <span class="kpi-label">REALIZADO</span>
+                <span id="kpiReal" class="kpi-value">R$ 0,00</span>
+            </div>
+            <div class="kpi-cell c-teal">
+                <span class="kpi-label">INVESTIDO</span>
+                <span id="kpiInv" class="kpi-value">R$ 0,00</span>
+                <span class="kpi-sub" id="kpiInvSub">Investimentos − resgates do mês</span>
+            </div>
+            <div class="kpi-cell c-purple">
+                <span class="kpi-label">Gasto Médio / Tx</span>
+                <span id="kpiAvgTx" class="kpi-value">R$ 0,00</span>
+            </div>
+            <div class="kpi-cell c-cyan">
+                <span class="kpi-label">TRANSAÇÕES</span>
+                <span id="kpiTxCount" class="kpi-value">0</span>
+            </div>
+            <div class="kpi-cell c-green">
+                <span class="kpi-label">Total Esperado</span>
+                <span id="kpiTotal" class="kpi-value">R$ 0,00</span>
+            </div>
+            <div class="kpi-cell c-slate">
+                <span class="kpi-label">Maior Gasto</span>
+                <span id="topGroup" class="kpi-value sm" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">---</span>
+            </div>
+        </div>
+
+        <div class="section-label">Evolução temporal</div>
+        <div class="card mb2">
+            <div class="card-title">Evolução de Despesas</div>
+            <div class="card-sub">Realizado, projeção manual e média móvel YTD</div>
+            <div style="height:340px"><canvas id="mainChart"></canvas></div>
+        </div>
+
+        <div class="section-label">Composição do mês</div>
+        <div class="g3 mb3">
+            <div class="card">
+                <button class="reset-chip" data-reset-view="visao">
+                    <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
+                    <span>Mostrar todos</span>
+                </button>
+                <div class="card-title">Grupos</div>
+                <div class="card-sub">Clique numa fatia ou legenda para filtrar</div>
+                <div style="height:280px"><canvas id="groupChart"></canvas></div>
+            </div>
+            <div class="card">
+                <div class="card-title">Subgrupo 1</div>
+                <div class="card-sub">Top itens</div>
+                <div style="height:280px"><canvas id="sub1Chart"></canvas></div>
+            </div>
+            <div class="card">
+                <div class="card-title">Subgrupo 2</div>
+                <div class="card-sub">Top itens</div>
+                <div style="height:280px"><canvas id="sub2Chart"></canvas></div>
             </div>
         </div>
     </div>
@@ -2481,7 +2622,7 @@
         // Tabela de detalhamento só aparece nas views de análise (exceto as que têm tabelas próprias)
         const detalhamento = document.getElementById('detalhamentoWrap');
         if (detalhamento) {
-            const semDetalhe = ['inputinv', 'movimentacoes', 'holerite', 'investimentos', 'ir', 'dolar', 'download'];
+            const semDetalhe = ['inputinv', 'movimentacoes', 'holerite', 'investimentos', 'ir', 'dolar', 'download', 'inputytd'];
             detalhamento.style.display = semDetalhe.includes(viewName) ? 'none' : 'block';
         }
         // Em mobile, fecha a sidebar ao navegar
@@ -2493,6 +2634,7 @@
         if (viewName === 'movimentacoes') { renderMov(); return; }
         if (viewName === 'dolar') { renderDolar(); return; }
         if (viewName === 'download') { renderDownload(); return; }
+        if (viewName === 'inputytd') { renderInputYtd(); return; }
         renderAll();
     }
 
@@ -5963,6 +6105,438 @@
         return count;
     }
 
+    /* ════════════════ INPUT YTD / YTG ════════════════
+       Aba unificada para gerenciar projecao_ytg (editável) e upload de
+       realizado_ytd (CSV → DELETE+INSERT por mês de competência).
+
+       YTG: tabela editável com add/edit (sem delete por design — usuário
+       decidiu evitar exclusões pontuais).
+       YTD: drag-and-drop de CSV no padrão BR (cabeçalho em português).
+            Estratégia: DELETE WHERE data_competencia no mês selecionado +
+            INSERT das linhas do CSV. Destrutivo, irrecuperável. */
+    let ytgRawRows = [];
+    let ytgRows = [];
+    let ytgTmpCounter = 0;
+    let ytdCsvParsed = null;
+
+    function ytgTmpId() { return 'YTG_TMP_' + (++ytgTmpCounter); }
+    function ytgRowByAnyId(id) {
+        return ytgRows.find(r => (r.id && String(r.id) === String(id)) || r._tmp === id);
+    }
+    // Converte string DD/MM/AAAA ou YYYY-MM-DD para ISO YYYY-MM-DD; vazio se inválido
+    function brToIsoFlexible(s) {
+        if (!s) return '';
+        s = String(s).trim();
+        if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+            const [d,m,y] = s.split('/');
+            return `${y}-${m}-${d}`;
+        }
+        return '';
+    }
+
+    async function loadYtgRaw() {
+        const { data, error } = await sbClient
+            .from('projecao_ytg')
+            .select('*')
+            .order('data_inicio', { ascending: true })
+            .limit(10000);
+        if (error) throw error;
+        ytgRawRows = data || [];
+    }
+
+    function ytgSyncFromRaw() {
+        ytgRows = ytgRawRows.map(r => ({
+            id: r.id,
+            tipo: r.tipo || '',
+            lancamento: r.lancamento || '',
+            origem_da_compra: r.origem_da_compra || '',
+            evento: r.evento || '',
+            valor_brl: Number(r.valor_brl) || 0,
+            data_inicio: String(r.data_inicio || '').slice(0,10),
+            data_fim:    String(r.data_fim    || '').slice(0,10),
+            grupo: r.grupo || '',
+            subgrupo_1: r.subgrupo_1 || '',
+            subgrupo_2: r.subgrupo_2 || '',
+            _dirty: false, _new: false
+        }));
+    }
+
+    async function renderInputYtd() {
+        // Reseta status visual de qualquer execução anterior
+        const st = document.getElementById('ytgStatus'); if (st) { st.textContent = ''; st.className = 'ii-status'; }
+        try {
+            await loadYtgRaw();
+            ytgSyncFromRaw();
+        } catch (err) {
+            console.error('Erro carregando YTG:', err);
+            if (st) { st.textContent = 'Erro ao carregar YTG: ' + (err.message||err); st.className = 'ii-status err'; }
+        }
+        renderYtgTable();
+        setupYtdUpload();
+    }
+
+    function renderYtgTable() {
+        const tbody = document.getElementById('ytgBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        const sortedRows = [...ytgRows].sort((a,b) =>
+            (a.data_inicio || '').localeCompare(b.data_inicio || '') ||
+            (a.tipo || '').localeCompare(b.tipo || '')
+        );
+        if (!sortedRows.length) {
+            tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Nenhuma projeção cadastrada. Clique em "+ Adicionar linha".</td></tr>';
+        } else {
+            sortedRows.forEach(row => tbody.appendChild(buildYtgRow(row)));
+        }
+        ytgUpdateKpis();
+        ytgUpdateSaveBtn();
+    }
+
+    function buildYtgRow(row) {
+        const tr = document.createElement('tr');
+        if (row._dirty || row._new) tr.classList.add('dirty-row');
+        const txtCss = 'width:100%;box-sizing:border-box;font-family:Inter,sans-serif;font-size:13px;padding:.35rem .45rem;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--text);transition:.15s';
+        const numCss = txtCss + ';text-align:right;font-variant-numeric:tabular-nums';
+
+        const fields = [
+            {key:'data_inicio', type:'date'},
+            {key:'data_fim',    type:'date'},
+            {key:'tipo',        type:'text'},
+            {key:'grupo',       type:'text'},
+            {key:'subgrupo_1',  type:'text'},
+            {key:'subgrupo_2',  type:'text'},
+            {key:'lancamento',  type:'text'},
+            {key:'origem_da_compra', type:'text'},
+            {key:'evento',      type:'text'},
+            {key:'valor_brl',   type:'num'}
+        ];
+
+        fields.forEach(f => {
+            const td = document.createElement('td');
+            const inp = document.createElement('input');
+            if (f.type === 'date') { inp.type = 'date'; inp.value = row[f.key] || ''; inp.style.cssText = txtCss; }
+            else if (f.type === 'num') { inp.type = 'text'; inp.value = iiFmtInput(row[f.key] || 0); inp.style.cssText = numCss; }
+            else { inp.type = 'text'; inp.value = row[f.key] || ''; inp.style.cssText = txtCss; }
+            inp.dataset.id = row.id || row._tmp;
+            inp.dataset.key = f.key;
+            inp.dataset.kind = f.type;
+            inp.addEventListener('input', ytgOnEdit);
+            if (f.type === 'date') inp.addEventListener('change', ytgOnEdit);
+            td.appendChild(inp);
+            tr.appendChild(td);
+        });
+        return tr;
+    }
+
+    function ytgOnEdit(e) {
+        const row = ytgRowByAnyId(e.target.dataset.id); if (!row) return;
+        const key = e.target.dataset.key, kind = e.target.dataset.kind, val = e.target.value;
+        if (kind === 'num') row[key] = iiParseNum(val);
+        else row[key] = val;
+        row._dirty = true;
+        e.target.classList.add('changed');
+        ytgUpdateKpis();
+        ytgUpdateSaveBtn();
+    }
+
+    function ytgAddRow() {
+        const today = new Date().toISOString().slice(0,10);
+        ytgRows.push({
+            _tmp: ytgTmpId(),
+            tipo: '', lancamento: '', origem_da_compra: '', evento: '',
+            valor_brl: 0,
+            data_inicio: today, data_fim: today,
+            grupo: '', subgrupo_1: '', subgrupo_2: '',
+            _dirty: true, _new: true
+        });
+        renderYtgTable();
+        const tb = document.getElementById('ytgBody');
+        const last = tb.querySelector('tr:last-child input');
+        if (last) last.focus();
+    }
+
+    function ytgUpdateKpis() {
+        const total = ytgRows.reduce((a,r) => a + (Number(r.valor_brl) || 0), 0);
+        const linhas = ytgRows.length;
+        const pend = ytgRows.filter(r => r._dirty || r._new).length;
+        const el = document.getElementById('ytgKpis');
+        if (el) el.innerHTML =
+            `<div>Linhas: <strong style="color:var(--text)">${linhas}</strong></div>
+             <div>Soma valor BRL: <strong style="color:var(--text)">${iiFmtNum(total)}</strong></div>
+             <div>Pendentes: <strong style="color:var(--text)">${pend}</strong></div>`;
+    }
+    function ytgUpdateSaveBtn() {
+        const btn = document.getElementById('ytgBtnSave');
+        if (btn) btn.disabled = ytgRows.filter(r => r._dirty || r._new).length === 0;
+    }
+
+    function ytgToPayload(r, uid) {
+        return {
+            user_id: uid,
+            tipo: r.tipo || '',
+            lancamento: r.lancamento || '',
+            origem_da_compra: r.origem_da_compra || '',
+            evento: r.evento || '',
+            valor_brl: Number(r.valor_brl) || 0,
+            data_inicio: r.data_inicio || null,
+            data_fim:    r.data_fim    || null,
+            grupo: r.grupo || '',
+            subgrupo_1: r.subgrupo_1 || '',
+            subgrupo_2: r.subgrupo_2 || ''
+        };
+    }
+
+    async function ytgSave() {
+        const btn = document.getElementById('ytgBtnSave');
+        const status = document.getElementById('ytgStatus');
+        btn.disabled = true;
+        status.textContent = 'Salvando...'; status.className = 'ii-status';
+        try {
+            const uid = await iiCurrentUserId();
+            const novos = ytgRows.filter(r => r._new);
+            const editados = ytgRows.filter(r => r._dirty && !r._new && r.id);
+            // Validação leve: datas devem existir
+            const errors = [];
+            [...novos, ...editados].forEach((r,i) => {
+                if (!r.data_inicio) errors.push(`Linha ${i+1}: data início vazia`);
+                if (!r.data_fim) errors.push(`Linha ${i+1}: data fim vazia`);
+                if (r.data_inicio && r.data_fim && r.data_inicio > r.data_fim) errors.push(`Linha ${i+1}: data início > data fim`);
+            });
+            if (errors.length) {
+                alert('Corrija antes de salvar:\n\n• ' + errors.join('\n• '));
+                btn.disabled = false; status.textContent = ''; return;
+            }
+            if (novos.length) {
+                const payloads = novos.map(r => ytgToPayload(r, uid));
+                const { error } = await sbClient.from('projecao_ytg').insert(payloads);
+                if (error) throw error;
+            }
+            for (const r of editados) {
+                const { error } = await sbClient.from('projecao_ytg').update(ytgToPayload(r, uid)).eq('id', r.id);
+                if (error) throw error;
+            }
+            await loadYtgRaw();
+            ytgSyncFromRaw();
+            renderYtgTable();
+            status.textContent = `✓ ${novos.length} criada(s), ${editados.length} atualizada(s).`;
+            status.className = 'ii-status ok';
+            setTimeout(() => { if (status.textContent.startsWith('✓')) { status.textContent = ''; status.className = 'ii-status'; } }, 4000);
+        } catch (err) {
+            console.error(err);
+            status.textContent = 'Erro: ' + (err.message || err);
+            status.className = 'ii-status err';
+            btn.disabled = false;
+        }
+    }
+
+    /* ── YTD upload ── */
+    function setupYtdUpload() {
+        const dz = document.getElementById('ytdDropZone');
+        const inp = document.getElementById('ytdFileInput');
+        const resetBtn = document.getElementById('ytdResetBtn');
+        if (!dz || !inp) return;
+        if (!dz.dataset.bound) {
+            dz.dataset.bound = '1';
+            dz.addEventListener('dragover', e => {
+                e.preventDefault();
+                dz.style.borderColor = 'var(--accent2)';
+                dz.style.background = 'rgba(0,0,0,.02)';
+            });
+            dz.addEventListener('dragleave', () => {
+                dz.style.borderColor = 'var(--border)';
+                dz.style.background = 'transparent';
+            });
+            dz.addEventListener('drop', e => {
+                e.preventDefault();
+                dz.style.borderColor = 'var(--border)';
+                dz.style.background = 'transparent';
+                const f = e.dataTransfer.files[0];
+                if (f) ytdHandleFile(f);
+            });
+            dz.addEventListener('click', () => inp.click());
+            inp.addEventListener('change', e => {
+                const f = e.target.files[0];
+                if (f) ytdHandleFile(f);
+            });
+            resetBtn.addEventListener('click', ytdReset);
+        }
+        ytdReset();
+        // Default month: corrente
+        const now = new Date();
+        document.getElementById('ytdMonth').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    }
+    function ytdReset() {
+        ytdCsvParsed = null;
+        document.getElementById('ytdPreview').innerHTML = '';
+        const btn = document.getElementById('ytdConfirmBtn');
+        btn.disabled = true; btn.style.opacity = '.5';
+        const st = document.getElementById('ytdStatus'); st.textContent = ''; st.className = 'ii-status';
+        document.getElementById('ytdFileInput').value = '';
+    }
+    function ytdHandleFile(file) {
+        const status = document.getElementById('ytdStatus');
+        status.textContent = `Lendo "${file.name}"...`; status.className = 'ii-status';
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: results => {
+                if (results.errors.length) {
+                    status.textContent = `Erro no CSV: ${results.errors[0].message}`;
+                    status.className = 'ii-status err';
+                    return;
+                }
+                ytdProcessCsv(results.data, file.name);
+            },
+            error: err => {
+                status.textContent = `Erro ao ler arquivo: ${err.message}`;
+                status.className = 'ii-status err';
+            }
+        });
+    }
+    function ytdProcessCsv(rows, fileName) {
+        const status = document.getElementById('ytdStatus');
+        const preview = document.getElementById('ytdPreview');
+        if (!rows.length) {
+            status.textContent = 'CSV vazio.';
+            status.className = 'ii-status err';
+            return;
+        }
+        const required = ['TIPO','DATA','DATA COMPETENCIA','LANÇAMENTO','VALOR BRL'];
+        const headers = Object.keys(rows[0] || {}).map(h => h.toUpperCase().trim());
+        const missing = required.filter(c => !headers.includes(c));
+        if (missing.length) {
+            status.textContent = `Colunas faltando: ${missing.join(', ')}`;
+            status.className = 'ii-status err';
+            preview.innerHTML = `<div style="color:#dc2626;font-size:13px">CSV inválido. Cabeçalho deve ter exatamente: <code>${required.join(', ')}</code> (e opcionalmente ORIGEM DA COMPRA, EVENTO, GRUPO, SUBGRUPO 1, SUBGRUPO 2)</div>`;
+            return;
+        }
+        // Lookup case-insensitive para tolerar variações de casing
+        const getVal = (r, key) => {
+            const keyU = key.toUpperCase().trim();
+            for (const k of Object.keys(r)) {
+                if (k.toUpperCase().trim() === keyU) return r[k];
+            }
+            return '';
+        };
+        const parsed = rows.map((r, i) => ({
+            _idx: i + 2, // +2 = +1 (humano) +1 (header)
+            tipo: String(getVal(r,'TIPO') || '').trim(),
+            data: brToIsoFlexible(getVal(r,'DATA')),
+            data_competencia: brToIsoFlexible(getVal(r,'DATA COMPETENCIA')),
+            lancamento: String(getVal(r,'LANÇAMENTO') || '').trim(),
+            valor_brl: parseNumber(getVal(r,'VALOR BRL')),
+            origem_da_compra: String(getVal(r,'ORIGEM DA COMPRA') || '').trim(),
+            evento: String(getVal(r,'EVENTO') || '').trim(),
+            grupo: String(getVal(r,'GRUPO') || '').trim(),
+            subgrupo_1: String(getVal(r,'SUBGRUPO 1') || '').trim(),
+            subgrupo_2: String(getVal(r,'SUBGRUPO 2') || '').trim()
+        }));
+        // Validações
+        const errors = [];
+        parsed.forEach(p => {
+            if (!p.data) errors.push(`Linha ${p._idx}: DATA inválida`);
+            if (!p.data_competencia) errors.push(`Linha ${p._idx}: DATA COMPETENCIA inválida`);
+            if (isNaN(p.valor_brl)) errors.push(`Linha ${p._idx}: VALOR BRL inválido`);
+        });
+        if (errors.length > 5) errors.splice(5, errors.length, `... e mais ${errors.length - 5} erro(s) — verifique o CSV`);
+        if (errors.length) {
+            status.textContent = `CSV com problemas`;
+            status.className = 'ii-status err';
+            preview.innerHTML = `<div style="color:#dc2626;font-size:13px;line-height:1.7"><strong>Erros encontrados:</strong><br>${errors.join('<br>')}</div>`;
+            const btn = document.getElementById('ytdConfirmBtn');
+            btn.disabled = true; btn.style.opacity = '.5';
+            return;
+        }
+        ytdCsvParsed = parsed;
+        const sel = document.getElementById('ytdMonth').value;
+        const monthMatch    = parsed.filter(p => p.data_competencia.startsWith(sel)).length;
+        const monthMismatch = parsed.length - monthMatch;
+        ytdCountExistingForMonth(sel).then(existing => {
+            let html = `<div style="font-size:13px;line-height:1.7;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem">
+                <div><strong>Arquivo:</strong> ${fileName}</div>
+                <div><strong>Mês selecionado:</strong> ${sel}</div>
+                <div><strong>Linhas no CSV:</strong> ${parsed.length}</div>
+                <div style="color:var(--muted)">↳ com data_competencia em ${sel}: ${monthMatch}</div>`;
+            if (monthMismatch) {
+                html += `<div style="color:#dc2626">↳ com data_competencia em OUTRO mês: ${monthMismatch} ⚠️</div>`;
+            }
+            html += `<div><strong>Linhas existentes a substituir:</strong> ${existing}</div>
+                <div style="margin-top:.5rem;color:var(--muted);font-style:italic">Ao confirmar: <strong>DELETE</strong> de ${existing} linha(s) em ${sel}, depois <strong>INSERT</strong> de ${parsed.length} linha(s) do CSV.</div>
+            </div>`;
+            preview.innerHTML = html;
+            const btn = document.getElementById('ytdConfirmBtn');
+            btn.disabled = false; btn.style.opacity = '1';
+            status.textContent = `CSV pronto — ${parsed.length} linha(s) detectada(s).`;
+            status.className = 'ii-status ok';
+        });
+    }
+    async function ytdCountExistingForMonth(yyyyMm) {
+        const [y, m] = yyyyMm.split('-');
+        const start = `${y}-${m}-01`;
+        const nextMo = (m === '12') ? `${Number(y)+1}-01-01` : `${y}-${String(Number(m)+1).padStart(2,'0')}-01`;
+        const { count, error } = await sbClient
+            .from('realizado_ytd')
+            .select('*', { count: 'exact', head: true })
+            .gte('data_competencia', start)
+            .lt('data_competencia', nextMo);
+        if (error) { console.warn('YTD count failed:', error); return '?'; }
+        return count || 0;
+    }
+    async function ytdConfirmReplace() {
+        if (!ytdCsvParsed) return;
+        const yyyyMm = document.getElementById('ytdMonth').value;
+        if (!yyyyMm) { alert('Selecione o mês de competência.'); return; }
+        const existing = await ytdCountExistingForMonth(yyyyMm);
+        if (!confirm(`Vai EXCLUIR ${existing} linha(s) de ${yyyyMm} e INSERIR ${ytdCsvParsed.length} do CSV.\n\nAção irreversível. Confirmar?`)) return;
+        const btn = document.getElementById('ytdConfirmBtn');
+        const status = document.getElementById('ytdStatus');
+        btn.disabled = true; btn.style.opacity = '.5';
+        status.textContent = 'Excluindo linhas do mês...'; status.className = 'ii-status';
+        try {
+            const uid = await iiCurrentUserId();
+            const [y, m] = yyyyMm.split('-');
+            const start = `${y}-${m}-01`;
+            const nextMo = (m === '12') ? `${Number(y)+1}-01-01` : `${y}-${String(Number(m)+1).padStart(2,'0')}-01`;
+            const { error: delErr } = await sbClient
+                .from('realizado_ytd')
+                .delete()
+                .gte('data_competencia', start)
+                .lt('data_competencia', nextMo);
+            if (delErr) throw delErr;
+            status.textContent = `Inserindo ${ytdCsvParsed.length} linha(s)...`;
+            const payloads = ytdCsvParsed.map(p => ({
+                user_id: uid,
+                tipo: p.tipo,
+                data: p.data,
+                data_competencia: p.data_competencia,
+                lancamento: p.lancamento,
+                valor_brl: p.valor_brl,
+                origem_da_compra: p.origem_da_compra,
+                evento: p.evento,
+                grupo: p.grupo,
+                subgrupo_1: p.subgrupo_1,
+                subgrupo_2: p.subgrupo_2
+            }));
+            // Insert em chunks de 500 (limite seguro do Supabase)
+            for (let i = 0; i < payloads.length; i += 500) {
+                const chunk = payloads.slice(i, i + 500);
+                const { error: insErr } = await sbClient.from('realizado_ytd').insert(chunk);
+                if (insErr) throw insErr;
+            }
+            status.textContent = `✓ ${ytdCsvParsed.length} linha(s) inserida(s) em ${yyyyMm}. Recarregue o dashboard para refletir nas análises.`;
+            status.className = 'ii-status ok';
+            ytdCsvParsed = null;
+            document.getElementById('ytdPreview').innerHTML = '';
+            document.getElementById('ytdFileInput').value = '';
+        } catch (err) {
+            console.error(err);
+            status.textContent = 'Erro: ' + (err.message || err);
+            status.className = 'ii-status err';
+            btn.disabled = false; btn.style.opacity = '1';
+        }
+    }
+
     /* ════════════════ DÓLAR (PTAX) ════════════════
        Aba para gerenciar a cotação mensal BRL/USD. Padrão idêntico ao Input
        Investimentos: edição inline + gravar em lote. Upsert por mês: ao
@@ -6417,6 +6991,18 @@
         e.target.value=v;
     });
     document.getElementById('modalMovOverlay').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+    // Listeners da aba Input de Despesas (YTD/YTG)
+    document.getElementById('ytgBtnAdd').addEventListener('click', ytgAddRow);
+    document.getElementById('ytgBtnSave').addEventListener('click', ytgSave);
+    document.getElementById('ytdConfirmBtn').addEventListener('click', ytdConfirmReplace);
+    document.getElementById('ytdMonth').addEventListener('change', function(){
+        if (ytdCsvParsed) ytdProcessCsv(ytdCsvParsed.map(p => ({
+            'TIPO':p.tipo, 'DATA':p.data, 'DATA COMPETENCIA':p.data_competencia,
+            'LANÇAMENTO':p.lancamento, 'VALOR BRL':String(p.valor_brl),
+            'ORIGEM DA COMPRA':p.origem_da_compra, 'EVENTO':p.evento,
+            'GRUPO':p.grupo, 'SUBGRUPO 1':p.subgrupo_1, 'SUBGRUPO 2':p.subgrupo_2
+        })), 'CSV em memória');
+    });
     // Listener da aba Download
     document.getElementById('dlBtnExport').addEventListener('click', dlExport);
 </script>
