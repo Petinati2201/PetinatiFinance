@@ -6335,6 +6335,26 @@
         const dz = document.getElementById('ytdDropZone');
         const inp = document.getElementById('ytdFileInput');
         const resetBtn = document.getElementById('ytdResetBtn');
+        const confirmBtn = document.getElementById('ytdConfirmBtn');
+        const monthSel = document.getElementById('ytdMonth');
+        // Bind do botão Confirmar e do seletor de mês aqui (idempotente via guard),
+        // pra garantir que estão ligados mesmo se o registro global falhar por ordem
+        // de carregamento do DOM.
+        if (confirmBtn && !confirmBtn.dataset.bound) {
+            confirmBtn.dataset.bound = '1';
+            confirmBtn.addEventListener('click', ytdConfirmReplace);
+        }
+        if (monthSel && !monthSel.dataset.bound) {
+            monthSel.dataset.bound = '1';
+            monthSel.addEventListener('change', function(){
+                if (ytdCsvParsed) ytdProcessCsv(ytdCsvParsed.map(p => ({
+                    'TIPO':p.tipo, 'DATA':p.data, 'DATA COMPETENCIA':p.data_competencia,
+                    'LANÇAMENTO':p.lancamento, 'VALOR BRL':String(p.valor_brl),
+                    'ORIGEM DA COMPRA':p.origem_da_compra, 'EVENTO':p.evento,
+                    'GRUPO':p.grupo, 'SUBGRUPO 1':p.subgrupo_1, 'SUBGRUPO 2':p.subgrupo_2
+                })), 'CSV em memória');
+            });
+        }
         if (!dz || !inp) return;
         if (!dz.dataset.bound) {
             dz.dataset.bound = '1';
@@ -6360,11 +6380,13 @@
                 if (f) ytdHandleFile(f);
             });
             resetBtn.addEventListener('click', ytdReset);
+            // Reset e mês default só na PRIMEIRA montagem — assim re-renders da
+            // aba não apagam um CSV já carregado (bug: botão Confirmar "não fazia
+            // nada" porque ytdCsvParsed era zerado a cada render).
+            ytdReset();
+            const now = new Date();
+            document.getElementById('ytdMonth').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
         }
-        ytdReset();
-        // Default month: corrente
-        const now = new Date();
-        document.getElementById('ytdMonth').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
     }
     function ytdReset() {
         ytdCsvParsed = null;
@@ -6992,17 +7014,9 @@
     });
     document.getElementById('modalMovOverlay').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
     // Listeners da aba Input de Despesas (YTD/YTG)
+    // (ytdConfirmBtn e ytdMonth são ligados dentro de setupYtdUpload, com guard)
     document.getElementById('ytgBtnAdd').addEventListener('click', ytgAddRow);
     document.getElementById('ytgBtnSave').addEventListener('click', ytgSave);
-    document.getElementById('ytdConfirmBtn').addEventListener('click', ytdConfirmReplace);
-    document.getElementById('ytdMonth').addEventListener('change', function(){
-        if (ytdCsvParsed) ytdProcessCsv(ytdCsvParsed.map(p => ({
-            'TIPO':p.tipo, 'DATA':p.data, 'DATA COMPETENCIA':p.data_competencia,
-            'LANÇAMENTO':p.lancamento, 'VALOR BRL':String(p.valor_brl),
-            'ORIGEM DA COMPRA':p.origem_da_compra, 'EVENTO':p.evento,
-            'GRUPO':p.grupo, 'SUBGRUPO 1':p.subgrupo_1, 'SUBGRUPO 2':p.subgrupo_2
-        })), 'CSV em memória');
-    });
     // Listener da aba Download
     document.getElementById('dlBtnExport').addEventListener('click', dlExport);
 </script>
