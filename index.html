@@ -1498,18 +1498,6 @@
                 <div style="height:280px"><canvas id="sub2Chart"></canvas></div>
             </div>
         </div>
-        <div class="card" style="margin-top:1rem">
-            <div class="card-title">Transações do mês</div>
-            <div class="card-sub">Realizado e projeção, ordenado por valor</div>
-            <div style="overflow-x:auto">
-                <table class="data-table">
-                    <thead><tr>
-                        <th>Data</th><th>Lançamento</th><th>Origem</th><th>Grupo</th><th style="text-align:right">Valor</th>
-                    </tr></thead>
-                    <tbody id="tableBodyVisao"></tbody>
-                </table>
-            </div>
-        </div>
     </div>
 
     <!-- VIEW: ANÁLISE DE ORIGEM -->
@@ -3235,7 +3223,7 @@
                 </tr>`;
             }).join('');
         }
-        ['tableBody','tableBodyVisao'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=html; });
+        ['tableBody'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=html; });
     }
 
     function renderOriginPie(data) {
