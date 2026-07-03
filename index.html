@@ -292,6 +292,117 @@
         }
         .mobile-menu-btn { display: none; }
 
+        /* ══════════ MOBILE APP SHELL (bottom-nav) ══════════ */
+        .mobile-bottom-nav { display: none; }
+        .mobile-topbar { display: none; }
+        .mobile-only { display: none; }
+
+        @media (max-width: 860px) {
+            /* Esconde a ribbon lateral inteira e o hambúrguer no modo mobile */
+            .sidebar { display: none !important; }
+            .mobile-menu-btn { display: none !important; }
+            .app { grid-template-columns: 1fr; }
+
+            /* Topbar fixa com marca + filtros (Ano/Mês/Moeda) */
+            .mobile-topbar {
+                display: flex;
+                align-items: center;
+                gap: .5rem;
+                position: fixed;
+                top: 0; left: 0; right: 0;
+                z-index: 45;
+                padding: .6rem .8rem;
+                background: var(--surface);
+                border-bottom: 1px solid var(--border);
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .mobile-topbar .mt-brand {
+                font-family: 'Instrument Serif', serif;
+                font-size: 1.25rem;
+                font-weight: 600;
+                color: var(--text);
+                flex-shrink: 0;
+                margin-right: .2rem;
+            }
+            .mobile-topbar .mt-brand span { color: var(--accent, #8A7B65); }
+            .mobile-topbar select {
+                min-width: 72px;
+                flex-shrink: 0;
+                padding: .35rem .5rem;
+                font-size: 13px;
+                border-radius: 8px;
+                border: 1px solid var(--border);
+                background: var(--surface);
+                color: var(--text);
+            }
+            .mobile-topbar .pill-toggle { flex-shrink: 0; }
+            .mobile-topbar .mt-theme {
+                flex-shrink: 0;
+                width: 34px; height: 34px;
+                border-radius: 8px;
+                border: 1px solid var(--border);
+                background: var(--surface);
+                display: flex; align-items: center; justify-content: center;
+                cursor: pointer;
+            }
+
+            /* Conteúdo: espaço p/ topbar e bottom-nav */
+            .main { padding: 4.2rem 1rem 5.5rem !important; }
+
+            /* Bottom nav */
+            .mobile-bottom-nav {
+                display: flex;
+                position: fixed;
+                bottom: 0; left: 0; right: 0;
+                z-index: 45;
+                background: var(--surface);
+                border-top: 1px solid var(--border);
+                padding: .35rem 0 calc(.35rem + env(safe-area-inset-bottom, 0px));
+                box-shadow: 0 -2px 16px rgba(0,0,0,.06);
+            }
+            .mbn-item {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 3px;
+                background: none;
+                border: none;
+                cursor: pointer;
+                padding: .4rem 0;
+                color: var(--muted);
+                font-family: 'Inter', sans-serif;
+                font-size: 10.5px;
+                font-weight: 500;
+                transition: color .15s;
+            }
+            .mbn-item.active { color: var(--accent, #8A7B65); }
+            .mbn-item svg { stroke-width: 2; }
+
+            /* Escopo mobile: esconde tudo que não faz parte das 3 telas permitidas */
+            .mobile-hide { display: none !important; }
+            .mobile-only { display: block; }
+
+            /* Movimentações: filter-bar quebra e botões acomodam o toque */
+            .mov-filter-bar {
+                flex-wrap: wrap;
+                gap: .5rem;
+                align-items: center;
+            }
+            .mov-filter-bar .spacer { display: none; }
+            .mov-filter-bar select { flex: 1 1 40%; min-width: 120px; }
+            .mov-filter-bar .mov-add-btn,
+            .mov-filter-bar #movBtnSave { flex: 1 1 100%; }
+            .mov-table, .mov-table th, .mov-table td { font-size: 12px; }
+            /* view-header mais compacto no topo */
+            .view-header { margin-bottom: 1rem; }
+            .view-title { font-size: 1.5rem; }
+            .card { padding: 1rem; }
+        }
+
+        /* Em desktop, os elementos mobile-only ficam ocultos (default acima) */
+
         /* ── HEADER ── */
         .header {
             display: flex;
@@ -1050,6 +1161,21 @@
     <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
 </button>
 
+<!-- MOBILE TOPBAR (filtros) -->
+<div class="mobile-topbar" id="mobileTopbar">
+    <span class="mt-brand">Petinati<span>.</span></span>
+    <select id="mYearFilter" aria-label="Ano"></select>
+    <select id="mMonthFilter" aria-label="Mês"></select>
+    <div class="pill-toggle sb-ccy" id="mCurrencyToggle">
+        <button class="active" data-ccy="BRL">R$</button>
+        <button data-ccy="USD">US$</button>
+    </div>
+    <button class="mt-theme" id="mThemeToggle" aria-label="Alternar tema">
+        <svg id="mSunIcon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:#D97706"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        <svg id="mMoonIcon" class="hidden" width="15" height="15" fill="currentColor" viewBox="0 0 20 20" style="color:#818CF8"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>
+    </button>
+</div>
+
 <div class="app" id="app">
 
     <!-- SIDEBAR -->
@@ -1441,7 +1567,7 @@
             </div>
         </div>
 
-        <div class="kpi-grid kpi-grid-6 mb2">
+        <div class="kpi-grid kpi-grid-6 mb2 mobile-hide">
             <div class="kpi-cell c-blue">
                 <span class="kpi-label">REALIZADO</span>
                 <span id="kpiReal" class="kpi-value">R$ 0,00</span>
@@ -1487,17 +1613,21 @@
                 <div class="card-sub">Clique numa fatia ou legenda para filtrar</div>
                 <div style="height:280px"><canvas id="groupChart"></canvas></div>
             </div>
-            <div class="card">
+            <div class="card mobile-hide">
                 <div class="card-title">Subgrupo 1</div>
                 <div class="card-sub">Top itens</div>
                 <div style="height:280px"><canvas id="sub1Chart"></canvas></div>
             </div>
-            <div class="card">
+            <div class="card mobile-hide">
                 <div class="card-title">Subgrupo 2</div>
                 <div class="card-sub">Top itens</div>
                 <div style="height:280px"><canvas id="sub2Chart"></canvas></div>
             </div>
         </div>
+
+        <!-- Slot p/ o rosca de Origem (realocado via JS só no mobile) -->
+        <div class="section-label mobile-only" id="mobileOriginLabel">Origem da despesa</div>
+        <div id="mobileOriginSlot" class="mobile-only mb3"></div>
     </div>
 
     <!-- VIEW: ANÁLISE DE ORIGEM -->
@@ -1524,7 +1654,7 @@
 
         <div class="section-label">Análise de origens</div>
         <div class="g2 mb3">
-            <div class="card">
+            <div class="card" id="originDonutCard">
                 <button class="reset-chip" data-reset-view="origem">
                     <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
                     <span>Mostrar todos</span>
@@ -1728,7 +1858,7 @@
         </div>
 
         <div id="invContent">
-            <div class="kpi-grid kpi-grid-5 mb2">
+            <div class="kpi-grid kpi-grid-5 mb2 mobile-hide">
                 <div class="kpi-cell c-blue">
                     <span class="kpi-label">Total Investido</span>
                     <span id="invTotalInv" class="kpi-value">—</span>
@@ -1756,8 +1886,8 @@
                 </div>
             </div>
 
-            <div class="section-label">Evolução mensal</div>
-            <div class="card mb2">
+            <div class="section-label mobile-hide">Evolução mensal</div>
+            <div class="card mb2 mobile-hide">
                 <div class="card-title">Investido + Rendimento Acumulado</div>
                 <div class="card-sub">Barras empilhadas mês a mês — base = investido (líquido de dividendos), topo = rendimento</div>
                 <div style="height:380px"><canvas id="invStackChart"></canvas></div>
@@ -1795,14 +1925,14 @@
                 </div>
             </div>
 
-            <div class="card mb2">
+            <div class="card mb2 mobile-hide">
                 <div class="card-title">Top Posições</div>
                 <div class="card-sub">Maiores ativos por valor investido</div>
                 <div style="height:300px"><canvas id="invTopBar"></canvas></div>
             </div>
 
-            <div class="section-label">Detalhamento</div>
-            <div class="card mb3">
+            <div class="section-label mobile-hide">Detalhamento</div>
+            <div class="card mb3 mobile-hide">
                 <div class="card-title" style="margin-bottom:.15rem">Posições do Mês Mais Recente</div>
                 <div class="card-sub">Ordenadas por valor investido</div>
                 <div style="overflow-x:auto">
@@ -2002,6 +2132,22 @@
 
     </main>
 </div>
+
+<!-- BOTTOM NAV (mobile) -->
+<nav class="mobile-bottom-nav" id="mobileBottomNav">
+    <button class="mbn-item active" data-view="visao" onclick="switchView('visao')" aria-label="Despesas">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <span>Despesas</span>
+    </button>
+    <button class="mbn-item" data-view="investimentos" onclick="switchView('investimentos')" aria-label="Carteira">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <span>Carteira</span>
+    </button>
+    <button class="mbn-item" data-view="movimentacoes" onclick="switchView('movimentacoes')" aria-label="Movimentações">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+        <span>Movim.</span>
+    </button>
+</nav>
 
 <!-- MODAL: Nova Movimentação -->
 <div class="modal-overlay" id="modalMovOverlay">
@@ -2535,6 +2681,44 @@
         });
     });
 
+    // No mobile, o card do rosca de Origem vive dentro de "Despesas Gerais".
+    // No desktop, volta para a aba Origem. Um único canvas/chart — sem duplicação.
+    const MOBILE_BP = 860;
+    function relocateOriginForViewport() {
+        const card = document.getElementById('originDonutCard');
+        const slot = document.getElementById('mobileOriginSlot');
+        if (!card || !slot) return;
+        const isMobile = window.innerWidth <= MOBILE_BP;
+        if (isMobile) {
+            // Move p/ o slot mobile (guarda o pai original p/ restaurar)
+            if (card.parentElement !== slot) {
+                if (!card.dataset.homeParent) {
+                    card._homeParent = card.parentElement;
+                    card._homeNext = card.nextElementSibling;
+                    card.dataset.homeParent = '1';
+                }
+                slot.appendChild(card);
+            }
+        } else {
+            // Restaura ao lugar original na aba Origem
+            if (card.dataset.homeParent && card._homeParent && card.parentElement === slot) {
+                if (card._homeNext && card._homeNext.parentElement === card._homeParent) {
+                    card._homeParent.insertBefore(card, card._homeNext);
+                } else {
+                    card._homeParent.appendChild(card);
+                }
+            }
+        }
+        // Chart.js precisa recalcular tamanho após mudar de container
+        if (charts['originChart']) { try { charts['originChart'].resize(); } catch(e){} }
+    }
+    // Reagir a mudança de viewport (rotacionar / redimensionar)
+    let _relocTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(_relocTimer);
+        _relocTimer = setTimeout(relocateOriginForViewport, 150);
+    });
+
     function switchView(viewName) {
         // Ao trocar de view, limpa os filtros da view ANTIGA
         // (filtros não persistem entre views, conforme decidido)
@@ -2543,9 +2727,15 @@
         document.querySelectorAll('.sb-link').forEach(el => {
             el.classList.toggle('active', el.dataset.view === viewName);
         });
+        // Bottom-nav mobile: marca item ativo (só as 3 views existem lá)
+        document.querySelectorAll('.mbn-item').forEach(el => {
+            el.classList.toggle('active', el.dataset.view === viewName);
+        });
         document.querySelectorAll('.view').forEach(el => {
             el.classList.toggle('active', el.id === `view-${viewName}`);
         });
+        // Realoca o rosca de Origem p/ dentro de Despesas quando em viewport mobile
+        relocateOriginForViewport();
         // Tabela de detalhamento só aparece nas views de análise (exceto as que têm tabelas próprias)
         const detalhamento = document.getElementById('detalhamentoWrap');
         if (detalhamento) {
@@ -2579,6 +2769,8 @@
         document.body.classList.toggle('dark-mode');
         document.getElementById('sunIcon').classList.toggle('hidden');
         document.getElementById('moonIcon').classList.toggle('hidden');
+        document.getElementById('mSunIcon').classList.toggle('hidden');
+        document.getElementById('mMoonIcon').classList.toggle('hidden');
         document.getElementById('themeLabel').textContent = isDarkMode ? 'Tema escuro' : 'Tema claro';
         renderAll();
     };
@@ -2597,6 +2789,20 @@
     }
     document.getElementById('yearFilter').onchange  = onRibbonChange;
     document.getElementById('monthFilter').onchange = onRibbonChange;
+
+    // ── Espelhos mobile dos filtros de ano/mês ──
+    document.getElementById('mYearFilter').onchange = e => {
+        document.getElementById('yearFilter').value = e.target.value;
+        onRibbonChange();
+    };
+    document.getElementById('mMonthFilter').onchange = e => {
+        document.getElementById('monthFilter').value = e.target.value;
+        onRibbonChange();
+    };
+    // Espelho mobile do tema
+    document.getElementById('mThemeToggle').onclick = () => {
+        document.getElementById('themeToggle').click();
+    };
 
     // BOOT: status inicial + collapse em mobile
     if (window.innerWidth <= 860) {
@@ -2876,6 +3082,11 @@
             const currentMonth = new Date().getMonth()+1;
             mSelect.value = String(currentMonth);
         }
+        // Espelha para os selects mobile (mesmo conteúdo e valor)
+        const myY = document.getElementById('mYearFilter');
+        const myM = document.getElementById('mMonthFilter');
+        if (myY) { myY.innerHTML = ySelect.innerHTML; myY.value = ySelect.value; }
+        if (myM) { myM.innerHTML = mSelect.innerHTML; myM.value = mSelect.value; }
     }
 
     /**
@@ -3006,6 +3217,11 @@
             restoreHiddenFromFilter('groupChart', (activeFilters.visao || {})['GRUPO']);
             renderBar('sub1Chart', cvAgg(aggregate(combined, 'SUBGRUPO 1')));
             renderBar('sub2Chart', cvAgg(aggregate(combined, 'SUBGRUPO 2')));
+            // No mobile, o rosca de Origem vive dentro de Despesas — renderiza aqui também
+            if (window.innerWidth <= MOBILE_BP) {
+                renderOriginPie(cvAgg(aggregate(allReal, 'ORIGEM DA COMPRA')));
+                restoreHiddenFromFilter('originChart', (activeFilters.origem || {})['ORIGEM DA COMPRA']);
+            }
         }
 
         if (currentView==='origem') {
@@ -3066,7 +3282,7 @@
         if (ccy !== 'BRL' && ccy !== 'USD') return;
         currentCcy = ccy;
         currentIrCcy = ccy;
-        document.querySelectorAll('#sbCurrencyToggle button').forEach(b => {
+        document.querySelectorAll('#sbCurrencyToggle button, #mCurrencyToggle button').forEach(b => {
             b.classList.toggle('active', b.dataset.ccy === ccy);
         });
         renderAll();
@@ -3074,6 +3290,11 @@
 
     // Toggle de moeda na ribbon (controle global único)
     document.getElementById('sbCurrencyToggle').addEventListener('click', e => {
+        const btn = e.target.closest('button[data-ccy]');
+        if (btn) setGlobalCcy(btn.dataset.ccy);
+    });
+    // Espelho mobile do toggle de moeda
+    document.getElementById('mCurrencyToggle').addEventListener('click', e => {
         const btn = e.target.closest('button[data-ccy]');
         if (btn) setGlobalCcy(btn.dataset.ccy);
     });
@@ -5098,6 +5319,7 @@
 
             // Trigger renderAll após carregar todos os dados
             // DEBUG: mostrar estado completo dos dados carregados
+            relocateOriginForViewport();  // posiciona rosca de Origem conforme viewport (mobile/desktop)
             renderAll();
             
             console.log('✅ Dados carregados do Supabase');
