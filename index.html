@@ -303,40 +303,32 @@
             .mobile-menu-btn { display: none !important; }
             .app { grid-template-columns: 1fr; }
 
-            /* Topbar fixa com marca + filtros (Ano/Mês/Moeda) */
+            /* Topbar fixa com filtros (Ano/Mês/Moeda) — cabe em uma linha, sem scroll */
             .mobile-topbar {
                 display: flex;
                 align-items: center;
-                gap: .5rem;
+                gap: .4rem;
                 position: fixed;
                 top: 0; left: 0; right: 0;
                 z-index: 45;
-                padding: .6rem .8rem;
+                padding: .55rem .7rem;
                 background: var(--surface);
                 border-bottom: 1px solid var(--border);
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
             }
-            .mobile-topbar .mt-brand {
-                font-family: 'Instrument Serif', serif;
-                font-size: 1.25rem;
-                font-weight: 600;
-                color: var(--text);
-                flex-shrink: 0;
-                margin-right: .2rem;
-            }
-            .mobile-topbar .mt-brand span { color: var(--accent, #8A7B65); }
+            .mobile-topbar .mt-brand { display: none; }
             .mobile-topbar select {
-                min-width: 72px;
-                flex-shrink: 0;
-                padding: .35rem .5rem;
+                flex: 1 1 0;
+                min-width: 0;
+                padding: .38rem .3rem;
                 font-size: 13px;
                 border-radius: 8px;
                 border: 1px solid var(--border);
                 background: var(--surface);
                 color: var(--text);
+                text-align: center;
             }
             .mobile-topbar .pill-toggle { flex-shrink: 0; }
+            .mobile-topbar .pill-toggle button { padding: .35rem .5rem; font-size: 12px; }
             .mobile-topbar .mt-theme {
                 flex-shrink: 0;
                 width: 34px; height: 34px;
@@ -399,6 +391,15 @@
             .view-header { margin-bottom: 1rem; }
             .view-title { font-size: 1.5rem; }
             .card { padding: 1rem; }
+
+            /* Carteira: ordem mobile → patrimônio, composição (Tipo/Ativo), rentabilidade */
+            #invContent { display: flex; flex-direction: column; }
+            #invEvolLabel  { order: 1; }
+            #invStackCard  { order: 2; }
+            #invCompLabel  { order: 3; }
+            #invPieGrid    { order: 4; }
+            #invRentCard   { order: 5; }
+            /* dentro do grid de roscas, Tipo antes de Ativo (já é a ordem do DOM) */
         }
 
         /* Em desktop, os elementos mobile-only ficam ocultos (default acima) */
@@ -1886,14 +1887,14 @@
                 </div>
             </div>
 
-            <div class="section-label mobile-hide">Evolução mensal</div>
-            <div class="card mb2 mobile-hide">
+            <div class="section-label" id="invEvolLabel">Evolução mensal</div>
+            <div class="card mb2" id="invStackCard">
                 <div class="card-title">Investido + Rendimento Acumulado</div>
                 <div class="card-sub">Barras empilhadas mês a mês — base = investido (líquido de dividendos), topo = rendimento</div>
                 <div style="height:380px"><canvas id="invStackChart"></canvas></div>
             </div>
 
-            <div class="card mb2">
+            <div class="card mb2" id="invRentCard">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap">
                     <div>
                         <div class="card-title">Rentabilidade Acumulada</div>
@@ -1911,14 +1912,14 @@
                 <div style="height:300px;margin-top:.5rem"><canvas id="invRentChart"></canvas></div>
             </div>
 
-            <div class="section-label">Composição da carteira</div>
-            <div class="g2 mb2">
-                <div class="card">
+            <div class="section-label" id="invCompLabel">Composição da carteira</div>
+            <div class="g2 mb2" id="invPieGrid">
+                <div class="card" id="invTypeCard">
                     <div class="card-title">Por Tipo de Investimento</div>
                     <div class="card-sub">Renda Fixa × Renda Variável × Imóvel</div>
                     <div style="height:300px"><canvas id="invTypePie"></canvas></div>
                 </div>
-                <div class="card">
+                <div class="card" id="invAssetCard">
                     <div class="card-title">Por Ativo</div>
                     <div class="card-sub">Top 8 + Outros — clique para filtrar (depende do tipo)</div>
                     <div style="height:300px"><canvas id="invAssetPie"></canvas></div>
@@ -2103,7 +2104,7 @@
     </div>
 
 
-    <div id="detalhamentoWrap">
+    <div id="detalhamentoWrap" class="mobile-hide">
         <div class="section-label">Detalhamento</div>
         <details class="card mb3 detail-collapse">
             <summary class="detail-summary">
@@ -2135,13 +2136,13 @@
 
 <!-- BOTTOM NAV (mobile) -->
 <nav class="mobile-bottom-nav" id="mobileBottomNav">
-    <button class="mbn-item active" data-view="visao" onclick="switchView('visao')" aria-label="Despesas">
-        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-        <span>Despesas</span>
-    </button>
-    <button class="mbn-item" data-view="investimentos" onclick="switchView('investimentos')" aria-label="Carteira">
+    <button class="mbn-item active" data-view="investimentos" onclick="switchView('investimentos')" aria-label="Carteira">
         <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
         <span>Carteira</span>
+    </button>
+    <button class="mbn-item" data-view="visao" onclick="switchView('visao')" aria-label="Despesas">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <span>Despesas</span>
     </button>
     <button class="mbn-item" data-view="movimentacoes" onclick="switchView('movimentacoes')" aria-label="Movimentações">
         <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
@@ -5320,7 +5321,12 @@
             // Trigger renderAll após carregar todos os dados
             // DEBUG: mostrar estado completo dos dados carregados
             relocateOriginForViewport();  // posiciona rosca de Origem conforme viewport (mobile/desktop)
-            renderAll();
+            // No mobile, a Carteira é a tela de entrada
+            if (window.innerWidth <= MOBILE_BP && currentView === 'visao') {
+                switchView('investimentos');
+            } else {
+                renderAll();
+            }
             
             console.log('✅ Dados carregados do Supabase');
             iiSyncFromRaw();   // sincroniza estado das telas de input com ids reais
