@@ -303,32 +303,28 @@
             .mobile-menu-btn { display: none !important; }
             .app { grid-template-columns: 1fr; }
 
-            /* Topbar fixa com filtros (Ano/Mês/Moeda) — cabe em uma linha, sem scroll */
+            /* Topbar fixa: marca + moeda + tema (uma linha, sem scroll) */
             .mobile-topbar {
                 display: flex;
                 align-items: center;
-                gap: .4rem;
+                gap: .5rem;
                 position: fixed;
                 top: 0; left: 0; right: 0;
                 z-index: 45;
-                padding: .55rem .7rem;
+                padding: .55rem .9rem;
                 background: var(--surface);
                 border-bottom: 1px solid var(--border);
             }
-            .mobile-topbar .mt-brand { display: none; }
-            .mobile-topbar select {
-                flex: 1 1 0;
-                min-width: 0;
-                padding: .38rem .3rem;
-                font-size: 13px;
-                border-radius: 8px;
-                border: 1px solid var(--border);
-                background: var(--surface);
+            .mobile-topbar .mt-brand {
+                font-family: 'Instrument Serif', serif;
+                font-size: 1.35rem;
+                font-weight: 600;
                 color: var(--text);
-                text-align: center;
+                margin-right: auto;
             }
+            .mobile-topbar .mt-brand span { color: var(--accent, #8A7B65); }
             .mobile-topbar .pill-toggle { flex-shrink: 0; }
-            .mobile-topbar .pill-toggle button { padding: .35rem .5rem; font-size: 12px; }
+            .mobile-topbar .pill-toggle button { padding: .35rem .6rem; font-size: 12px; }
             .mobile-topbar .mt-theme {
                 flex-shrink: 0;
                 width: 34px; height: 34px;
@@ -1167,8 +1163,6 @@
 <!-- MOBILE TOPBAR (filtros) -->
 <div class="mobile-topbar" id="mobileTopbar">
     <span class="mt-brand">Petinati<span>.</span></span>
-    <select id="mYearFilter" aria-label="Ano"></select>
-    <select id="mMonthFilter" aria-label="Mês"></select>
     <div class="pill-toggle sb-ccy" id="mCurrencyToggle">
         <button class="active" data-ccy="BRL">R$</button>
         <button data-ccy="USD">US$</button>
@@ -2793,15 +2787,6 @@
     document.getElementById('yearFilter').onchange  = onRibbonChange;
     document.getElementById('monthFilter').onchange = onRibbonChange;
 
-    // ── Espelhos mobile dos filtros de ano/mês ──
-    document.getElementById('mYearFilter').onchange = e => {
-        document.getElementById('yearFilter').value = e.target.value;
-        onRibbonChange();
-    };
-    document.getElementById('mMonthFilter').onchange = e => {
-        document.getElementById('monthFilter').value = e.target.value;
-        onRibbonChange();
-    };
     // Espelho mobile do tema
     document.getElementById('mThemeToggle').onclick = () => {
         document.getElementById('themeToggle').click();
@@ -3085,11 +3070,6 @@
             const currentMonth = new Date().getMonth()+1;
             mSelect.value = String(currentMonth);
         }
-        // Espelha para os selects mobile (mesmo conteúdo e valor)
-        const myY = document.getElementById('mYearFilter');
-        const myM = document.getElementById('mMonthFilter');
-        if (myY) { myY.innerHTML = ySelect.innerHTML; myY.value = ySelect.value; }
-        if (myM) { myM.innerHTML = mSelect.innerHTML; myM.value = mSelect.value; }
     }
 
     /**
