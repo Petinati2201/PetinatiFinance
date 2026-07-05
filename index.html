@@ -394,12 +394,14 @@
 
             /* Carteira: ordem mobile → patrimônio, composição (Tipo/Ativo), rentabilidade */
             #invContent { display: flex; flex-direction: column; }
-            #invEvolLabel  { order: 1; }
-            #invStackCard  { order: 2; }
-            #invCompLabel  { order: 3; }
-            #invPieGrid    { order: 4; }
-            #invRentCard   { order: 5; }
-            /* dentro do grid de roscas, Tipo antes de Ativo (já é a ordem do DOM) */
+            /* grid de roscas vira transparente p/ order individual de Tipo e Ativo */
+            #invPieGrid { display: contents; }
+            #invTypeCard   { order: 1; }
+            #invEvolLabel  { order: 2; }
+            #invStackCard  { order: 3; }
+            #invAssetCard  { order: 4; }
+            #invCompLabel  { display: none; }
+            #invRentCard   { order: 6; }
         }
 
         /* Em desktop, os elementos mobile-only ficam ocultos (default acima) */
