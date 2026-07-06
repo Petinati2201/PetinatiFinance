@@ -2668,6 +2668,32 @@
         return (brutoAtual - invBruto(prev)) - aporte + (row._divJcp || 0);
     }
 
+    // Rendimento do mês JÁ CONVERTIDO para dispCcy, convertendo cada ponta com a PTAX
+    // do seu próprio mês. É isso que faz a variação cambial entrar no "com câmbio":
+    // bruto do mês passado usa PTAX do mês passado; bruto atual usa PTAX atual.
+    // (No modo fxFrozen, convert() usa a PTAX mais recente em ambas → câmbio some.)
+    function invRendMesConv(row, dispCcy) {
+        const cc = dispCcy || currentCcy;
+        const pk = prevMonthKey(row._k);
+        const rowCodeLc = (row._codigo||'').trim().toLowerCase();
+        const prev = investimentosData.find(r => r._k === pk && (r._codigo||'').trim().toLowerCase() === rowCodeLc);
+        const brutoAtual = invBruto(row);
+        const divJcp = row._divJcp || 0;
+        if (!prev) {
+            const baseKey = Object.keys(rendBaseData).find(k => k.trim().toLowerCase() === rowCodeLc);
+            const base = baseKey ? rendBaseData[baseKey] : 0;
+            // ponta única no mês atual
+            return convert(base + divJcp, row._moeda, row._k, cc);
+        }
+        const aporte = aporteDoMes(row._codigo, row._k);
+        // Cada ponta convertida pela PTAX do SEU mês:
+        const brutoAtualC = convert(brutoAtual,       row._moeda, row._k, cc);
+        const brutoPrevC  = convert(invBruto(prev),   prev._moeda, prev._k, cc);
+        const aporteC     = convert(aporte,           row._moeda, row._k, cc);
+        const divC        = convert(divJcp,           row._moeda, row._k, cc);
+        return (brutoAtualC - brutoPrevC) - aporteC + divC;
+    }
+
     // rendimento total acumulado (moeda nativa)
     function invRendTotal(row, _seen) {
         // proteção contra loop (encadeamento defensivo)
@@ -4412,9 +4438,9 @@
             // snap: rendimento mensal < 1 centavo é ruído de float → zero (mesma correção
             // aplicada a rend/valoriz; aqui no numerador do retorno time-weighted).
             const snapM = v => Math.abs(v) < 0.01 ? 0 : v;
-            const rendMesTotal  = snapM(rows.reduce((a, r) => a + convert(invRendMes(r), r._moeda, r._k), 0));
-            // Variante sem dividendos: subtrai o provento do mês do rendimento mensal
-            const rendMesSemDiv = snapM(rows.reduce((a, r) => a + convert(invRendMes(r) - (r._divJcp || 0), r._moeda, r._k), 0));
+            const rendMesTotal  = snapM(rows.reduce((a, r) => a + invRendMesConv(r), 0));
+            // Variante sem dividendos: subtrai o provento (convertido) do rendimento mensal
+            const rendMesSemDiv = snapM(rows.reduce((a, r) => a + invRendMesConv(r) - convert(r._divJcp || 0, r._moeda, r._k), 0));
             const brutoInicio = rows.reduce((a, r) => {
                 const prev = filteredData.find(x => x._k === pk && x._codigo === r._codigo);
                 return a + (prev ? prev._dispBruto : 0);
