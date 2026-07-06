@@ -417,6 +417,32 @@
             .mpat-value.neg { color: #DC2626; }
             .mpat-sub { font-size: 11.5px; color: var(--muted); }
             .mpat-divider { width: 1px; background: var(--border); flex-shrink: 0; }
+
+            /* Wrapper com header (mês) e dots de paginação */
+            .mpatrimonio-wrap { margin-bottom: 1rem; }
+            .mpat-header {
+                display: flex; align-items: baseline; justify-content: space-between;
+                gap: .5rem; margin-bottom: .4rem;
+            }
+            .mpat-mes {
+                font-size: 13px; font-weight: 700; color: var(--text);
+                letter-spacing: .02em;
+            }
+            .mpat-hint { font-size: 10.5px; color: var(--muted); }
+            .mpatrimonio-wrap .mpatrimonio-card { margin-bottom: .5rem; touch-action: pan-y; }
+            .mpat-dots { display: flex; justify-content: center; gap: 6px; }
+            .mpat-dot {
+                width: 6px; height: 6px; border-radius: 50%;
+                background: var(--border); transition: background .15s, width .15s;
+            }
+            .mpat-dot.active { background: var(--accent, #8A7B65); width: 18px; border-radius: 3px; }
+
+            /* Rótulo de mês nas roscas */
+            .pie-mes { font-size: 12px; font-weight: 500; color: var(--muted); }
+
+            /* Bottom-nav agora com 4 itens: aperta o texto */
+            .mbn-item { font-size: 10px; }
+            .mbn-item svg { width: 20px; height: 20px; }
         }
 
         /* Em desktop, os elementos mobile-only ficam ocultos (default acima) */
@@ -1902,19 +1928,26 @@
                 </div>
             </div>
 
-            <!-- Card-resumo mobile: patrimônio total + rendimento do mês -->
-            <div class="mobile-only mpatrimonio-card" id="mPatrimonioCard">
-                <div class="mpat-block">
-                    <span class="mpat-label">Patrimônio total</span>
-                    <span class="mpat-value" id="mPatrimonioValor">—</span>
-                    <span class="mpat-sub" id="mPatrimonioSub"></span>
+            <!-- Card-resumo mobile: patrimônio + rendimento, com swipe por mês -->
+            <div class="mobile-only mpatrimonio-wrap" id="mPatrimonioWrap">
+                <div class="mpat-header">
+                    <span class="mpat-mes" id="mPatrimonioMes">—</span>
+                    <span class="mpat-hint" id="mPatrimonioHint"></span>
                 </div>
-                <div class="mpat-divider"></div>
-                <div class="mpat-block">
-                    <span class="mpat-label">Rendeu no mês</span>
-                    <span class="mpat-value pos" id="mRendMesValor">—</span>
-                    <span class="mpat-sub" id="mRendMesSub"></span>
+                <div class="mpatrimonio-card" id="mPatrimonioCard">
+                    <div class="mpat-block">
+                        <span class="mpat-label">Patrimônio total</span>
+                        <span class="mpat-value" id="mPatrimonioValor">—</span>
+                        <span class="mpat-sub" id="mPatrimonioSub"></span>
+                    </div>
+                    <div class="mpat-divider"></div>
+                    <div class="mpat-block">
+                        <span class="mpat-label">Rendeu no mês</span>
+                        <span class="mpat-value pos" id="mRendMesValor">—</span>
+                        <span class="mpat-sub" id="mRendMesSub"></span>
+                    </div>
                 </div>
+                <div class="mpat-dots" id="mPatrimonioDots"></div>
             </div>
 
             <div class="section-label" id="invEvolLabel">Evolução mensal</div>
@@ -1945,12 +1978,12 @@
             <div class="section-label" id="invCompLabel">Composição da carteira</div>
             <div class="g2 mb2" id="invPieGrid">
                 <div class="card" id="invTypeCard">
-                    <div class="card-title">Por Tipo de Investimento</div>
+                    <div class="card-title">Por Tipo de Investimento <span class="pie-mes" id="invTypeMes"></span></div>
                     <div class="card-sub">Renda Fixa × Renda Variável × Imóvel</div>
                     <div style="height:300px"><canvas id="invTypePie"></canvas></div>
                 </div>
                 <div class="card" id="invAssetCard">
-                    <div class="card-title">Por Ativo</div>
+                    <div class="card-title">Por Ativo <span class="pie-mes" id="invAssetMes"></span></div>
                     <div class="card-sub">Top 8 + Outros — clique para filtrar (depende do tipo)</div>
                     <div style="height:300px"><canvas id="invAssetPie"></canvas></div>
                 </div>
@@ -1981,6 +2014,27 @@
                     </table>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- VIEW: EVOLUÇÃO (mobile-only) -->
+    <div id="view-evolucao" class="view">
+        <div class="view-header">
+            <div>
+                <h1 class="view-title">Evolução</h1>
+                <div class="view-subtitle">Como a carteira cresceu ao longo do tempo</div>
+            </div>
+        </div>
+        <div id="evolContent">
+            <div class="section-label">Rendimento mês a mês</div>
+            <div class="card mb2">
+                <div class="card-title">Rendimento por mês</div>
+                <div class="card-sub">Quanto a carteira rendeu em cada mês (vs. mês anterior), já descontando aportes</div>
+                <div style="height:320px"><canvas id="invRendMesChart"></canvas></div>
+            </div>
+            <!-- Slots: recebem os cards de Evolução mensal e Rentabilidade (realocados no mobile) -->
+            <div id="evolStackSlot"></div>
+            <div id="evolRentSlot"></div>
         </div>
     </div>
 
@@ -2170,6 +2224,10 @@
         <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
         <span>Carteira</span>
     </button>
+    <button class="mbn-item" data-view="evolucao" onclick="switchView('evolucao')" aria-label="Evolução">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>
+        <span>Evolução</span>
+    </button>
     <button class="mbn-item" data-view="visao" onclick="switchView('visao')" aria-label="Despesas">
         <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
         <span>Despesas</span>
@@ -2270,6 +2328,8 @@
     let isDarkMode    = false;
     let charts        = {};
     let currentView   = 'visao';
+    let _lastByMonth  = [];   // último byMonth da Carteira (p/ gráfico de rendimento mensal)
+    let mCardIdx      = 0;    // índice do mês exibido no card-resumo (swipe)
     // Cross-filter por view: cada sub-objeto guarda, por campo, um Set de valores OCULTOS
     // Ex: activeFilters.visao['GRUPO'] = Set{'Alimentação', 'Lazer'}
     let activeFilters = {
@@ -2778,12 +2838,112 @@
         }
         if (charts['invTypePie']) { try { charts['invTypePie'].resize(); } catch(e){} }
     }
+
+    // No mobile, os cards "Evolução mensal" e "Rentabilidade" migram da Carteira para a
+    // aba Evolução (slots dedicados). No desktop, voltam ao lugar original na Carteira.
+    function relocateEvolucaoForViewport() {
+        const stack = document.getElementById('invStackCard');
+        const rent  = document.getElementById('invRentCard');
+        const stackSlot = document.getElementById('evolStackSlot');
+        const rentSlot  = document.getElementById('evolRentSlot');
+        const evolLabel = document.getElementById('invEvolLabel');
+        if (!stack || !rent || !stackSlot || !rentSlot) return;
+        const isMobile = window.innerWidth <= MOBILE_BP;
+        const remember = (el) => {
+            if (!el.dataset.evolHome) {
+                el._evolParent = el.parentElement;
+                el._evolNext = el.nextElementSibling;
+                el.dataset.evolHome = '1';
+            }
+        };
+        if (isMobile) {
+            remember(stack); remember(rent);
+            if (stack.parentElement !== stackSlot) stackSlot.appendChild(stack);
+            if (rent.parentElement !== rentSlot)  rentSlot.appendChild(rent);
+            // o label "Evolução mensal" da Carteira some no mobile (ele vira título da aba)
+            if (evolLabel) evolLabel.classList.add('mobile-hide');
+        } else {
+            const restore = (el) => {
+                if (el.dataset.evolHome && el._evolParent) {
+                    if (el._evolNext && el._evolNext.parentElement === el._evolParent) {
+                        el._evolParent.insertBefore(el, el._evolNext);
+                    } else {
+                        el._evolParent.appendChild(el);
+                    }
+                }
+            };
+            restore(stack); restore(rent);
+            if (evolLabel) evolLabel.classList.remove('mobile-hide');
+        }
+        if (charts.invStack) { try { charts.invStack.resize(); } catch(e){} }
+        if (charts.invRent)  { try { charts.invRent.resize(); } catch(e){} }
+    }
+
     // Reagir a mudança de viewport (rotacionar / redimensionar)
     let _relocTimer;
     window.addEventListener('resize', () => {
         clearTimeout(_relocTimer);
-        _relocTimer = setTimeout(() => { relocateOriginForViewport(); relocateCarteiraForViewport(); }, 150);
+        _relocTimer = setTimeout(() => { relocateOriginForViewport(); relocateCarteiraForViewport(); relocateEvolucaoForViewport(); }, 150);
     });
+
+    // ── Card-resumo com swipe por mês ──
+    // Lê de _lastByMonth[mCardIdx]: total (patrimônio) e rendMes (rendimento puro do mês).
+    function paintPatrimonioCard() {
+        const wrap = document.getElementById('mPatrimonioWrap');
+        if (!wrap || !_lastByMonth || _lastByMonth.length === 0) return;
+        const n = _lastByMonth.length;
+        if (mCardIdx < 0) mCardIdx = 0;
+        if (mCardIdx > n - 1) mCardIdx = n - 1;
+        const row = _lastByMonth[mCardIdx];
+        const fmt = v => fmtCcy(v, {minimumFractionDigits:0, maximumFractionDigits:0});
+        const [y, m] = row.k.split('-');
+        const mesLabel = `${monthNames[Number(m)-1]}/${y.slice(2)}`;
+
+        document.getElementById('mPatrimonioMes').innerText = mesLabel;
+        document.getElementById('mPatrimonioValor').innerText = fmt(row.total);
+        document.getElementById('mPatrimonioSub').innerText = `Posição em ${mesLabel}`;
+
+        const rend = row.rendMes || 0;
+        const sinal = rend < 0 ? '−' : '+';
+        const rendEl = document.getElementById('mRendMesValor');
+        rendEl.innerText = `${sinal} ${fmt(Math.abs(rend))}`;
+        rendEl.classList.toggle('neg', rend < 0);
+        rendEl.classList.toggle('pos', rend >= 0);
+        const pct = (row.retMes || 0) * 100;
+        document.getElementById('mRendMesSub').innerText = `${sinal}${Math.abs(pct).toFixed(2)}% no mês`;
+
+        // hint (só no mês mais recente, some ao navegar)
+        const hint = document.getElementById('mPatrimonioHint');
+        hint.innerText = (mCardIdx === n - 1 && n > 1) ? '‹ deslize p/ ver meses anteriores' : '';
+
+        // dots: mostra até os últimos 6 meses p/ não poluir; o ativo é o cheio
+        const dotsEl = document.getElementById('mPatrimonioDots');
+        const maxDots = Math.min(n, 6);
+        const startIdx = n - maxDots;
+        let html = '';
+        for (let i = startIdx; i < n; i++) {
+            html += `<span class="mpat-dot${i === mCardIdx ? ' active' : ''}"></span>`;
+        }
+        dotsEl.innerHTML = html;
+    }
+
+    // Gestos de swipe no card (esquerda = mês anterior, direita = próximo)
+    (function initCardSwipe() {
+        const card = document.getElementById('mPatrimonioCard');
+        if (!card) return;
+        let x0 = null;
+        card.addEventListener('touchstart', e => { x0 = e.changedTouches[0].clientX; }, {passive:true});
+        card.addEventListener('touchend', e => {
+            if (x0 === null) return;
+            const dx = e.changedTouches[0].clientX - x0;
+            if (Math.abs(dx) > 40) {
+                // swipe p/ esquerda (dx<0) → mês anterior (idx-1); direita → próximo (idx+1)
+                mCardIdx += dx < 0 ? -1 : 1;
+                paintPatrimonioCard();
+            }
+            x0 = null;
+        }, {passive:true});
+    })();
 
     function switchView(viewName) {
         // Ao trocar de view, limpa os filtros da view ANTIGA
@@ -2803,6 +2963,7 @@
         // Realoca o rosca de Origem p/ dentro de Despesas quando em viewport mobile
         relocateOriginForViewport();
         relocateCarteiraForViewport();
+        relocateEvolucaoForViewport();
         // Tabela de detalhamento só aparece nas views de análise (exceto as que têm tabelas próprias)
         const detalhamento = document.getElementById('detalhamentoWrap');
         if (detalhamento) {
@@ -2819,6 +2980,9 @@
         if (viewName === 'dolar') { renderDolar(); return; }
         if (viewName === 'download') { renderDownload(); return; }
         if (viewName === 'inputytd') { renderInputYtd(); return; }
+        // Evolução (mobile): usa o mesmo pipeline da Carteira (popula byMonth e desenha
+        // stack/rent, já realocados p/ os slots) e adiciona o gráfico de rendimento mensal.
+        if (viewName === 'evolucao') { renderInvestimentos(); renderInvRendMesChart(); return; }
         renderAll();
     }
 
@@ -4157,8 +4321,9 @@
             }, 0);
             const retMes       = brutoInicio > 0 ? (rendMesTotal  / brutoInicio) : 0;
             const retMesSemDiv = brutoInicio > 0 ? (rendMesSemDiv / brutoInicio) : 0;
-            return { k, invested, custo, rend, total, valoriz, rendDiv, lucroReal, retMes, retMesSemDiv };
+            return { k, invested, custo, rend, total, valoriz, rendDiv, lucroReal, retMes, retMesSemDiv, rendMes: rendMesTotal };
         });
+        _lastByMonth = byMonth;  // exposto p/ o gráfico de rendimento mês a mês (aba Evolução)
 
         if (byMonth.length === 0) {
             document.getElementById('invTotalInv').innerText  = '—';
@@ -4194,34 +4359,9 @@
         const latestKey = picked.k;
         const latestRows = filteredData.filter(r => r._k === latestKey && r._dispBruto > 0);
 
-        // Rendimento PURO do mês corrente (neutraliza aportes): Σ invRendMes por linha.
-        // Mesma base da série verde do gráfico e do retorno time-weighted.
-        const snapM = v => Math.abs(v) < 0.01 ? 0 : v;
-        const rendMesAtual = snapM(
-            filteredData.filter(r => r._k === latestKey)
-                .reduce((a, r) => a + convert(invRendMes(r), r._moeda, r._k), 0)
-        );
-        // Base do mês (bruto no início) p/ exibir o % ao lado do valor
-        const pkAtual = prevMonthKey(latestKey);
-        const brutoInicioAtual = filteredData.filter(r => r._k === latestKey).reduce((a, r) => {
-            const prev = filteredData.find(x => x._k === pkAtual && x._codigo === r._codigo);
-            return a + (prev ? prev._dispBruto : 0);
-        }, 0);
-        const retMesAtual = brutoInicioAtual > 0 ? (rendMesAtual / brutoInicioAtual * 100) : 0;
-
-        // Card-resumo (mobile): patrimônio total + rendimento do mês
-        const elPat = document.getElementById('mPatrimonioValor');
-        if (elPat) {
-            elPat.innerText = fmt(picked.total);
-            const [yy, mm] = latestKey.split('-');
-            document.getElementById('mPatrimonioSub').innerText = `Posição em ${monthNames[Number(mm)-1]}/${yy.slice(2)}`;
-            const sinal = rendMesAtual < 0 ? '−' : '+';
-            const rendEl = document.getElementById('mRendMesValor');
-            rendEl.innerText = `${sinal} ${fmt(Math.abs(rendMesAtual))}`;
-            rendEl.classList.toggle('neg', rendMesAtual < 0);
-            document.getElementById('mRendMesSub').innerText =
-                `${sinal}${Math.abs(retMesAtual).toFixed(2)}% no mês`;
-        }
+        // Card-resumo (mobile) com swipe por mês: inicia no último mês de _lastByMonth.
+        mCardIdx = _lastByMonth.length - 1;
+        paintPatrimonioCard();
 
         // KPIs
         document.getElementById('invTotalInv').innerText  = fmt(picked.invested);
@@ -4230,6 +4370,13 @@
         const rentab = picked.invested > 0 ? (picked.rend / picked.invested * 100) : 0;
         document.getElementById('invRentab').innerText = rentab.toFixed(2) + '%';
         document.getElementById('invAssets').innerText = latestRows.length;
+        // Rótulo de mês nas roscas (podem diferir do card, que tem swipe próprio)
+        {
+            const [py, pm] = latestKey.split('-');
+            const rotulo = `· ${monthNames[Number(pm)-1]}/${py.slice(2)}`;
+            const t = document.getElementById('invTypeMes'); if (t) t.innerText = rotulo;
+            const a = document.getElementById('invAssetMes'); if (a) a.innerText = rotulo;
+        }
         const [y,m] = latestKey.split('-');
         document.getElementById('invTotalInvSub').innerText = `Posição em ${monthNames[Number(m)-1]}/${y.slice(2)}`;
         const lr = picked.lucroReal || 0;
@@ -4400,6 +4547,51 @@
         invRentJanela = e.target.value;
         if (currentView === 'investimentos') renderInvestimentos(true, true);
     });
+
+    // Gráfico (aba Evolução): rendimento em VALOR de cada mês vs. mês anterior.
+    // Usa _lastByMonth (populado por renderInvestimentos) → sem recálculo/duplicação.
+    function renderInvRendMesChart() {
+        const canvas = document.getElementById('invRendMesChart');
+        if (!canvas || !_lastByMonth || _lastByMonth.length === 0) return;
+        const tc = isDarkMode ? '#6B6966' : '#8A8880';
+        const gc = isDarkMode ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
+        if (charts.invRendMes) charts.invRendMes.destroy();
+
+        // pula o 1º mês (não tem "mês anterior" p/ comparar) — rendMes lá é 0 por definição
+        const serie = _lastByMonth.slice(1);
+        const labels = serie.map(r => { const [y,m] = r.k.split('-'); return `${monthNames[Number(m)-1]}/${y.slice(2)}`; });
+        const vals = serie.map(r => r.rendMes || 0);
+        const pos = '#059669', neg = '#DC2626';
+        const cores = vals.map(v => v < 0 ? neg : pos);
+
+        charts.invRendMes = new Chart(canvas, {
+            type: 'bar',
+            data: { labels, datasets: [{ data: vals, backgroundColor: cores, borderRadius: 4, maxBarThickness: 28 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                const v = ctx.raw;
+                                const s = v < 0 ? '−' : '+';
+                                return `${s} ${fmtCcy(Math.abs(v), {minimumFractionDigits:0, maximumFractionDigits:0})}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: tc, maxRotation: 60, minRotation: 60, font: {size: 10} }, grid: { display: false } },
+                    y: {
+                        ticks: { color: tc, callback: v => fmtCcyK(v) },
+                        grid: { color: gc },
+                        border: { display: false }
+                    }
+                }
+            }
+        });
+    }
 
     function renderInvTypePie(latestRows, invKey, fmt) {
         const agg = {};
@@ -5403,6 +5595,7 @@
             // DEBUG: mostrar estado completo dos dados carregados
             relocateOriginForViewport();  // posiciona rosca de Origem conforme viewport (mobile/desktop)
             relocateCarteiraForViewport();  // rosca "Por Tipo" no topo da Carteira no mobile
+            relocateEvolucaoForViewport();  // stack/rent migram p/ aba Evolução no mobile
             // No mobile, a Carteira é a tela de entrada
             if (window.innerWidth <= MOBILE_BP && currentView === 'visao') {
                 switchView('investimentos');
