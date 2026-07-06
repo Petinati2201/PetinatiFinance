@@ -390,14 +390,7 @@
 
             /* Carteira: ordem mobile → patrimônio, composição (Tipo/Ativo), rentabilidade */
             #invContent { display: flex; flex-direction: column; }
-            /* grid de roscas vira transparente p/ order individual de Tipo e Ativo */
-            #invPieGrid { display: contents; }
-            #invTypeCard   { order: 1; }
-            #invEvolLabel  { order: 2; }
-            #invStackCard  { order: 3; }
-            #invAssetCard  { order: 4; }
-            #invCompLabel  { display: none; }
-            #invRentCard   { order: 6; }
+            /* ordem mobile controlada via JS (relocateCarteiraForViewport) */
         }
 
         /* Em desktop, os elementos mobile-only ficam ocultos (default acima) */
@@ -2709,11 +2702,41 @@
         // Chart.js precisa recalcular tamanho após mudar de container
         if (charts['originChart']) { try { charts['originChart'].resize(); } catch(e){} }
     }
+
+    // No mobile, o rosca "Por Tipo" sobe para o topo da Carteira (antes da evolução).
+    // Ordem mobile resultante: Tipo → Evolução → Rentabilidade → (Composição: Ativo).
+    function relocateCarteiraForViewport() {
+        const typeCard = document.getElementById('invTypeCard');
+        const content  = document.getElementById('invContent');
+        const evolLabel = document.getElementById('invEvolLabel');
+        if (!typeCard || !content || !evolLabel) return;
+        const isMobile = window.innerWidth <= MOBILE_BP;
+        if (isMobile) {
+            if (!typeCard.dataset.homeSaved) {
+                typeCard._homeParent = typeCard.parentElement;   // #invPieGrid
+                typeCard._homeNext = typeCard.nextElementSibling; // invAssetCard
+                typeCard.dataset.homeSaved = '1';
+            }
+            // Coloca o card de Tipo como 1º filho do invContent (antes do label de evolução)
+            if (content.firstElementChild !== typeCard) {
+                content.insertBefore(typeCard, evolLabel);
+            }
+        } else {
+            if (typeCard.dataset.homeSaved && typeCard._homeParent) {
+                if (typeCard._homeNext && typeCard._homeNext.parentElement === typeCard._homeParent) {
+                    typeCard._homeParent.insertBefore(typeCard, typeCard._homeNext);
+                } else {
+                    typeCard._homeParent.appendChild(typeCard);
+                }
+            }
+        }
+        if (charts['invTypePie']) { try { charts['invTypePie'].resize(); } catch(e){} }
+    }
     // Reagir a mudança de viewport (rotacionar / redimensionar)
     let _relocTimer;
     window.addEventListener('resize', () => {
         clearTimeout(_relocTimer);
-        _relocTimer = setTimeout(relocateOriginForViewport, 150);
+        _relocTimer = setTimeout(() => { relocateOriginForViewport(); relocateCarteiraForViewport(); }, 150);
     });
 
     function switchView(viewName) {
@@ -2733,6 +2756,7 @@
         });
         // Realoca o rosca de Origem p/ dentro de Despesas quando em viewport mobile
         relocateOriginForViewport();
+        relocateCarteiraForViewport();
         // Tabela de detalhamento só aparece nas views de análise (exceto as que têm tabelas próprias)
         const detalhamento = document.getElementById('detalhamentoWrap');
         if (detalhamento) {
@@ -5303,6 +5327,7 @@
             // Trigger renderAll após carregar todos os dados
             // DEBUG: mostrar estado completo dos dados carregados
             relocateOriginForViewport();  // posiciona rosca de Origem conforme viewport (mobile/desktop)
+            relocateCarteiraForViewport();  // rosca "Por Tipo" no topo da Carteira no mobile
             // No mobile, a Carteira é a tela de entrada
             if (window.innerWidth <= MOBILE_BP && currentView === 'visao') {
                 switchView('investimentos');
