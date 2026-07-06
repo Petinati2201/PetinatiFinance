@@ -391,6 +391,32 @@
             /* Carteira: ordem mobile → patrimônio, composição (Tipo/Ativo), rentabilidade */
             #invContent { display: flex; flex-direction: column; }
             /* ordem mobile controlada via JS (relocateCarteiraForViewport) */
+
+            /* Card-resumo: patrimônio + rendimento do mês */
+            .mpatrimonio-card {
+                display: flex;
+                align-items: stretch;
+                gap: .9rem;
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 14px;
+                padding: 1.1rem 1rem;
+                margin-bottom: 1rem;
+            }
+            .mpat-block { flex: 1; display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+            .mpat-label {
+                font-size: 11px; font-weight: 600; letter-spacing: .04em;
+                text-transform: uppercase; color: var(--muted);
+            }
+            .mpat-value {
+                font-family: 'Instrument Serif', serif;
+                font-size: 1.75rem; line-height: 1.1; color: var(--text);
+                white-space: nowrap;
+            }
+            .mpat-value.pos { color: #059669; }
+            .mpat-value.neg { color: #DC2626; }
+            .mpat-sub { font-size: 11.5px; color: var(--muted); }
+            .mpat-divider { width: 1px; background: var(--border); flex-shrink: 0; }
         }
 
         /* Em desktop, os elementos mobile-only ficam ocultos (default acima) */
@@ -1876,6 +1902,21 @@
                 </div>
             </div>
 
+            <!-- Card-resumo mobile: patrimônio total + rendimento do mês -->
+            <div class="mobile-only mpatrimonio-card" id="mPatrimonioCard">
+                <div class="mpat-block">
+                    <span class="mpat-label">Patrimônio total</span>
+                    <span class="mpat-value" id="mPatrimonioValor">—</span>
+                    <span class="mpat-sub" id="mPatrimonioSub"></span>
+                </div>
+                <div class="mpat-divider"></div>
+                <div class="mpat-block">
+                    <span class="mpat-label">Rendeu no mês</span>
+                    <span class="mpat-value pos" id="mRendMesValor">—</span>
+                    <span class="mpat-sub" id="mRendMesSub"></span>
+                </div>
+            </div>
+
             <div class="section-label" id="invEvolLabel">Evolução mensal</div>
             <div class="card mb2" id="invStackCard">
                 <div class="card-title">Investido + Rendimento Acumulado</div>
@@ -2717,8 +2758,13 @@
                 typeCard._homeNext = typeCard.nextElementSibling; // invAssetCard
                 typeCard.dataset.homeSaved = '1';
             }
-            // Coloca o card de Tipo como 1º filho do invContent (antes do label de evolução)
-            if (content.firstElementChild !== typeCard) {
+            // Coloca o card de Tipo logo após o card-resumo de patrimônio (ou no topo)
+            const anchor = document.getElementById('mPatrimonioCard');
+            if (anchor && anchor.parentElement === content) {
+                if (anchor.nextElementSibling !== typeCard) {
+                    content.insertBefore(typeCard, anchor.nextElementSibling);
+                }
+            } else if (content.firstElementChild !== typeCard) {
                 content.insertBefore(typeCard, evolLabel);
             }
         } else {
@@ -4147,6 +4193,35 @@
 
         const latestKey = picked.k;
         const latestRows = filteredData.filter(r => r._k === latestKey && r._dispBruto > 0);
+
+        // Rendimento PURO do mês corrente (neutraliza aportes): Σ invRendMes por linha.
+        // Mesma base da série verde do gráfico e do retorno time-weighted.
+        const snapM = v => Math.abs(v) < 0.01 ? 0 : v;
+        const rendMesAtual = snapM(
+            filteredData.filter(r => r._k === latestKey)
+                .reduce((a, r) => a + convert(invRendMes(r), r._moeda, r._k), 0)
+        );
+        // Base do mês (bruto no início) p/ exibir o % ao lado do valor
+        const pkAtual = prevMonthKey(latestKey);
+        const brutoInicioAtual = filteredData.filter(r => r._k === latestKey).reduce((a, r) => {
+            const prev = filteredData.find(x => x._k === pkAtual && x._codigo === r._codigo);
+            return a + (prev ? prev._dispBruto : 0);
+        }, 0);
+        const retMesAtual = brutoInicioAtual > 0 ? (rendMesAtual / brutoInicioAtual * 100) : 0;
+
+        // Card-resumo (mobile): patrimônio total + rendimento do mês
+        const elPat = document.getElementById('mPatrimonioValor');
+        if (elPat) {
+            elPat.innerText = fmt(picked.total);
+            const [yy, mm] = latestKey.split('-');
+            document.getElementById('mPatrimonioSub').innerText = `Posição em ${monthNames[Number(mm)-1]}/${yy.slice(2)}`;
+            const sinal = rendMesAtual < 0 ? '−' : '+';
+            const rendEl = document.getElementById('mRendMesValor');
+            rendEl.innerText = `${sinal} ${fmt(Math.abs(rendMesAtual))}`;
+            rendEl.classList.toggle('neg', rendMesAtual < 0);
+            document.getElementById('mRendMesSub').innerText =
+                `${sinal}${Math.abs(retMesAtual).toFixed(2)}% no mês`;
+        }
 
         // KPIs
         document.getElementById('invTotalInv').innerText  = fmt(picked.invested);
