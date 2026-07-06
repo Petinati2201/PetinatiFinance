@@ -237,6 +237,17 @@
             overflow-x: hidden;
         }
 
+        /* Linha-cabeçalho de ano na tabela de câmbio (colapsável) */
+        .dolar-year-row td {
+            background: var(--surface-2, rgba(0,0,0,.03));
+            font-size: 14px;
+            user-select: none;
+            padding: .6rem .75rem;
+        }
+        .dolar-year-row:hover td { background: var(--border); }
+        .dolar-year-chevron { display: inline-block; width: 16px; color: var(--muted); }
+        .dolar-year-count { color: var(--muted); font-size: 12px; font-weight: 400; margin-left: .5rem; }
+
         /* Pull-to-refresh (mobile) */
         #ptrIndicator {
             position: fixed;
@@ -7269,6 +7280,7 @@
         const curKey = `${yNow}-${String(now.getMonth()+1).padStart(2,'0')}`;
         sel.value = prev && opts.includes(prev) ? prev : curKey;
     }
+    let _dolarCollapsed = null;  // Set de anos recolhidos; null = inicializa com todos recolhidos
     function renderDolar(){
         dolarPopulateMonthSelect();
         const tbody = document.getElementById('dolarBody'); tbody.innerHTML = '';
@@ -7276,36 +7288,64 @@
         const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
         if (!sorted.length) {
             tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Nenhuma cotação cadastrada. Use o campo acima para adicionar.</td></tr>';
+            dolarUpdateKpis(); dolarUpdateSaveBtn(); return;
         }
+
+        // Agrupa por ano preservando a ordem (mais recente primeiro)
+        const anos = [];
+        const porAno = {};
         sorted.forEach(r => {
-            const tr = document.createElement('tr');
-            if (r._dirty || r._new) tr.classList.add('dirty-row');
-            const [y,m] = r._k.split('-');
-            // Coluna 1: Ano (read-only)
-            const tdAno = document.createElement('td'); tdAno.className = 'static-cell'; tdAno.textContent = y;
-            tr.appendChild(tdAno);
-            // Coluna 2: Mês (read-only)
-            const tdMes = document.createElement('td'); tdMes.className = 'static-cell'; tdMes.textContent = meses[parseInt(m,10)-1] || m;
-            tr.appendChild(tdMes);
-            // Coluna 3: PTAX editável
-            const tdPtax = document.createElement('td');
-            const inp = document.createElement('input'); inp.type = 'text';
-            inp.value = iiFmtInput(r.ptax); inp.style.textAlign = 'right';
-            inp.dataset.k = r._k;
-            inp.addEventListener('input', function(e){
-                const row = dolarRows.find(x => x._k === e.target.dataset.k); if (!row) return;
-                row.ptax = iiParseNum(e.target.value); row._dirty = true;
-                e.target.classList.add('changed');
-                dolarUpdateKpis(); dolarUpdateSaveBtn();
+            const y = r._k.split('-')[0];
+            if (!porAno[y]) { porAno[y] = []; anos.push(y); }
+            porAno[y].push(r);
+        });
+        // 1ª vez: recolhe todos os anos
+        if (_dolarCollapsed === null) _dolarCollapsed = new Set(anos);
+
+        anos.forEach(y => {
+            const collapsed = _dolarCollapsed.has(y);
+            // Linha-cabeçalho do ano
+            const trH = document.createElement('tr');
+            trH.className = 'dolar-year-row';
+            const tdH = document.createElement('td');
+            tdH.colSpan = 4;
+            tdH.style.cursor = 'pointer';
+            tdH.innerHTML = `<span class="dolar-year-chevron">${collapsed ? '▸' : '▾'}</span>
+                <b>${y}</b> <span class="dolar-year-count">${porAno[y].length} ${porAno[y].length===1?'mês':'meses'}</span>`;
+            tdH.addEventListener('click', () => {
+                if (_dolarCollapsed.has(y)) _dolarCollapsed.delete(y); else _dolarCollapsed.add(y);
+                renderDolar();
             });
-            iiMaskNumeric(inp);
-            tdPtax.appendChild(inp); tr.appendChild(tdPtax);
-            // Coluna 4: excluir
-            const tdAct = document.createElement('td'); tdAct.style.textAlign = 'right';
-            const btn = document.createElement('button'); btn.className = 'act-discard'; btn.textContent = '✕'; btn.title = 'Excluir cotação';
-            btn.addEventListener('click', () => dolarDeleteRow(r));
-            tdAct.appendChild(btn); tr.appendChild(tdAct);
-            tbody.appendChild(tr);
+            trH.appendChild(tdH);
+            tbody.appendChild(trH);
+            if (collapsed) return;
+
+            porAno[y].forEach(r => {
+                const tr = document.createElement('tr');
+                if (r._dirty || r._new) tr.classList.add('dirty-row');
+                const [yy,m] = r._k.split('-');
+                const tdAno = document.createElement('td'); tdAno.className = 'static-cell'; tdAno.textContent = yy;
+                tr.appendChild(tdAno);
+                const tdMes = document.createElement('td'); tdMes.className = 'static-cell'; tdMes.textContent = meses[parseInt(m,10)-1] || m;
+                tr.appendChild(tdMes);
+                const tdPtax = document.createElement('td');
+                const inp = document.createElement('input'); inp.type = 'text';
+                inp.value = iiFmtInput(r.ptax); inp.style.textAlign = 'right';
+                inp.dataset.k = r._k;
+                inp.addEventListener('input', function(e){
+                    const row = dolarRows.find(x => x._k === e.target.dataset.k); if (!row) return;
+                    row.ptax = iiParseNum(e.target.value); row._dirty = true;
+                    e.target.classList.add('changed');
+                    dolarUpdateKpis(); dolarUpdateSaveBtn();
+                });
+                iiMaskNumeric(inp);
+                tdPtax.appendChild(inp); tr.appendChild(tdPtax);
+                const tdAct = document.createElement('td'); tdAct.style.textAlign = 'right';
+                const btn = document.createElement('button'); btn.className = 'act-discard'; btn.textContent = '✕'; btn.title = 'Excluir cotação';
+                btn.addEventListener('click', () => dolarDeleteRow(r));
+                tdAct.appendChild(btn); tr.appendChild(tdAct);
+                tbody.appendChild(tr);
+            });
         });
         dolarUpdateKpis(); dolarUpdateSaveBtn();
     }
@@ -7332,6 +7372,7 @@
             dolarSetStatus(`Cotação de ${dolarMonthLabel(k)} adicionada (pendente de salvar).`, 'ok');
         }
         document.getElementById('dolarInputPtax').value = '';
+        if (_dolarCollapsed) _dolarCollapsed.delete(k.split('-')[0]);  // abre o ano afetado
         renderDolar();
     }
     function dolarDeleteRow(r){
