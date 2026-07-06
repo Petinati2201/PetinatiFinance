@@ -350,6 +350,7 @@
                 box-shadow: 0 -2px 16px rgba(0,0,0,.06);
             }
             .mbn-item {
+                position: relative;
                 flex: 1;
                 display: flex;
                 flex-direction: column;
@@ -358,14 +359,23 @@
                 background: none;
                 border: none;
                 cursor: pointer;
-                padding: .4rem 0;
+                padding: .55rem 0 .4rem;
                 color: var(--muted);
                 font-family: 'Inter', sans-serif;
                 font-size: 10.5px;
                 font-weight: 500;
                 transition: color .15s;
             }
-            .mbn-item.active { color: var(--accent, #8A7B65); }
+            .mbn-item.active { color: var(--accent, #8A7B65); font-weight: 700; }
+            /* barra indicadora no topo do item ativo */
+            .mbn-item.active::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                width: 26px; height: 3px;
+                border-radius: 0 0 3px 3px;
+                background: var(--accent, #8A7B65);
+            }
             .mbn-item svg { stroke-width: 2; }
 
             /* Escopo mobile: esconde tudo que não faz parte das 3 telas permitidas */
@@ -437,8 +447,9 @@
             }
             .mpat-dot.active { background: var(--accent, #8A7B65); width: 18px; border-radius: 3px; }
 
-            /* Header de mês nas roscas (mesmo padrão do card) */
+            /* Header de mês nas roscas (mesmo padrão do card: fora da área branca) */
             .pie-header { margin-bottom: .5rem; }
+            .pie-wrap { display: flex; flex-direction: column; }
 
             /* Bottom-nav agora com 4 itens: aperta o texto */
             .mbn-item { font-size: 10px; }
@@ -1977,17 +1988,21 @@
 
             <div class="section-label" id="invCompLabel">Composição da carteira</div>
             <div class="g2 mb2" id="invPieGrid">
-                <div class="card" id="invTypeCard">
+                <div class="pie-wrap" id="invTypeWrap">
                     <div class="mpat-header pie-header mobile-only"><span class="mpat-mes" id="invTypeMes">—</span></div>
-                    <div class="card-title">Por Tipo de Investimento</div>
-                    <div class="card-sub">Renda Fixa × Renda Variável × Imóvel</div>
-                    <div style="height:300px"><canvas id="invTypePie"></canvas></div>
+                    <div class="card" id="invTypeCard">
+                        <div class="card-title">Por Tipo de Investimento</div>
+                        <div class="card-sub">Renda Fixa × Renda Variável × Imóvel</div>
+                        <div style="height:300px"><canvas id="invTypePie"></canvas></div>
+                    </div>
                 </div>
-                <div class="card" id="invAssetCard">
+                <div class="pie-wrap" id="invAssetWrap">
                     <div class="mpat-header pie-header mobile-only"><span class="mpat-mes" id="invAssetMes">—</span></div>
-                    <div class="card-title">Por Ativo</div>
-                    <div class="card-sub">Top 8 + Outros — clique para filtrar (depende do tipo)</div>
-                    <div style="height:300px"><canvas id="invAssetPie"></canvas></div>
+                    <div class="card" id="invAssetCard">
+                        <div class="card-title">Por Ativo</div>
+                        <div class="card-sub">Top 8 + Outros — clique para filtrar (depende do tipo)</div>
+                        <div style="height:300px"><canvas id="invAssetPie"></canvas></div>
+                    </div>
                 </div>
             </div>
 
@@ -2809,32 +2824,32 @@
     // No mobile, o rosca "Por Tipo" sobe para o topo da Carteira (antes da evolução).
     // Ordem mobile resultante: Tipo → Evolução → Rentabilidade → (Composição: Ativo).
     function relocateCarteiraForViewport() {
-        const typeCard = document.getElementById('invTypeCard');
+        const typeWrap = document.getElementById('invTypeWrap');
         const content  = document.getElementById('invContent');
         const evolLabel = document.getElementById('invEvolLabel');
-        if (!typeCard || !content || !evolLabel) return;
+        if (!typeWrap || !content || !evolLabel) return;
         const isMobile = window.innerWidth <= MOBILE_BP;
         if (isMobile) {
-            if (!typeCard.dataset.homeSaved) {
-                typeCard._homeParent = typeCard.parentElement;   // #invPieGrid
-                typeCard._homeNext = typeCard.nextElementSibling; // invAssetCard
-                typeCard.dataset.homeSaved = '1';
+            if (!typeWrap.dataset.homeSaved) {
+                typeWrap._homeParent = typeWrap.parentElement;   // #invPieGrid
+                typeWrap._homeNext = typeWrap.nextElementSibling; // invAssetWrap
+                typeWrap.dataset.homeSaved = '1';
             }
-            // Coloca o card de Tipo logo após o card-resumo de patrimônio (ou no topo)
-            const anchor = document.getElementById('mPatrimonioCard');
+            // Coloca a rosca de Tipo logo após o card-resumo de patrimônio (ou no topo)
+            const anchor = document.getElementById('mPatrimonioWrap');
             if (anchor && anchor.parentElement === content) {
-                if (anchor.nextElementSibling !== typeCard) {
-                    content.insertBefore(typeCard, anchor.nextElementSibling);
+                if (anchor.nextElementSibling !== typeWrap) {
+                    content.insertBefore(typeWrap, anchor.nextElementSibling);
                 }
-            } else if (content.firstElementChild !== typeCard) {
-                content.insertBefore(typeCard, evolLabel);
+            } else if (content.firstElementChild !== typeWrap) {
+                content.insertBefore(typeWrap, evolLabel);
             }
         } else {
-            if (typeCard.dataset.homeSaved && typeCard._homeParent) {
-                if (typeCard._homeNext && typeCard._homeNext.parentElement === typeCard._homeParent) {
-                    typeCard._homeParent.insertBefore(typeCard, typeCard._homeNext);
+            if (typeWrap.dataset.homeSaved && typeWrap._homeParent) {
+                if (typeWrap._homeNext && typeWrap._homeNext.parentElement === typeWrap._homeParent) {
+                    typeWrap._homeParent.insertBefore(typeWrap, typeWrap._homeNext);
                 } else {
-                    typeCard._homeParent.appendChild(typeCard);
+                    typeWrap._homeParent.appendChild(typeWrap);
                 }
             }
         }
