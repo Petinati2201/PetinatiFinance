@@ -419,7 +419,7 @@
             .mpat-divider { width: 1px; background: var(--border); flex-shrink: 0; }
 
             /* Wrapper com header (mês) e dots de paginação */
-            .mpatrimonio-wrap { margin-bottom: 1rem; }
+            .mpatrimonio-wrap { margin-bottom: 1rem; overflow: hidden; }
             .mpat-header {
                 display: flex; align-items: baseline; justify-content: space-between;
                 gap: .5rem; margin-bottom: .4rem;
@@ -429,7 +429,7 @@
                 letter-spacing: .02em;
             }
             .mpat-hint { font-size: 10.5px; color: var(--muted); }
-            .mpatrimonio-wrap .mpatrimonio-card { margin-bottom: .5rem; touch-action: pan-y; }
+            .mpatrimonio-wrap .mpatrimonio-card { margin-bottom: .5rem; touch-action: pan-y; will-change: transform, opacity; }
             .mpat-dots { display: flex; justify-content: center; gap: 6px; }
             .mpat-dot {
                 width: 6px; height: 6px; border-radius: 50%;
@@ -437,8 +437,8 @@
             }
             .mpat-dot.active { background: var(--accent, #8A7B65); width: 18px; border-radius: 3px; }
 
-            /* Rótulo de mês nas roscas */
-            .pie-mes { font-size: 12px; font-weight: 500; color: var(--muted); }
+            /* Header de mês nas roscas (mesmo padrão do card) */
+            .pie-header { margin-bottom: .5rem; }
 
             /* Bottom-nav agora com 4 itens: aperta o texto */
             .mbn-item { font-size: 10px; }
@@ -1978,12 +1978,14 @@
             <div class="section-label" id="invCompLabel">Composição da carteira</div>
             <div class="g2 mb2" id="invPieGrid">
                 <div class="card" id="invTypeCard">
-                    <div class="card-title">Por Tipo de Investimento <span class="pie-mes" id="invTypeMes"></span></div>
+                    <div class="mpat-header pie-header mobile-only"><span class="mpat-mes" id="invTypeMes">—</span></div>
+                    <div class="card-title">Por Tipo de Investimento</div>
                     <div class="card-sub">Renda Fixa × Renda Variável × Imóvel</div>
                     <div style="height:300px"><canvas id="invTypePie"></canvas></div>
                 </div>
                 <div class="card" id="invAssetCard">
-                    <div class="card-title">Por Ativo <span class="pie-mes" id="invAssetMes"></span></div>
+                    <div class="mpat-header pie-header mobile-only"><span class="mpat-mes" id="invAssetMes">—</span></div>
+                    <div class="card-title">Por Ativo</div>
                     <div class="card-sub">Top 8 + Outros — clique para filtrar (depende do tipo)</div>
                     <div style="height:300px"><canvas id="invAssetPie"></canvas></div>
                 </div>
@@ -2937,13 +2939,39 @@
             if (x0 === null) return;
             const dx = e.changedTouches[0].clientX - x0;
             if (Math.abs(dx) > 40) {
-                // swipe p/ esquerda (dx<0) → mês anterior (idx-1); direita → próximo (idx+1)
-                mCardIdx += dx < 0 ? -1 : 1;
-                paintPatrimonioCard();
+                // direita (dx>0) → mês anterior (idx−1); esquerda (dx<0) → mês seguinte (idx+1)
+                const dir = dx > 0 ? -1 : 1;
+                const next = mCardIdx + dir;
+                // só anima/troca se houver mês nesse sentido
+                if (next >= 0 && next <= _lastByMonth.length - 1) {
+                    animateCardSlide(dir, () => { mCardIdx = next; paintPatrimonioCard(); });
+                }
             }
             x0 = null;
         }, {passive:true});
     })();
+
+    // Desliza o card p/ fora na direção do gesto, troca o conteúdo, entra pelo lado oposto.
+    // dir: -1 (mês anterior, sai p/ direita) | +1 (mês seguinte, sai p/ esquerda).
+    function animateCardSlide(dir, swapContent) {
+        const card = document.getElementById('mPatrimonioCard');
+        if (!card) { swapContent(); return; }
+        const out = dir > 0 ? -1 : 1;   // gesto p/ esquerda empurra card p/ esquerda
+        card.style.transition = 'transform .16s ease-in, opacity .16s ease-in';
+        card.style.transform = `translateX(${out * 40}%)`;
+        card.style.opacity = '0';
+        setTimeout(() => {
+            swapContent();
+            // posiciona no lado oposto (sem transição) e traz de volta
+            card.style.transition = 'none';
+            card.style.transform = `translateX(${-out * 40}%)`;
+            requestAnimationFrame(() => {
+                card.style.transition = 'transform .2s ease-out, opacity .2s ease-out';
+                card.style.transform = 'translateX(0)';
+                card.style.opacity = '1';
+            });
+        }, 160);
+    }
 
     function switchView(viewName) {
         // Ao trocar de view, limpa os filtros da view ANTIGA
@@ -4373,7 +4401,7 @@
         // Rótulo de mês nas roscas (podem diferir do card, que tem swipe próprio)
         {
             const [py, pm] = latestKey.split('-');
-            const rotulo = `· ${monthNames[Number(pm)-1]}/${py.slice(2)}`;
+            const rotulo = `${monthNames[Number(pm)-1]}/${py.slice(2)}`;
             const t = document.getElementById('invTypeMes'); if (t) t.innerText = rotulo;
             const a = document.getElementById('invAssetMes'); if (a) a.innerText = rotulo;
         }
