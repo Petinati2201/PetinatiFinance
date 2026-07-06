@@ -237,6 +237,31 @@
             overflow-x: hidden;
         }
 
+        /* Pull-to-refresh (mobile) */
+        #ptrIndicator {
+            position: fixed;
+            top: 0; left: 50%;
+            transform: translateX(-50%) translateY(-60px);
+            z-index: 60;
+            width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            box-shadow: 0 2px 12px rgba(0,0,0,.12);
+            transition: transform .2s ease-out;
+        }
+        #ptrIndicator .ptr-spinner {
+            width: 18px; height: 18px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent, #8A7B65);
+            border-radius: 50%;
+            transition: transform .1s;
+        }
+        #ptrIndicator.ready .ptr-spinner { transform: rotate(180deg); border-top-color: #059669; }
+        #ptrIndicator.spin .ptr-spinner { animation: ptrSpin .7s linear infinite; }
+        @keyframes ptrSpin { to { transform: rotate(360deg); } }
+
         .view-header {
             display: flex;
             align-items: flex-end;
@@ -2378,7 +2403,7 @@
     let charts        = {};
     let currentView   = 'visao';
     let _lastByMonth  = [];   // último byMonth da Carteira (p/ gráfico de rendimento mensal)
-    let mCardIdx      = 0;    // índice do mês exibido no card-resumo (swipe)
+    let mCardIdx      = null; // índice do mês exibido no card-resumo (swipe); null = ancora no último
     // Cross-filter por view: cada sub-objeto guarda, por campo, um Set de valores OCULTOS
     // Ex: activeFilters.visao['GRUPO'] = Set{'Alimentação', 'Lazer'}
     let activeFilters = {
@@ -3028,6 +3053,57 @@
                 }
             }
             x0 = null;
+        }, {passive:true});
+    })();
+
+    // Pull-to-refresh (mobile): puxar a tela p/ baixo no topo recarrega os dados do Supabase.
+    (function initPullToRefresh() {
+        if (window.innerWidth > MOBILE_BP) return;
+        const ind = document.createElement('div');
+        ind.id = 'ptrIndicator';
+        ind.innerHTML = '<div class="ptr-spinner"></div>';
+        document.body.appendChild(ind);
+
+        let startY = 0, pulling = false, dist = 0, refreshing = false;
+        const THRESHOLD = 70;
+
+        window.addEventListener('touchstart', e => {
+            // só arma se a página está no topo (scrollY 0)
+            if (window.scrollY <= 0 && !refreshing) {
+                startY = e.touches[0].clientY;
+                pulling = true;
+            } else {
+                pulling = false;
+            }
+        }, {passive:true});
+
+        window.addEventListener('touchmove', e => {
+            if (!pulling || refreshing) return;
+            dist = e.touches[0].clientY - startY;
+            if (dist > 0) {
+                const pull = Math.min(dist * 0.5, 90);
+                ind.style.transform = `translateX(-50%) translateY(${pull}px)`;
+                ind.classList.toggle('ready', pull >= THRESHOLD);
+            }
+        }, {passive:true});
+
+        window.addEventListener('touchend', async () => {
+            if (!pulling || refreshing) { pulling = false; return; }
+            pulling = false;
+            const pull = Math.min(dist * 0.5, 90);
+            if (pull >= THRESHOLD) {
+                refreshing = true;
+                ind.classList.add('spin');
+                ind.style.transform = 'translateX(-50%) translateY(60px)';
+                try { await loadAllDataFromSupabase(); } catch(e) {}
+                ind.classList.remove('spin', 'ready');
+                ind.style.transform = 'translateX(-50%) translateY(-60px)';
+                refreshing = false;
+            } else {
+                ind.style.transform = 'translateX(-50%) translateY(-60px)';
+                ind.classList.remove('ready');
+            }
+            dist = 0;
         }, {passive:true});
     })();
 
@@ -4485,8 +4561,12 @@
         const latestKey = picked.k;
         const latestRows = filteredData.filter(r => r._k === latestKey && r._dispBruto > 0);
 
-        // Card-resumo (mobile) com swipe por mês: inicia no último mês de _lastByMonth.
-        mCardIdx = _lastByMonth.length - 1;
+        // Card-resumo (mobile) com swipe por mês. Preserva o mês selecionado entre
+        // re-renders (toggle câmbio, filtro de legenda). Só reancora no último mês se
+        // o índice ainda não foi inicializado ou saiu do range dos dados.
+        if (mCardIdx == null || mCardIdx < 0 || mCardIdx > _lastByMonth.length - 1) {
+            mCardIdx = _lastByMonth.length - 1;
+        }
         paintPatrimonioCard();
 
         // KPIs
