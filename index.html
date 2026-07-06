@@ -732,6 +732,29 @@
             background: var(--text);
             color: var(--bg);
         }
+        /* Toggle Com/Sem câmbio — mesma estética do pill-toggle */
+        .fx-toggle {
+            display: inline-flex;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 3px;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+        .fx-toggle button {
+            background: transparent; border: none;
+            padding: .45rem .9rem;
+            font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
+            color: var(--muted); cursor: pointer; border-radius: 6px;
+            transition: background .2s, color .2s; letter-spacing: .02em; white-space: nowrap;
+        }
+        .fx-toggle button:hover { color: var(--text); }
+        .fx-toggle button.active { background: var(--text); color: var(--bg); }
+        @media (max-width: 860px) {
+            .fx-toggle { width: 100%; margin-top: .75rem; }
+            .fx-toggle button { flex: 1; }
+        }
         /* Variante da ribbon: alinhada aos selects de Ano/Mês (mesma altura, radius e bordas) */
         .pill-toggle.sb-ccy {
             display: flex;
@@ -1901,6 +1924,10 @@
                 <h1 class="view-title">Investimentos</h1>
                 <div class="view-subtitle">Aportes, rendimento e composição da carteira ao longo do tempo</div>
             </div>
+            <div class="fx-toggle" data-fx-toggle>
+                <button class="active" data-fx="0" onclick="setFxFrozen(false)">Com câmbio</button>
+                <button data-fx="1" onclick="setFxFrozen(true)">Sem câmbio</button>
+            </div>
         </div>
 
         <div id="invNoData" class="card mb2" style="display:none;text-align:center;padding:2.5rem">
@@ -2040,6 +2067,10 @@
             <div>
                 <h1 class="view-title">Evolução</h1>
                 <div class="view-subtitle">Como a carteira cresceu ao longo do tempo</div>
+            </div>
+            <div class="fx-toggle" data-fx-toggle>
+                <button class="active" data-fx="0" onclick="setFxFrozen(false)">Com câmbio</button>
+                <button data-fx="1" onclick="setFxFrozen(true)">Sem câmbio</button>
             </div>
         </div>
         <div id="evolContent">
@@ -2339,6 +2370,7 @@
     let dolarFallback = 5.0;   // usado se um mês não tiver cotação
     let rendBaseData = {};     // { 'KO': 24, 'HGLG11': 1256, ... } — rendimento acumulado pré-2025 (moeda nativa)
     let currentCcy = 'BRL';
+    let fxFrozen   = false;  // "sem variação cambial": usa PTAX mais recente p/ todos os meses
     let currentIrCcy = 'BRL';
     let currentIrAsset = null;
     let currentIrTypeFilter = 'ALL';  // 'ALL' | 'AÇÃO' | 'AÇÃO EXTERIOR' | 'FII'
@@ -2535,14 +2567,21 @@
         return best ? dolarData[best] : dolarData[keys[0]];
     }
 
+    // PTAX do mês mais recente disponível (usada no modo "sem câmbio").
+    function ptaxLatest() {
+        const keys = Object.keys(dolarData).filter(k => dolarData[k] > 0).sort();
+        return keys.length ? dolarData[keys[keys.length - 1]] : dolarFallback;
+    }
+
     // Converte um valor de uma moeda nativa para a moeda de exibição,
     // usando a PTAX do mês informado (key = "YYYY-MM").
     // displayCcy opcional — default usa currentCcy (toggle global).
+    // Se fxFrozen, usa a PTAX mais recente p/ todos os meses (neutraliza variação cambial).
     function convert(value, nativeCcy, key, displayCcy) {
         if (value == null || isNaN(value)) return 0;
         const disp = displayCcy || currentCcy;
         if (disp === nativeCcy) return value;
-        const ptax = ptaxOfMonth(key);
+        const ptax = fxFrozen ? ptaxLatest() : ptaxOfMonth(key);
         if (disp === 'USD') {
             return nativeCcy === 'BRL' ? value / ptax : value;
         } else {
@@ -2992,6 +3031,13 @@
         // Ao trocar de view, limpa os filtros da view ANTIGA
         // (filtros não persistem entre views, conforme decidido)
         if (currentView !== viewName) clearFilters(currentView);
+        // "Sem câmbio" só vale nas telas de investimento; reseta ao sair
+        if (viewName !== 'investimentos' && viewName !== 'evolucao' && fxFrozen) {
+            fxFrozen = false;
+            document.querySelectorAll('[data-fx-toggle] button').forEach(b => {
+                b.classList.toggle('active', b.dataset.fx === '0');
+            });
+        }
         currentView = viewName;
         document.querySelectorAll('.sb-link').forEach(el => {
             el.classList.toggle('active', el.dataset.view === viewName);
@@ -3546,6 +3592,17 @@
             b.classList.toggle('active', b.dataset.ccy === ccy);
         });
         renderAll();
+    }
+
+    // "Sem câmbio": congela a PTAX na mais recente, isolando a variação cambial do rendimento.
+    // Afeta card, rentabilidade mensal e evolução. Um só flag controla os 3.
+    function setFxFrozen(frozen) {
+        fxFrozen = !!frozen;
+        document.querySelectorAll('[data-fx-toggle] button').forEach(b => {
+            b.classList.toggle('active', (b.dataset.fx === '1') === fxFrozen);
+        });
+        if (currentView === 'evolucao') { renderInvestimentos(); renderInvRendMesChart(); }
+        else { renderInvestimentos(); }
     }
 
     // Toggle de moeda na ribbon (controle global único)
