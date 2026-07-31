@@ -1357,7 +1357,7 @@
                 </div>
                 <div class="sb-link" data-view="inputytd" onclick="switchView('inputytd')">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>
-                    <span class="sb-link-label">Input de Despesas</span>
+                    <span class="sb-link-label">Input Despesas &amp; Renda</span>
                 </div>
                 <div class="sb-link" data-view="download" onclick="switchView('download')">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -1567,8 +1567,8 @@
     <div id="view-inputytd" class="view">
         <div class="view-header">
             <div>
-                <h1 class="view-title">Input de Despesas</h1>
-                <div class="view-subtitle">Projeção (YTG) editável + upload CSV de realizado (YTD) por mês</div>
+                <h1 class="view-title">Input Despesas &amp; Renda</h1>
+                <div class="view-subtitle">Projeção (YTG) editável, upload de realizado (YTD) por mês e leitura do holerite em PDF</div>
             </div>
         </div>
 
@@ -8129,7 +8129,7 @@
         e.target.value=v;
     });
     document.getElementById('modalMovOverlay').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
-    // Listeners da aba Input de Despesas (YTD/YTG)
+    // Listeners da aba Input Despesas & Renda (YTD/YTG/holerite)
     // (ytdConfirmBtn e ytdMonth são ligados dentro de setupYtdUpload, com guard)
     document.getElementById('ytgBtnAdd').addEventListener('click', ytgAddRow);
     document.getElementById('ytgBtnSave').addEventListener('click', ytgSave);
