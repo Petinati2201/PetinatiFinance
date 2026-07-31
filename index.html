@@ -8,6 +8,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- pdf.js NÃO é carregado aqui de propósito: são ~350KB usados só na aba de
+         upload de holerite. Carregamento sob demanda em holEnsurePdfJs(). -->
     <script>
         // Fallback: se o jsdelivr foi bloqueado, tenta unpkg
         if (typeof supabase === 'undefined') {
@@ -1629,6 +1631,27 @@
                 <div class="ii-status" id="ytdStatus" style="margin-left:.5rem"></div>
             </div>
         </div>
+
+        <!-- SEÇÃO 3: Upload Holerite PDF -->
+        <div class="card mb3">
+            <div class="card-title" style="margin-bottom:.15rem">Upload Holerite (PDF)</div>
+            <div class="card-sub">Lê o Demonstrativo de Pagamento e grava a linha do mês em <code>remuneracao</code> (upsert por mês — sobrescreve se já existir)</div>
+
+            <div id="holDropZone" style="margin-top:1rem;border:2px dashed var(--border);border-radius:10px;padding:2rem;text-align:center;cursor:pointer;transition:all .2s;background:transparent">
+                <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:.5;margin-bottom:.5rem"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <div style="font-size:14px;color:var(--text);font-weight:600">Arraste o PDF do holerite aqui ou clique para escolher</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:.4rem;line-height:1.5">O mês é lido do campo MÊS/ANO do próprio PDF.<br>Linhas sem código conhecido aparecem para você mapear manualmente antes de gravar.</div>
+                <input type="file" id="holFileInput" accept=".pdf,application/pdf" style="display:none">
+            </div>
+
+            <div id="holPreview" style="margin-top:1rem"></div>
+
+            <div style="display:flex;gap:1rem;align-items:center;margin-top:1rem;flex-wrap:wrap">
+                <button id="holConfirmBtn" class="primary" disabled style="font-family:'Inter',sans-serif;font-size:13px;border-radius:8px;padding:.55rem 1.2rem;border:1px solid var(--accent2);background:var(--accent2);color:#fff;font-weight:600;cursor:pointer;opacity:.5">Gravar em remuneração</button>
+                <button id="holResetBtn" style="font-family:'Inter',sans-serif;font-size:13px;border-radius:8px;padding:.5rem 1rem;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer">Limpar</button>
+                <div class="ii-status" id="holStatus" style="margin-left:.5rem"></div>
+            </div>
+        </div>
     </div>
 
     <!-- VIEW: DOWNLOAD -->
@@ -2425,7 +2448,28 @@
     };
 
     const monthNames = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-    const palette    = ['#2563EB','#7C3AED','#059669','#D97706','#DC2626','#0891B2','#DB2777','#65A30D','#475569','#0D9488'];
+    // Paleta base — 30 tons distintos e legíveis em light/dark.
+    // As 10 primeiras são as cores históricas (mantém identidade dos gráficos antigos).
+    const paletteBase = [
+        '#2563EB','#7C3AED','#059669','#D97706','#DC2626','#0891B2','#DB2777','#65A30D','#475569','#0D9488',
+        '#EA580C','#4F46E5','#16A34A','#BE123C','#0284C7','#9333EA','#CA8A04','#15803D','#B91C1C','#1E40AF',
+        '#A21CAF','#047857','#F59E0B','#6D28D9','#0369A1','#B45309','#BE185D','#3F6212','#334155','#115E59'
+    ];
+    const palette = paletteBase; // retrocompat: usos antigos com índice módulo
+    // Retorna N cores distintas. Até 30 usa a paleta base; acima disso gera tons
+    // adicionais pelo ângulo áureo (137.508°), que maximiza a separação de matiz
+    // e evita repetição visual mesmo com dezenas de categorias.
+    function paletteFor(n) {
+        if (n <= paletteBase.length) return paletteBase.slice(0, n);
+        const out = paletteBase.slice();
+        for (let i = paletteBase.length; i < n; i++) {
+            const h = (i * 137.508) % 360;
+            const s = 58 + (i % 3) * 9;   // 58 / 67 / 76 %
+            const l = 40 + (i % 4) * 7;   // 40 / 47 / 54 / 61 %
+            out.push(`hsl(${h.toFixed(1)}, ${s}%, ${l}%)`);
+        }
+        return out;
+    }
 
     /* ── Registro de TIPOS de investimento ────────────────────────────────────
        Centraliza a lista canônica (defaults + tipos custom criados pelo
@@ -3736,7 +3780,7 @@
 
         charts['groupChart'] = new Chart(document.getElementById('groupChart'), {
             type: 'doughnut',
-            data: { labels, datasets: [{ data: Object.values(data), backgroundColor: palette, borderWidth: 0 }] },
+            data: { labels, datasets: [{ data: Object.values(data), backgroundColor: paletteFor(labels.length), borderWidth: 0 }] },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 plugins: {
@@ -3748,12 +3792,15 @@
                         onClick: makeLegendSyncOnClick(syncVisaoFilter)
                     },
                     tooltip: {
+                        // Os valores já chegam convertidos (cvAgg aplica convert() antes de
+                        // passar pra cá) — NÃO reconverter. O % ignora fatias ocultas.
                         callbacks: {
                             label: ctx => {
-                                const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+                                const ch = ctx.chart;
+                                const total = ctx.dataset.data.reduce((a,b,i) => a + (ch.getDataVisibility(i) ? (b||0) : 0), 0);
                                 const v = ctx.parsed;
-                                const p = total > 0 ? ((v/total)*100).toFixed(1) : 0;
-                                return `${ctx.label}: ${fmtCcy(convert(v,'BRL',rem._k))} (${p}%)`;
+                                const p = total > 0 ? ((v/total)*100).toFixed(1) : '0.0';
+                                return `${ctx.label}: ${fmtCcy(v)} (${p}%)`;
                             }
                         }
                     }
@@ -3884,7 +3931,7 @@
 
         charts['originChart'] = new Chart(document.getElementById('originChart'), {
             type: 'doughnut',
-            data: { labels, datasets: [{ data: Object.values(data), backgroundColor: palette, borderWidth: 0 }] },
+            data: { labels, datasets: [{ data: Object.values(data), backgroundColor: paletteFor(labels.length), borderWidth: 0 }] },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 plugins: {
@@ -3894,12 +3941,14 @@
                         onClick: makeLegendSyncOnClick(syncOrigemFilter)
                     },
                     tooltip: {
+                        // Valores já convertidos por cvAgg — não reconverter.
                         callbacks: {
                             label: ctx => {
-                                const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+                                const ch = ctx.chart;
+                                const total = ctx.dataset.data.reduce((a,b,i) => a + (ch.getDataVisibility(i) ? (b||0) : 0), 0);
                                 const v = ctx.parsed;
-                                const p = total > 0 ? ((v/total)*100).toFixed(1) : 0;
-                                return `${ctx.label}: ${fmtCcy(convert(v,'BRL',rem._k))} (${p}%)`;
+                                const p = total > 0 ? ((v/total)*100).toFixed(1) : '0.0';
+                                return `${ctx.label}: ${fmtCcy(v)} (${p}%)`;
                             }
                         }
                     }
@@ -5497,7 +5546,15 @@
                     if (filterInfo.view === 'visao') renderVisaoExceptPie();
                     else if (filterInfo.view === 'origem') renderOrigemExceptPie();
                 } : undefined,
-                plugins:{legend:{display:false}},
+                plugins:{
+                    legend:{display:false},
+                    // Valores já convertidos por cvAgg — só formatar na moeda corrente
+                    tooltip:{callbacks:{label: ctx => {
+                        const total = ctx.dataset.data.reduce((a,b)=>a+(b||0),0);
+                        const p = total > 0 ? ((ctx.parsed.x/total)*100).toFixed(1) : '0.0';
+                        return `${fmtCcy(ctx.parsed.x)} (${p}% do exibido)`;
+                    }}}
+                },
                 scales:{
                     x:{grid:{color:gc},ticks:{color:tc,font:{size:10,family:'Inter'}}},
                     y:{grid:{display:false},ticks:{color:tc,font:{size:10,family:'Inter'}}}
@@ -6858,6 +6915,7 @@
         }
         renderYtgTable();
         setupYtdUpload();
+        setupHoleriteUpload();
     }
 
     function renderYtgTable() {
@@ -7241,6 +7299,350 @@
             status.className = 'ii-status err';
             btn.disabled = false; btn.style.opacity = '1';
         }
+    }
+
+    /* ════════════════ HOLERITE PDF → remuneracao ════════════════
+       Lê o Demonstrativo de Pagamento (SPAL/FEMSA) via pdf.js, classifica cada
+       linha em VENCIMENTO ou DESCONTO pela COLUNA em que o valor aparece (x
+       relativo à largura da página) — não pelo sinal, que nem todo layout traz —
+       e mapeia código → coluna da tabela `remuneracao`.
+
+       Design deliberado: nada é gravado automaticamente. O preview mostra cada
+       linha com um <select> do campo de destino, e linhas com código desconhecido
+       vêm marcadas como "(ignorar)" para Thiago decidir. Assim o parser degrada
+       de forma segura quando a Coca muda o layout ou aparece uma rubrica nova. */
+
+    // Colunas gravaveis de `remuneracao` (side: V=vencimento, D=desconto)
+    const HOL_FIELDS = [
+        {k:'folha',            l:'Folha (salário)',      side:'V'},
+        {k:'ferias',           l:'Férias',               side:'V'},
+        {k:'decimo_terceiro',  l:'13º Salário',          side:'V'},
+        {k:'plr',              l:'PLR',                  side:'V'},
+        {k:'inss',             l:'INSS',                 side:'D'},
+        {k:'irrf',             l:'IRRF',                 side:'D'},
+        {k:'restaurante',      l:'Restaurante',          side:'D'},
+        {k:'vale_alimentacao', l:'Vale Alimentação',     side:'D'},
+        {k:'seguro_vida',      l:'Seguro de Vida',       side:'D'},
+        {k:'sul_america',      l:'Sul América',          side:'D'},
+        {k:'odontologico',     l:'Odontológico',         side:'D'},
+        {k:'mensalidade_coop', l:'Mensalidade Coop.',    side:'D'},
+        {k:'emprestimo_coop',  l:'Empréstimo Coop.',     side:'D'},
+        {k:'multas_transito',  l:'Multas Trânsito',      side:'D'},
+        {k:'cafe_lanche',      l:'Café/Lanche',          side:'D'},
+        {k:'ferias_abono_imp', l:'Férias/Abono (imp.)',  side:'D'},
+        {k:'desc_adiant',      l:'Desc. Adiantamento',   side:'D'}
+    ];
+
+    // Códigos confirmados no holerite. Chave de maior confiança.
+    const HOL_CODE_MAP = {
+        '1001':'folha', '/314':'inss', '/401':'irrf',
+        '2204':'restaurante', '2210':'multas_transito', '2251':'vale_alimentacao',
+        '2266':'seguro_vida', '2326':'sul_america', '2328':'odontologico',
+        '2359':'mensalidade_coop'
+    };
+
+    // Fallback por descrição (ordem importa: regra mais específica primeiro)
+    const HOL_DESC_RULES = [
+        [/13|d[eé]cimo/i,                            'decimo_terceiro'],
+        [/\bplr\b|particip.*result/i,                'plr'],
+        [/abono.*pecuni|f[ée]rias.*abono|abono.*f[ée]rias/i, 'ferias_abono_imp'],
+        [/f[ée]rias/i,                               'ferias'],
+        [/adiant/i,                                  'desc_adiant'],
+        [/empr[ée]st/i,                              'emprestimo_coop'],
+        [/mensalidade/i,                             'mensalidade_coop'],
+        [/caf[ée]|lanche/i,                          'cafe_lanche'],
+        [/restaurante/i,                             'restaurante'],
+        [/vale.*aliment|aliment/i,                   'vale_alimentacao'],
+        [/seguro.*vida/i,                            'seguro_vida'],
+        [/sul.?am[ée]rica|assist.*m[ée]d|co ?part/i, 'sul_america'],
+        [/odonto/i,                                  'odontologico'],
+        [/multa/i,                                   'multas_transito'],
+        [/inss|previd/i,                             'inss'],
+        [/irrf|imposto.*renda|tributo/i,             'irrf'],
+        [/sal[áa]rio|salario|ordenado/i,             'folha']
+    ];
+
+    let holParsed = null; // {mes:'YYYY-MM', items:[...], totals:{...}}
+
+    function holNorm(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim(); }
+    function holIsNum(s){ return /^-?\s*\d{1,3}(\.\d{3})*,\d{2}$|^-?\s*\d+,\d{2}$|^-?\s*\d+$/.test(String(s||'').trim()); }
+
+    // Quebra items do pdf.js em tokens de palavra, estimando x por proporção de caracteres.
+    // Necessário porque o pdf.js às vezes entrega "TOTAL VENCIMENTOS" num item só.
+    function holTokens(items) {
+        const out = [];
+        items.forEach(it => {
+            const parts = String(it.s).split(/\s+/).filter(Boolean);
+            if (parts.length <= 1) { out.push({ s: it.s.trim(), x: it.x, w: it.w }); return; }
+            const total = it.s.length || 1;
+            let pos = 0;
+            parts.forEach(p => {
+                const idx = it.s.indexOf(p, pos);
+                out.push({ s: p, x: it.x + (idx / total) * it.w, w: (p.length / total) * it.w });
+                pos = idx + p.length;
+            });
+        });
+        return out.sort((a, b) => a.x - b.x);
+    }
+
+    // pdf.js v3 (build UMD — v4+ é ESM-only e não expõe global). Carregado sob
+    // demanda: ~350KB que não fazem sentido no boot de quem só quer ver gráficos.
+    const HOL_PDFJS = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/';
+    let holPdfJsPromise = null;
+    function holEnsurePdfJs() {
+        if (typeof pdfjsLib !== 'undefined') return Promise.resolve();
+        if (holPdfJsPromise) return holPdfJsPromise;
+        holPdfJsPromise = new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = HOL_PDFJS + 'pdf.min.js';
+            s.onload = () => resolve();
+            s.onerror = () => { holPdfJsPromise = null; reject(new Error('não foi possível carregar o pdf.js (CDN bloqueado ou offline)')); };
+            document.head.appendChild(s);
+        });
+        return holPdfJsPromise;
+    }
+
+    // Extrai linhas do PDF: [{y, pw, tokens:[{s,x,w}]}] em ordem de leitura
+    async function holExtractRows(file) {
+        await holEnsurePdfJs();
+        pdfjsLib.GlobalWorkerOptions.workerSrc = HOL_PDFJS + 'pdf.worker.min.js';
+        const buf = await file.arrayBuffer();
+        const doc = await pdfjsLib.getDocument({ data: buf }).promise;
+        const rows = [];
+        for (let p = 1; p <= doc.numPages; p++) {
+            const page = await doc.getPage(p);
+            const vp = page.getViewport({ scale: 1 });
+            const tc = await page.getTextContent();
+            const items = tc.items
+                .filter(it => it.str && it.str.trim())
+                .map(it => ({ s: it.str, x: it.transform[4], y: it.transform[5], w: it.width || 0 }));
+            const buckets = [];
+            items.sort((a, b) => b.y - a.y || a.x - b.x);
+            items.forEach(it => {
+                const b = buckets.find(bb => Math.abs(bb.y - it.y) <= 3);
+                if (b) b.items.push(it); else buckets.push({ y: it.y, items: [it] });
+            });
+            buckets.forEach(b => rows.push({ y: b.y, pw: vp.width, tokens: holTokens(b.items) }));
+        }
+        return rows;
+    }
+
+    // Coluna pelo centro relativo do token: <0.55 ref/descrição, <0.82 vencimento, senão desconto
+    function holCol(tok, pw) {
+        const rel = (tok.x + tok.w / 2) / (pw || 595);
+        if (rel < 0.55) return 'ref';
+        if (rel < 0.82) return 'venc';
+        return 'desc';
+    }
+
+    // Localiza um total pelo rótulo, pegando o número da linha seguinte mais próximo em x
+    function holFindTotal(rows, words) {
+        const W = words.map(holNorm);
+        for (let i = 0; i < rows.length - 1; i++) {
+            const t = rows[i].tokens;
+            for (let j = 0; j <= t.length - W.length; j++) {
+                if (W.every((w, k) => holNorm(t[j + k].s) === w)) {
+                    const first = t[j], last = t[j + W.length - 1];
+                    const cx = (first.x + last.x + last.w) / 2;
+                    const nums = rows[i + 1].tokens.filter(o => holIsNum(o.s))
+                        .map(o => ({ v: Math.abs(iiParseNum(o.s)), cx: o.x + o.w / 2 }));
+                    if (!nums.length) return null;
+                    nums.sort((a, b) => Math.abs(a.cx - cx) - Math.abs(b.cx - cx));
+                    return nums[0].v;
+                }
+            }
+        }
+        return null;
+    }
+
+    function holGuessField(codigo, descricao, side) {
+        if (HOL_CODE_MAP[codigo]) return HOL_CODE_MAP[codigo];
+        for (const [re, k] of HOL_DESC_RULES) {
+            if (re.test(descricao)) {
+                const f = HOL_FIELDS.find(x => x.k === k);
+                if (f && f.side === side) return k;
+            }
+        }
+        return '';
+    }
+
+    async function holParsePdf(file) {
+        const rows = await holExtractRows(file);
+
+        // Mês/ano: token MM/AAAA (CNPJ não casa por causa do -93 e dos 4 dígitos iniciais)
+        let mes = '';
+        for (const r of rows) {
+            for (const t of r.tokens) {
+                const m = String(t.s).trim().match(/^(0[1-9]|1[0-2])\/(20\d{2})$/);
+                if (m) { mes = `${m[2]}-${m[1]}`; break; }
+            }
+            if (mes) break;
+        }
+
+        const items = [];
+        rows.forEach(r => {
+            const t = r.tokens;
+            if (!t.length) return;
+            const cod = String(t[0].s).trim();
+            if (!/^\/?\d{3,4}$/.test(cod)) return;
+            const desc = t.slice(1).filter(o => holCol(o, r.pw) === 'ref' && !holIsNum(o.s))
+                              .map(o => o.s).join(' ').trim();
+            const vencTok = t.find(o => holCol(o, r.pw) === 'venc' && holIsNum(o.s));
+            const descTok = t.find(o => holCol(o, r.pw) === 'desc' && holIsNum(o.s));
+            if (!vencTok && !descTok) return;
+            const side = descTok ? 'D' : 'V';
+            const valor = Math.abs(iiParseNum((descTok || vencTok).s));
+            if (!valor) return;
+            items.push({ codigo: cod, descricao: desc || '(sem descrição)', side, valor,
+                         campo: holGuessField(cod, desc, side) });
+        });
+
+        const totals = {
+            bruto:     holFindTotal(rows, ['TOTAL', 'VENCIMENTOS']),
+            descontos: holFindTotal(rows, ['TOTAL', 'DESCONTOS']),
+            liquido:   holFindTotal(rows, ['TOTAL', 'LIQUIDO'])
+        };
+        return { mes, items, totals };
+    }
+
+    function holRenderPreview() {
+        const box = document.getElementById('holPreview');
+        const btn = document.getElementById('holConfirmBtn');
+        if (!holParsed) { box.innerHTML = ''; btn.disabled = true; btn.style.opacity = '.5'; return; }
+
+        const sumV = holParsed.items.filter(i => i.side === 'V').reduce((a, b) => a + b.valor, 0);
+        const sumD = holParsed.items.filter(i => i.side === 'D').reduce((a, b) => a + b.valor, 0);
+        const t = holParsed.totals;
+        const naoMapeadas = holParsed.items.filter(i => !i.campo).length;
+        const ignoradasV  = holParsed.items.filter(i => i.side === 'V' && !i.campo).reduce((a,b)=>a+b.valor,0);
+        const ignoradasD  = holParsed.items.filter(i => i.side === 'D' && !i.campo).reduce((a,b)=>a+b.valor,0);
+        const fmt = v => (v == null ? '—' : Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2}));
+        const diff = (a, b) => (a == null || b == null) ? null : Math.abs(a - b);
+
+        const chk = (label, doPdf, calc) => {
+            const d = diff(doPdf, calc);
+            const ok = d !== null && d < 0.02;
+            const color = d === null ? 'var(--muted)' : (ok ? '#059669' : '#DC2626');
+            return `<div style="font-size:12px;color:${color}">${ok ? '✓' : (d===null?'·':'⚠')} ${label}: PDF ${fmt(doPdf)} / soma das linhas ${fmt(calc)}</div>`;
+        };
+
+        const opts = side => ['<option value="">(ignorar)</option>']
+            .concat(HOL_FIELDS.filter(f => f.side === side).map(f => `<option value="${f.k}">${f.l}</option>`)).join('');
+
+        box.innerHTML = `
+            <div style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.75rem">
+                <div style="font-size:13px"><b>Mês detectado:</b> ${holParsed.mes ? holParsed.mes.split('-').reverse().join('/') : '<span style="color:#DC2626">não encontrado</span>'}</div>
+                <div style="font-size:13px;color:var(--muted)">${holParsed.items.length} linha(s)</div>
+                ${naoMapeadas ? `<div style="font-size:13px;color:#D97706"><b>${naoMapeadas} sem campo definido</b> — serão ignoradas se você não escolher</div>` : ''}
+            </div>
+            <div style="display:flex;flex-direction:column;gap:.15rem;margin-bottom:.75rem">
+                ${chk('Bruto',     t.bruto,     sumV)}
+                ${chk('Descontos', t.descontos, sumD)}
+                ${chk('Líquido',   t.liquido,   (t.bruto ?? sumV) - (t.descontos ?? sumD))}
+                ${(ignoradasV || ignoradasD) ? `<div style="font-size:12px;color:#D97706">⚠ ${fmt(ignoradasV)} de vencimento e ${fmt(ignoradasD)} de desconto ficarão fora das colunas detalhadas (totais continuam corretos)</div>` : ''}
+            </div>
+            <div style="overflow-x:auto">
+                <table class="ii-table">
+                    <thead><tr><th>Código</th><th>Descrição</th><th>Tipo</th><th style="text-align:right">Valor</th><th>Campo destino</th></tr></thead>
+                    <tbody>${holParsed.items.map((it, i) => `
+                        <tr>
+                            <td class="muted">${it.codigo}</td>
+                            <td>${it.descricao}</td>
+                            <td><span class="badge ${it.side === 'V' ? 'badge-real' : 'badge-proj'}">${it.side === 'V' ? 'Vencimento' : 'Desconto'}</span></td>
+                            <td style="text-align:right">${fmt(it.valor)}</td>
+                            <td><select data-hol-idx="${i}" style="font-family:'Inter',sans-serif;font-size:12px;padding:.25rem .4rem;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">${opts(it.side)}</select></td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+
+        box.querySelectorAll('select[data-hol-idx]').forEach(sel => {
+            const i = Number(sel.dataset.holIdx);
+            sel.value = holParsed.items[i].campo || '';
+            sel.addEventListener('change', () => { holParsed.items[i].campo = sel.value; holRenderPreview(); });
+        });
+
+        const ok = !!holParsed.mes && holParsed.items.length > 0;
+        btn.disabled = !ok; btn.style.opacity = ok ? '1' : '.5';
+    }
+
+    function holReset() {
+        holParsed = null;
+        const p = document.getElementById('holPreview'); if (p) p.innerHTML = '';
+        const b = document.getElementById('holConfirmBtn'); if (b) { b.disabled = true; b.style.opacity = '.5'; }
+        const s = document.getElementById('holStatus'); if (s) { s.textContent = ''; s.className = 'ii-status'; }
+        const f = document.getElementById('holFileInput'); if (f) f.value = '';
+    }
+
+    async function holHandleFile(file) {
+        const status = document.getElementById('holStatus');
+        status.textContent = `Lendo "${file.name}"...`; status.className = 'ii-status';
+        try {
+            holParsed = await holParsePdf(file);
+            if (!holParsed.items.length) throw new Error('Nenhuma rubrica reconhecida — o layout do PDF pode ter mudado.');
+            holRenderPreview();
+            status.textContent = 'Confira o mapeamento antes de gravar.'; status.className = 'ii-status';
+        } catch (err) {
+            console.error(err);
+            holParsed = null; holRenderPreview();
+            status.textContent = 'Erro: ' + (err.message || err); status.className = 'ii-status err';
+        }
+    }
+
+    async function holConfirmSave() {
+        if (!holParsed || !holParsed.mes) return;
+        const status = document.getElementById('holStatus');
+        const btn = document.getElementById('holConfirmBtn');
+        const mesIso = `${holParsed.mes}-01`;
+        const sumV = holParsed.items.filter(i => i.side === 'V').reduce((a, b) => a + b.valor, 0);
+        const sumD = holParsed.items.filter(i => i.side === 'D').reduce((a, b) => a + b.valor, 0);
+
+        const payload = { user_id: null, mes: mesIso };
+        HOL_FIELDS.forEach(f => { payload[f.k] = 0; });
+        holParsed.items.forEach(it => { if (it.campo) payload[it.campo] = (payload[it.campo] || 0) + it.valor; });
+        // Totais: prioriza o que o PDF declara; cai na soma das linhas se ausente
+        payload.bruto     = holParsed.totals.bruto     != null ? holParsed.totals.bruto     : sumV;
+        payload.descontos = holParsed.totals.descontos != null ? holParsed.totals.descontos : sumD;
+        payload.liquido   = holParsed.totals.liquido   != null ? holParsed.totals.liquido   : (payload.bruto - payload.descontos);
+
+        if (!confirm(`Gravar remuneração de ${holParsed.mes.split('-').reverse().join('/')}?\n\nBruto ${payload.bruto.toLocaleString('pt-BR')}\nDescontos ${payload.descontos.toLocaleString('pt-BR')}\nLíquido ${payload.liquido.toLocaleString('pt-BR')}\n\nSe o mês já existir, será SOBRESCRITO.`)) return;
+
+        btn.disabled = true; btn.style.opacity = '.5';
+        status.textContent = 'Gravando...'; status.className = 'ii-status';
+        try {
+            payload.user_id = await iiCurrentUserId();
+            const { error } = await sbClient.from('remuneracao')
+                .upsert(payload, { onConflict: 'user_id,mes' });
+            if (error) throw error;
+            status.textContent = `✓ ${holParsed.mes.split('-').reverse().join('/')} gravado. Recarregue o dashboard para refletir nas análises.`;
+            status.className = 'ii-status ok';
+            holParsed = null;
+            document.getElementById('holPreview').innerHTML = '';
+            document.getElementById('holFileInput').value = '';
+        } catch (err) {
+            console.error(err);
+            status.textContent = 'Erro: ' + (err.message || err); status.className = 'ii-status err';
+            btn.disabled = false; btn.style.opacity = '1';
+        }
+    }
+
+    function setupHoleriteUpload() {
+        const dz = document.getElementById('holDropZone');
+        const inp = document.getElementById('holFileInput');
+        if (!dz || !inp || dz.dataset.bound) return;
+        dz.dataset.bound = '1';
+        dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = 'var(--accent2)'; dz.style.background = 'rgba(0,0,0,.02)'; });
+        dz.addEventListener('dragleave', () => { dz.style.borderColor = 'var(--border)'; dz.style.background = 'transparent'; });
+        dz.addEventListener('drop', e => {
+            e.preventDefault();
+            dz.style.borderColor = 'var(--border)'; dz.style.background = 'transparent';
+            const f = e.dataTransfer.files[0]; if (f) holHandleFile(f);
+        });
+        dz.addEventListener('click', () => inp.click());
+        inp.addEventListener('change', e => { const f = e.target.files[0]; if (f) holHandleFile(f); });
+        document.getElementById('holResetBtn').addEventListener('click', holReset);
+        document.getElementById('holConfirmBtn').addEventListener('click', holConfirmSave);
+        holReset();
     }
 
     /* ════════════════ DÓLAR (PTAX) ════════════════
