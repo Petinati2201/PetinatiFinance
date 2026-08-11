@@ -676,6 +676,28 @@
         }
         .ctrl-select:hover { border-color: var(--accent2) !important; }
 
+        /* Multi-select de meses (sidebar) */
+        .ms-btn { text-align: left; }
+        .ms-btn.multi { border-color: var(--sb-accent) !important; }
+        .ms-panel { display: none; margin-top: .45rem; border: 1px solid var(--sb-border); border-radius: 8px; padding: .5rem; background: var(--sb-surface); }
+        .ms-panel.open { display: block; }
+        .ms-quick { display: flex; gap: .3rem; flex-wrap: wrap; margin-bottom: .5rem; }
+        .ms-quick button {
+            font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 600;
+            letter-spacing: .04em; text-transform: uppercase;
+            padding: .22rem .45rem; border-radius: 5px; cursor: pointer;
+            border: 1px solid var(--sb-border); background: transparent; color: var(--sb-muted);
+        }
+        .ms-quick button:hover { color: var(--sb-text); border-color: var(--sb-accent); }
+        .ms-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .18rem; }
+        .ms-grid label {
+            display: flex; align-items: center; gap: .3rem;
+            font-size: 11px; color: var(--sb-text); cursor: pointer;
+            padding: .18rem .2rem; border-radius: 5px;
+        }
+        .ms-grid label:hover { background: rgba(255,255,255,.05); }
+        .ms-grid input { accent-color: var(--sb-accent); width: 12px; height: 12px; cursor: pointer; }
+
         #themeToggle {
             width: 100%;
             padding: .5rem .75rem;
@@ -1376,7 +1398,18 @@
             </div>
             <div>
                 <span class="sb-ctrl-label">Mês</span>
-                <select id="monthFilter" class="ctrl-select"></select>
+                <button type="button" id="monthMultiBtn" class="ctrl-select ms-btn">—</button>
+                <div class="ms-panel" id="monthMultiPanel">
+                    <div class="ms-quick">
+                        <button type="button" data-msq="all">Todos</button>
+                        <button type="button" data-msq="ytd">YTD</button>
+                        <button type="button" data-msq="none">Limpar</button>
+                    </div>
+                    <div class="ms-grid" id="monthMultiGrid"></div>
+                </div>
+                <!-- Select legado: mantido oculto e sincronizado com o mês de referência
+                     (último mês selecionado). Telas de input dependem dele. -->
+                <select id="monthFilter" class="ctrl-select" style="display:none"></select>
             </div>
             <div>
                 <span class="sb-ctrl-label">Moeda</span>
@@ -1599,6 +1632,7 @@
                             <th>Origem</th>
                             <th>Evento</th>
                             <th class="calc" style="text-align:right">Valor BRL</th>
+                            <th style="width:48px"></th>
                         </tr>
                     </thead>
                     <tbody id="ytgBody"></tbody>
@@ -2305,6 +2339,19 @@
                 </div>
                 <span class="detail-chevron" aria-hidden="true">▾</span>
             </summary>
+            <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;margin-top:.85rem">
+                <div style="position:relative;flex:1;min-width:220px;max-width:420px">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                         style="position:absolute;left:.6rem;top:50%;transform:translateY(-50%);opacity:.45;pointer-events:none">
+                        <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input type="search" id="detailSearch" placeholder="Pesquisar lançamento, origem, grupo…" autocomplete="off"
+                           style="width:100%;box-sizing:border-box;font-family:Inter,sans-serif;font-size:13px;padding:.5rem .65rem .5rem 2rem;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)">
+                </div>
+                <button type="button" id="detailSearchClear"
+                        style="font-family:Inter,sans-serif;font-size:12px;border-radius:8px;padding:.45rem .8rem;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer">Limpar</button>
+                <div id="detailSearchInfo" style="font-size:12px;color:var(--muted);margin-left:auto"></div>
+            </div>
             <div style="overflow-x:auto;margin-top:.75rem">
                 <table class="data-table">
                     <thead>
@@ -3258,6 +3305,88 @@
         location.reload();
     };
 
+    /* ── Multi-seleção de meses ──────────────────────────────────────────────
+       selectedMonths guarda os meses (1-12) marcados. O <select id="monthFilter">
+       continua existindo, oculto, sempre apontando para o MÊS DE REFERÊNCIA
+       (o maior mês selecionado). Telas que precisam de um mês único —
+       Input Investimentos, Movimentações, Holerite — leem esse select e por isso
+       seguem funcionando sem alteração. */
+    let selectedMonths = [new Date().getMonth() + 1];
+
+    function getSelectedMonths() {
+        // Seleção vazia é um estado legítimo: as views mostram "—" em vez de
+        // cair silenciosamente num mês qualquer.
+        return selectedMonths.filter(m => m >= 1 && m <= 12).sort((a,b)=>a-b);
+    }
+    function refMonth() {
+        const ms = getSelectedMonths();
+        return ms.length ? ms[ms.length - 1] : 0;
+    }
+    function monthKeysFor(year) {
+        return getSelectedMonths().map(m => `${year}-${String(m).padStart(2,'0')}`);
+    }
+
+    function msLabel() {
+        const ms = getSelectedMonths();
+        if (!ms.length) return 'Nenhum mês';
+        if (ms.length === 1) return monthNames[ms[0]-1];
+        if (ms.length === 12) return 'Ano inteiro (12)';
+        // Detecta intervalo contíguo para um rótulo mais curto
+        const contiguo = ms.every((m,i) => i === 0 || m === ms[i-1] + 1);
+        if (contiguo) return `${monthNames[ms[0]-1]}–${monthNames[ms[ms.length-1]-1]} (${ms.length})`;
+        return `${ms.length} meses`;
+    }
+
+    function msSyncUI() {
+        const btn = document.getElementById('monthMultiBtn');
+        const ms = getSelectedMonths();
+        if (btn) {
+            btn.textContent = msLabel();
+            btn.classList.toggle('multi', ms.length > 1);
+        }
+        document.querySelectorAll('#monthMultiGrid input[type=checkbox]').forEach(cb => {
+            cb.checked = ms.includes(Number(cb.value));
+        });
+        // Mantém o select legado no mês de referência
+        const sel = document.getElementById('monthFilter');
+        if (sel && ms.length) sel.value = String(ms[ms.length - 1]);
+    }
+
+    function msApply() {
+        msSyncUI();
+        onRibbonChange();
+    }
+
+    function msBuild() {
+        const grid = document.getElementById('monthMultiGrid');
+        if (!grid || grid.dataset.built) return;
+        grid.dataset.built = '1';
+        grid.innerHTML = monthNames.map((m,i) =>
+            `<label><input type="checkbox" value="${i+1}"><span>${m}</span></label>`
+        ).join('');
+        grid.addEventListener('change', e => {
+            const cb = e.target.closest('input[type=checkbox]'); if (!cb) return;
+            const v = Number(cb.value);
+            if (cb.checked) { if (!selectedMonths.includes(v)) selectedMonths.push(v); }
+            else selectedMonths = selectedMonths.filter(x => x !== v);
+            selectedMonths.sort((a,b)=>a-b);
+            msApply();
+        });
+        document.getElementById('monthMultiBtn').addEventListener('click', () => {
+            document.getElementById('monthMultiPanel').classList.toggle('open');
+        });
+        document.querySelectorAll('#monthMultiPanel .ms-quick button').forEach(b => {
+            b.addEventListener('click', () => {
+                const k = b.dataset.msq;
+                if (k === 'all')  selectedMonths = monthNames.map((_,i)=>i+1);
+                if (k === 'none') selectedMonths = [];
+                if (k === 'ytd')  selectedMonths = Array.from({length:new Date().getMonth()+1},(_,i)=>i+1);
+                msApply();
+            });
+        });
+        msSyncUI();
+    }
+
     function onRibbonChange() {
         // Se estiver numa tela de entrada de dados, ela depende do mês da ribbon.
         if (currentView === 'inputinv') { renderInputInv(); return; }
@@ -3266,6 +3395,21 @@
     }
     document.getElementById('yearFilter').onchange  = onRibbonChange;
     document.getElementById('monthFilter').onchange = onRibbonChange;
+
+    // Busca textual no Detalhamento (não recalcula charts/KPIs — só a tabela)
+    (function bindDetailSearch(){
+        const inp = document.getElementById('detailSearch');
+        const clr = document.getElementById('detailSearchClear');
+        if (inp) inp.addEventListener('input', e => {
+            detailSearchTerm = e.target.value || '';
+            renderDetailTable();
+        });
+        if (clr) clr.addEventListener('click', () => {
+            detailSearchTerm = '';
+            if (inp) { inp.value = ''; inp.focus(); }
+            renderDetailTable();
+        });
+    })();
 
     // Espelho mobile do tema
     document.getElementById('mThemeToggle').onclick = () => {
@@ -3550,6 +3694,8 @@
             const currentMonth = new Date().getMonth()+1;
             mSelect.value = String(currentMonth);
         }
+        msBuild();
+        msSyncUI();
     }
 
     /**
@@ -3598,6 +3744,50 @@
         return { liquido: bruto + resgate, bruto, resgate };
     }
 
+    /* ── Helpers multi-mês ────────────────────────────────────────────────
+       Toda soma exibida converte CADA linha pela PTAX do próprio mês dela.
+       Para 1 mês o resultado é idêntico ao anterior (convert é linear); para
+       vários meses evita usar uma PTAX única e distorcer o total em USD. */
+    function sumDisp(rows) {
+        return rows.reduce((a,b) => a + convert(b._v, 'BRL', b._k), 0);
+    }
+    function aggregateDisp(data, field) {
+        const res = {};
+        data.forEach(r => {
+            let k = r[field];
+            if (!k || String(k).trim() === '') k = 'Não Classificado';
+            res[k] = (res[k] || 0) + convert(r._v, 'BRL', r._k);
+        });
+        return res;
+    }
+    // Soma o "esperado" (média móvel) de cada mês selecionado. null se nenhum mês tem base.
+    function expectedMMForKeys(keys) {
+        let acc = null;
+        keys.forEach(k => {
+            const e = getMediaMovelExpectedForMonth(k);
+            if (e !== null) acc = (acc || 0) + convert(e, 'BRL', k);
+        });
+        return acc;
+    }
+    function investidoForKeys(keys) {
+        return keys.reduce((acc, k) => {
+            const i = getInvestidoMes(k);
+            acc.liquido += convert(i.liquido, 'BRL', k);
+            acc.bruto   += convert(i.bruto,   'BRL', k);
+            acc.resgate += convert(i.resgate, 'BRL', k);
+            return acc;
+        }, { liquido: 0, bruto: 0, resgate: 0 });
+    }
+    // Nenhum mês marcado: zera KPIs e tabela em vez de deixar números antigos na tela.
+    function renderEmptySelection() {
+        ['kpiReal','kpiAvgTx','kpiTotal','kpiInv','kpiBruto','kpiLiquido','kpiDespesa','kpiSaldo','kpiFinancedVal']
+            .forEach(id => { const el = document.getElementById(id); if (el) el.innerText = '—'; });
+        ['kpiTxCount'].forEach(id => { const el = document.getElementById(id); if (el) el.innerText = '0'; });
+        ['kpiPoupanca','kpiFinanced'].forEach(id => { const el = document.getElementById(id); if (el) el.innerText = '—'; });
+        const tg = document.getElementById('topGroup'); if (tg) tg.innerText = '---';
+        renderTableWithData([]);
+    }
+
     function renderAll() {
         // Atualiza visibilidade dos chips de reset antes de renderizar
         updateResetChips();
@@ -3614,13 +3804,14 @@
             return;
         }
         const year=Number(document.getElementById('yearFilter').value);
-        const month=Number(document.getElementById('monthFilter').value);
-        if (!year) return;
-
+        const months=getSelectedMonths();
+        if (!year || !months.length) { renderEmptySelection(); return; }
+        const month=months[months.length-1];              // mês de referência
+        const keys=months.map(m=>`${year}-${String(m).padStart(2,'0')}`);
+        const keySet=new Set(keys);
         const key=`${year}-${String(month).padStart(2,'0')}`;
-        if (!month || month < 1 || month > 12) return;
-        const allReal=realizadoData.filter(r=>r._k===key);
-        const allProj=projecaoData.filter(r=>r._k===key);
+        const allReal=realizadoData.filter(r=>keySet.has(r._k));
+        const allProj=projecaoData.filter(r=>keySet.has(r._k));
         const allCombined=[...allReal,...allProj];
 
         // APLICAÇÃO DE FILTROS (cross-filter)
@@ -3641,33 +3832,33 @@
         }
         combined = [...filteredReal, ...filteredProj];
 
+        // Somas em BRL nativo (usadas para razões) e na moeda de exibição
+        // (cada linha convertida pela PTAX do SEU mês — correto para multi-mês).
         const sumR = filteredReal.reduce((a,b)=>a+b._v,0);
         const sumP = filteredProj.reduce((a,b)=>a+b._v,0);
+        const sumRD = sumDisp(filteredReal);
+        const sumPD = sumDisp(filteredProj);
 
         /* Tabela — reflete os filtros */
         renderTableWithData(combined);
 
-        // Conversor local: valores de despesa são nativos em BRL, convertidos pela PTAX do mês `key`
-        const cv = v => convert(v, 'BRL', key);
         const fmtD = v => fmtCcy(v);
-        // Converte um objeto agregado {label: valorBRL} para a moeda de exibição
-        const cvAgg = obj => { const o={}; for (const kk in obj) o[kk]=cv(obj[kk]); return o; };
 
         /* KPIs — também refletem os filtros */
         const txCount = filteredReal.length;
-        const avgTx   = txCount > 0 ? sumR / txCount : 0;
-        document.getElementById('kpiReal').innerText    = fmtD(cv(sumR));
-        document.getElementById('kpiAvgTx').innerText   = fmtD(cv(avgTx));
+        const avgTxD  = txCount > 0 ? sumRD / txCount : 0;
+        document.getElementById('kpiReal').innerText    = fmtD(sumRD);
+        document.getElementById('kpiAvgTx').innerText   = fmtD(avgTxD);
         document.getElementById('kpiTxCount').innerText = txCount.toLocaleString('pt-BR');
-        const expectedMM = getMediaMovelExpectedForMonth(key);
+        const expectedMM = expectedMMForKeys(keys);
         document.getElementById('kpiTotal').innerText   = (expectedMM === null)
             ? '—'
-            : fmtD(cv(expectedMM));
-        const inv = getInvestidoMes(key);
-        document.getElementById('kpiInv').innerText = fmtD(cv(inv.liquido));
+            : fmtD(expectedMM);
+        const inv = investidoForKeys(keys);
+        document.getElementById('kpiInv').innerText = fmtD(inv.liquido);
         document.getElementById('kpiInvSub').innerText = inv.resgate < 0
-            ? `Aporte ${fmtD(cv(inv.bruto))} − Resgate ${fmtD(cv(Math.abs(inv.resgate)))}`
-            : 'Aportes do mês (líquido de resgates)';
+            ? `Aporte ${fmtD(inv.bruto)} − Resgate ${fmtD(Math.abs(inv.resgate))}`
+            : (months.length > 1 ? 'Aportes do período (líquido de resgates)' : 'Aportes do mês (líquido de resgates)');
         const grpData=aggregate(combined,'GRUPO');
         const top=Object.entries(grpData).sort((a,b)=>b[1]-a[1])[0];
         document.getElementById('topGroup').innerText=top?top[0]:'---';
@@ -3675,14 +3866,14 @@
         if (currentView==='visao') {
             renderMainChart();
             // Pie recebe TODOS os grupos (sem filtro aplicado) — Chart.js gerencia hidden internamente
-            renderGroupPie(cvAgg(aggregate([...allReal, ...allProj], 'GRUPO')));
+            renderGroupPie(aggregateDisp([...allReal, ...allProj], 'GRUPO'));
             // Restaura estado hidden após recriar a pie (ex: quando filtros persistem entre renders)
             restoreHiddenFromFilter('groupChart', (activeFilters.visao || {})['GRUPO']);
-            renderBar('sub1Chart', cvAgg(aggregate(combined, 'SUBGRUPO 1')));
-            renderBar('sub2Chart', cvAgg(aggregate(combined, 'SUBGRUPO 2')));
+            renderBar('sub1Chart', aggregateDisp(combined, 'SUBGRUPO 1'));
+            renderBar('sub2Chart', aggregateDisp(combined, 'SUBGRUPO 2'));
             // No mobile, o rosca de Origem vive dentro de Despesas — renderiza aqui também
             if (window.innerWidth <= MOBILE_BP) {
-                renderOriginPie(cvAgg(aggregate(allReal, 'ORIGEM DA COMPRA')));
+                renderOriginPie(aggregateDisp(allReal, 'ORIGEM DA COMPRA'));
                 restoreHiddenFromFilter('originChart', (activeFilters.origem || {})['ORIGEM DA COMPRA']);
             }
         }
@@ -3694,27 +3885,27 @@
             });
             const financedVal=financedData.reduce((a,b)=>a+b._v,0);
             const percFinanced=sumR>0?(financedVal/sumR)*100:0;
-            document.getElementById('kpiFinancedVal').innerText=fmtD(cv(financedVal));
+            document.getElementById('kpiFinancedVal').innerText=fmtD(sumDisp(financedData));
             document.getElementById('kpiFinanced').innerText=percFinanced.toFixed(1)+'%';
             // Pie de Origem também recebe dados completos
-            renderOriginPie(cvAgg(aggregate(allReal,'ORIGEM DA COMPRA')));
+            renderOriginPie(aggregateDisp(allReal,'ORIGEM DA COMPRA'));
             restoreHiddenFromFilter('originChart', (activeFilters.origem || {})['ORIGEM DA COMPRA']);
-            renderBar('originBarChart', cvAgg(aggregate(filteredReal, 'LANÇAMENTO')));
+            renderBar('originBarChart', aggregateDisp(filteredReal, 'LANÇAMENTO'));
         }
 
         if (currentView==='fluxo') {
             // Fluxo: tudo convertido pela PTAX do mês para o saldo (líquido − despesa) fazer sentido na moeda exibida
-            const remMes = remuneracaoData.find(r => r._k === key);
-            const bruto   = remMes ? remMes._bruto   : 0;
-            const liquido = remMes ? remMes._liquido : 0;
-            const despesa = sumR + sumP;
+            const remSel  = remuneracaoData.filter(r => keySet.has(r._k));
+            const bruto   = remSel.reduce((a,b)=>a+convert(b._bruto,  'BRL', b._k), 0);
+            const liquido = remSel.reduce((a,b)=>a+convert(b._liquido,'BRL', b._k), 0);
+            const despesa = sumRD + sumPD;
             const saldo   = liquido - despesa;
             const poupanca = liquido > 0 ? (saldo / liquido) * 100 : 0;
 
-            document.getElementById('kpiBruto').innerText    = fmtD(cv(bruto));
-            document.getElementById('kpiLiquido').innerText  = fmtD(cv(liquido));
-            document.getElementById('kpiDespesa').innerText  = fmtD(cv(despesa));
-            document.getElementById('kpiSaldo').innerText    = fmtD(cv(saldo));
+            document.getElementById('kpiBruto').innerText    = fmtD(bruto);
+            document.getElementById('kpiLiquido').innerText  = fmtD(liquido);
+            document.getElementById('kpiDespesa').innerText  = fmtD(despesa);
+            document.getElementById('kpiSaldo').innerText    = fmtD(saldo);
             document.getElementById('kpiPoupanca').innerText = poupanca.toFixed(1) + '%';
 
             // YTD no ano selecionado (convertido pela PTAX do mês de cada parcela)
@@ -3865,47 +4056,87 @@
     // Redesenha tudo da view Visão Geral, pulando o donut de Grupos
     function renderVisaoExceptPie() {
         const year=Number(document.getElementById('yearFilter').value);
-        const month=Number(document.getElementById('monthFilter').value);
-        if (!year) return;
-        const key=`${year}-${String(month).padStart(2,'0')}`;
-        const allReal=realizadoData.filter(r=>r._k===key);
-        const allProj=projecaoData.filter(r=>r._k===key);
+        const months=getSelectedMonths();
+        if (!year || !months.length) { renderEmptySelection(); return; }
+        const keys=months.map(m=>`${year}-${String(m).padStart(2,'0')}`);
+        const keySet=new Set(keys);
+        const allReal=realizadoData.filter(r=>keySet.has(r._k));
+        const allProj=projecaoData.filter(r=>keySet.has(r._k));
         const fields = ['GRUPO', 'SUBGRUPO 1', 'SUBGRUPO 2'];
         const filteredReal = allReal.filter(r => !isRowHidden('visao', r, fields));
         const filteredProj = allProj.filter(r => !isRowHidden('visao', r, fields));
         const combined = [...filteredReal, ...filteredProj];
-        const sumR = filteredReal.reduce((a,b)=>a+b._v,0);
-        const sumP = filteredProj.reduce((a,b)=>a+b._v,0);
+        const sumRD = sumDisp(filteredReal);
 
         const txCount = filteredReal.length;
-        const avgTx   = txCount > 0 ? sumR / txCount : 0;
-        document.getElementById('kpiReal').innerText    = sumR.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-        document.getElementById('kpiAvgTx').innerText   = avgTx.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+        const avgTxD  = txCount > 0 ? sumRD / txCount : 0;
+        document.getElementById('kpiReal').innerText    = fmtCcy(sumRD);
+        document.getElementById('kpiAvgTx').innerText   = fmtCcy(avgTxD);
         document.getElementById('kpiTxCount').innerText = txCount.toLocaleString('pt-BR');
-        const expectedMM = getMediaMovelExpectedForMonth(key);
-        document.getElementById('kpiTotal').innerText   = (expectedMM === null)
-            ? '—'
-            : expectedMM.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-        const inv = getInvestidoMes(key);
-        document.getElementById('kpiInv').innerText = inv.liquido.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+        const expectedMM = expectedMMForKeys(keys);
+        document.getElementById('kpiTotal').innerText   = (expectedMM === null) ? '—' : fmtCcy(expectedMM);
+        const inv = investidoForKeys(keys);
+        document.getElementById('kpiInv').innerText = fmtCcy(inv.liquido);
         document.getElementById('kpiInvSub').innerText = inv.resgate < 0
-            ? `Aporte ${inv.bruto.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} − Resgate ${Math.abs(inv.resgate).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}`
-            : 'Aportes do mês (líquido de resgates)';
+            ? `Aporte ${fmtCcy(inv.bruto)} − Resgate ${fmtCcy(Math.abs(inv.resgate))}`
+            : (months.length > 1 ? 'Aportes do período (líquido de resgates)' : 'Aportes do mês (líquido de resgates)');
         const grpData=aggregate(combined,'GRUPO');
         const top=Object.entries(grpData).sort((a,b)=>b[1]-a[1])[0];
         document.getElementById('topGroup').innerText=top?top[0]:'---';
 
-        renderBar('sub1Chart', aggregate(combined, 'SUBGRUPO 1'));
-        renderBar('sub2Chart', aggregate(combined, 'SUBGRUPO 2'));
+        renderBar('sub1Chart', aggregateDisp(combined, 'SUBGRUPO 1'));
+        renderBar('sub2Chart', aggregateDisp(combined, 'SUBGRUPO 2'));
         renderTableWithData(combined);
         updateResetChips();
     }
 
+    // Guarda o último conjunto renderizado para que a busca textual possa
+    // re-filtrar sem recalcular todo o pipeline de filtros/charts.
+    let detailRowsCache = [];
+    let detailSearchTerm = '';
+
+    // Normaliza para busca: minúsculas + remove acentos.
+    function detailNorm(v) {
+        return String(v == null ? '' : v)
+            .toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function detailMatches(r, term) {
+        if (!term) return true;
+        const hay = detailNorm([
+            r['DATA'], r['DATA COMPETENCIA'], r['DATA INICIO'],
+            r['LANÇAMENTO'], r['ORIGEM DA COMPRA'], r['GRUPO'],
+            r['SUBGRUPO 1'], r['SUBGRUPO 2'], r['EVENTO'],
+            r._type === 'REAL' ? 'real' : 'proj',
+            r._v
+        ].join(' '));
+        // Todos os termos separados por espaço precisam bater (AND).
+        return term.split(/\s+/).filter(Boolean).every(t => hay.includes(t));
+    }
+
     function renderTableWithData(combined) {
+        detailRowsCache = combined || [];
+        renderDetailTable();
+    }
+
+    function renderDetailTable() {
+        const term = detailNorm(detailSearchTerm).trim();
+        const base = detailRowsCache;
+        const combined = term ? base.filter(r => detailMatches(r, term)) : base;
         const sorted=[...combined].sort((a,b)=>b._v-a._v);
+
+        const info = document.getElementById('detailSearchInfo');
+        if (info) {
+            const totalDisp = sorted.reduce((a,b)=>a+convert(b._v,'BRL',b._k),0);
+            info.textContent = term
+                ? `${sorted.length} de ${base.length} lançamentos · ${fmtCcy(totalDisp)}`
+                : `${base.length} lançamentos · ${fmtCcy(totalDisp)}`;
+        }
+
         let html;
         if (sorted.length===0) {
-            html=`<tr><td colspan="5" style="padding:2rem;text-align:center;color:var(--muted)">Nenhum dado para este período.</td></tr>`;
+            html=`<tr><td colspan="5" style="padding:2rem;text-align:center;color:var(--muted)">${term ? 'Nenhum lançamento corresponde à busca.' : 'Nenhum dado para este período.'}</td></tr>`;
         } else {
             html=sorted.map(r=>{
                 const dataStr=r['DATA']||r['DATA COMPETENCIA']||r['DATA INICIO']||'-';
@@ -3977,11 +4208,11 @@
 
     function renderOrigemExceptPie() {
         const year=Number(document.getElementById('yearFilter').value);
-        const month=Number(document.getElementById('monthFilter').value);
-        if (!year) return;
-        const key=`${year}-${String(month).padStart(2,'0')}`;
-        const allReal=realizadoData.filter(r=>r._k===key);
-        const allProj=projecaoData.filter(r=>r._k===key);
+        const months=getSelectedMonths();
+        if (!year || !months.length) { renderEmptySelection(); return; }
+        const keySet=new Set(months.map(m=>`${year}-${String(m).padStart(2,'0')}`));
+        const allReal=realizadoData.filter(r=>keySet.has(r._k));
+        const allProj=projecaoData.filter(r=>keySet.has(r._k));
         const fields = ['ORIGEM DA COMPRA', 'LANÇAMENTO'];
         const filteredReal = allReal.filter(r => !isRowHidden('origem', r, fields));
         const filteredProj = allProj.filter(r => !isRowHidden('origem', r, fields));
@@ -3994,10 +4225,10 @@
         });
         const financedVal=financedData.reduce((a,b)=>a+b._v,0);
         const percFinanced=sumR>0?(financedVal/sumR)*100:0;
-        document.getElementById('kpiFinancedVal').innerText=financedVal.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+        document.getElementById('kpiFinancedVal').innerText=fmtCcy(sumDisp(financedData));
         document.getElementById('kpiFinanced').innerText=percFinanced.toFixed(1)+'%';
 
-        renderBar('originBarChart', aggregate(filteredReal, 'LANÇAMENTO'));
+        renderBar('originBarChart', aggregateDisp(filteredReal, 'LANÇAMENTO'));
         renderTableWithData(combined);
         updateResetChips();
     }
@@ -6857,6 +7088,7 @@
             INSERT das linhas do CSV. Destrutivo, irrecuperável. */
     let ytgRawRows = [];
     let ytgRows = [];
+    let ytgDeleted = [];   // ids reais a apagar no Supabase ao gravar
     let ytgTmpCounter = 0;
     let ytdCsvParsed = null;
 
@@ -6901,6 +7133,7 @@
             subgrupo_2: r.subgrupo_2 || '',
             _dirty: false, _new: false
         }));
+        ytgDeleted = [];
     }
 
     async function renderInputYtd() {
@@ -6927,7 +7160,7 @@
             (a.tipo || '').localeCompare(b.tipo || '')
         );
         if (!sortedRows.length) {
-            tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Nenhuma projeção cadastrada. Clique em "+ Adicionar linha".</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" class="empty-state">Nenhuma projeção cadastrada. Clique em "+ Adicionar linha".</td></tr>';
         } else {
             sortedRows.forEach(row => tbody.appendChild(buildYtgRow(row)));
         }
@@ -6968,7 +7201,30 @@
             td.appendChild(inp);
             tr.appendChild(td);
         });
+        // Ação remover — mesmo padrão da aba de Investimentos
+        const tdAct = document.createElement('td');
+        tdAct.style.textAlign = 'right';
+        const delBtn = document.createElement('button');
+        delBtn.className = 'act-discard';
+        delBtn.textContent = '✕';
+        delBtn.title = 'Remover linha';
+        delBtn.addEventListener('click', () => ytgDeleteRow(row.id || row._tmp));
+        tdAct.appendChild(delBtn);
+        tr.appendChild(tdAct);
         return tr;
+    }
+
+    function ytgDeleteRow(id) {
+        const row = ytgRowByAnyId(id); if (!row) return;
+        if (row.id) {
+            // Linha já persistida: confirma, pois só some do banco ao clicar em "Gravar".
+            const ref = row.lancamento ? `"${row.lancamento}"` : 'esta linha';
+            if (!confirm(`Excluir ${ref}? A remoção é efetivada ao clicar em "Gravar".`)) return;
+            ytgDeleted.push(row.id);
+        }
+        // Linha nova (ainda não salva): remove direto.
+        ytgRows = ytgRows.filter(r => r !== row);
+        renderYtgTable();
     }
 
     function ytgOnEdit(e) {
@@ -7001,16 +7257,17 @@
     function ytgUpdateKpis() {
         const total = ytgRows.reduce((a,r) => a + (Number(r.valor_brl) || 0), 0);
         const linhas = ytgRows.length;
-        const pend = ytgRows.filter(r => r._dirty || r._new).length;
+        const pend = ytgRows.filter(r => r._dirty || r._new).length + ytgDeleted.length;
         const el = document.getElementById('ytgKpis');
         if (el) el.innerHTML =
             `<div>Linhas: <strong style="color:var(--text)">${linhas}</strong></div>
              <div>Soma valor BRL: <strong style="color:var(--text)">${iiFmtNum(total)}</strong></div>
-             <div>Pendentes: <strong style="color:var(--text)">${pend}</strong></div>`;
+             <div>Pendentes: <strong style="color:var(--text)">${pend}</strong></div>` +
+            (ytgDeleted.length ? `<div style="color:#dc2626">A excluir: <strong>${ytgDeleted.length}</strong></div>` : '');
     }
     function ytgUpdateSaveBtn() {
         const btn = document.getElementById('ytgBtnSave');
-        if (btn) btn.disabled = ytgRows.filter(r => r._dirty || r._new).length === 0;
+        if (btn) btn.disabled = (ytgRows.filter(r => r._dirty || r._new).length + ytgDeleted.length) === 0;
     }
 
     function ytgToPayload(r, uid) {
@@ -7058,10 +7315,15 @@
                 const { error } = await sbClient.from('projecao_ytg').update(ytgToPayload(r, uid)).eq('id', r.id);
                 if (error) throw error;
             }
+            const removidos = ytgDeleted.length;
+            if (removidos) {
+                const { error } = await sbClient.from('projecao_ytg').delete().in('id', ytgDeleted);
+                if (error) throw error;
+            }
             await loadYtgRaw();
             ytgSyncFromRaw();
             renderYtgTable();
-            status.textContent = `✓ ${novos.length} criada(s), ${editados.length} atualizada(s).`;
+            status.textContent = `✓ ${novos.length} criada(s), ${editados.length} atualizada(s), ${removidos} excluída(s).`;
             status.className = 'ii-status ok';
             setTimeout(() => { if (status.textContent.startsWith('✓')) { status.textContent = ''; status.className = 'ii-status'; } }, 4000);
         } catch (err) {
