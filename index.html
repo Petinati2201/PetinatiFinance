@@ -1267,6 +1267,62 @@
     .modal-btn-cancel { background:var(--bg); color:var(--muted); }
     .modal-btn-confirm { background:#059669; color:#fff; border-color:#059669; }
     .modal-btn-confirm:hover { background:#047857; }
+    /* ══ SWITCH ══ */
+    .sw-wrap { display:flex; align-items:center; gap:.55rem; }
+    .sw {
+        position:relative; width:38px; height:21px; flex:0 0 auto; border-radius:999px;
+        background:var(--border); cursor:pointer; transition:background .2s; border:none; padding:0;
+    }
+    .sw::after {
+        content:''; position:absolute; top:2px; left:2px; width:17px; height:17px; border-radius:50%;
+        background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:transform .2s;
+    }
+    .sw.on { background:#DB2777; }
+    .sw.on::after { transform:translateX(17px); }
+    .sw-label { font-size:12px; color:var(--muted); font-weight:500; user-select:none; cursor:pointer; }
+    .sw-label.on { color:var(--text); }
+
+    /* ══ CASAMENTO ══ */
+    .cas-toolbar { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; margin-bottom:.9rem; }
+    .cas-btn {
+        font-family:'Inter',sans-serif; font-size:12px; font-weight:600; padding:.45rem .85rem;
+        border-radius:8px; border:1px solid var(--border); background:var(--surface);
+        color:var(--text); cursor:pointer; transition:.15s;
+    }
+    .cas-btn:hover { border-color:#DB2777; color:#DB2777; }
+    .cas-grid-wrap { overflow-x:auto; max-height:70vh; }
+    table.cas-grid { border-collapse:separate; border-spacing:0; width:100%; font-size:12px; }
+    table.cas-grid th, table.cas-grid td {
+        padding:.45rem .55rem; border-bottom:1px solid var(--border); white-space:nowrap; text-align:right;
+    }
+    table.cas-grid th {
+        font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted);
+        font-weight:600; position:sticky; top:0; background:var(--surface); z-index:2;
+    }
+    table.cas-grid th.cas-mes, table.cas-grid td.cas-mes {
+        text-align:left; position:sticky; left:0; background:var(--surface); font-weight:600; z-index:1;
+    }
+    table.cas-grid th.cas-mes { z-index:3; }
+    table.cas-grid tr.cas-total td { border-top:2px solid var(--border); font-weight:700; border-bottom:none; }
+    table.cas-grid tr.cas-now td.cas-mes { color:#DB2777; }
+    .cas-cell { cursor:pointer; position:relative; }
+    .cas-cell:hover { background:rgba(219,39,119,.08); }
+    .cas-cell .cv { display:block; line-height:1.25; }
+    .cas-cell .cbar { display:block; height:3px; border-radius:2px; background:var(--border); margin-top:3px; overflow:hidden; }
+    .cas-cell .cbar i { display:block; height:100%; background:#059669; }
+    .cas-cell.part .cbar i { background:#D97706; }
+    .cas-cell.zero .cv { color:var(--muted); opacity:.45; }
+    .cas-cell .cnote { position:absolute; top:2px; right:2px; width:0; height:0; border-top:6px solid #DB2777; border-left:6px solid transparent; }
+    .cas-th-name { cursor:pointer; }
+    .cas-th-name:hover { color:#DB2777; }
+    td.cas-sum, th.cas-sum { background:rgba(0,0,0,.03); }
+    body.dark-mode td.cas-sum, body.dark-mode th.cas-sum { background:rgba(255,255,255,.045); }
+    .modal-field textarea {
+        width:100%; box-sizing:border-box; font-family:'Inter',sans-serif; font-size:13px;
+        padding:.55rem .7rem; border:1px solid var(--border); border-radius:8px;
+        background:var(--bg); color:var(--text); resize:vertical; min-height:64px;
+    }
+    .modal-field textarea:focus { outline:none; border-color:#DB2777; }
     </style>
 </head>
 
@@ -1344,6 +1400,10 @@
                 <div class="sb-link" data-view="holerite" onclick="switchView('holerite')">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8M8 9h2"/></svg>
                     <span class="sb-link-label">Holerite</span>
+                </div>
+                <div class="sb-link" data-view="casamento" onclick="switchView('casamento')">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="15" r="6"/><circle cx="15" cy="15" r="6"/><path d="M12 3l2 3h-4l2-3z"/></svg>
+                    <span class="sb-link-label">Casamento</span>
                 </div>
             </nav>
         </div>
@@ -1766,8 +1826,16 @@
 
         <div class="section-label">Evolução temporal</div>
         <div class="card mb2">
-            <div class="card-title">Evolução de Despesas</div>
-            <div class="card-sub">Realizado, projeção manual e média móvel YTD</div>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+                <div>
+                    <div class="card-title">Evolução de Despesas</div>
+                    <div class="card-sub">Realizado, projeção manual e média móvel YTD</div>
+                </div>
+                <span class="sw-wrap" style="padding-top:.2rem">
+                    <button type="button" class="sw" id="swCasamento" onclick="toggleCasamentoChart()" aria-label="Desconsiderar casamento"></button>
+                    <span class="sw-label" id="swCasamentoLbl" onclick="toggleCasamentoChart()">Desconsiderar casamento</span>
+                </span>
+            </div>
             <div style="height:340px"><canvas id="mainChart"></canvas></div>
         </div>
 
@@ -2006,6 +2074,94 @@
                         <tbody id="holeriteTable"></tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW: CASAMENTO -->
+    <div id="view-casamento" class="view">
+        <div class="view-header">
+            <div>
+                <h1 class="view-title">Casamento</h1>
+                <div class="view-subtitle">Plano de custos por mês e rateio de pagamentos entre Thiago e Vanessa</div>
+            </div>
+        </div>
+
+        <div class="kpi-grid kpi-grid-6 mb2">
+            <div class="kpi-cell c-pink">
+                <span class="kpi-label">Pago no Cartão</span>
+                <span id="casKpiCartao" class="kpi-value">R$ 0,00</span>
+                <span id="casKpiCartaoSub" class="kpi-label" style="letter-spacing:.04em;text-transform:none;margin-top:.25rem">grupo CASAMENTO</span>
+            </div>
+            <div class="kpi-cell c-slate">
+                <span class="kpi-label">Total Planejado</span>
+                <span id="casKpiPlan" class="kpi-value">R$ 0,00</span>
+            </div>
+            <div class="kpi-cell c-indigo">
+                <span class="kpi-label">Pago Thiago</span>
+                <span id="casKpiThiago" class="kpi-value">R$ 0,00</span>
+            </div>
+            <div class="kpi-cell c-teal">
+                <span class="kpi-label">Pago Vanessa</span>
+                <span id="casKpiVanessa" class="kpi-value">R$ 0,00</span>
+            </div>
+            <div class="kpi-cell c-amber">
+                <span class="kpi-label">Saldo a Pagar</span>
+                <span id="casKpiSaldo" class="kpi-value">R$ 0,00</span>
+            </div>
+            <div class="kpi-cell c-emerald">
+                <span class="kpi-label">Quitado</span>
+                <span id="casKpiPerc" class="kpi-value">0%</span>
+            </div>
+        </div>
+
+        <div class="section-label">Plano de pagamentos</div>
+        <div class="card mb2">
+            <div class="cas-toolbar">
+                <button class="cas-btn" onclick="casAddCusto()">+ Custo</button>
+                <button class="cas-btn" onclick="casAddMes()">+ Mês</button>
+                <button class="cas-btn" onclick="casLoad(true).then(casRenderAll)">↻ Recarregar</button>
+                <span style="font-size:11px;color:var(--muted);margin-left:auto">
+                    Clique numa célula para lançar pagamentos · clique no nome da coluna para renomear/excluir
+                </span>
+            </div>
+            <div class="cas-grid-wrap">
+                <table class="cas-grid" id="casGrid"></table>
+            </div>
+            <div id="casEmpty" style="display:none;text-align:center;padding:2rem;color:var(--muted);font-size:13px">
+                Nenhum custo cadastrado. Use <b>+ Custo</b> para começar.
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CÉLULA CASAMENTO -->
+    <div class="modal-overlay" id="casModal">
+        <div class="modal-box">
+            <h2 class="modal-title" id="casModalTitle">Custo</h2>
+            <div class="modal-sub" id="casModalSub">—</div>
+            <div class="modal-field">
+                <label>Valor planejado (R$)</label>
+                <input type="text" id="casFldPlan" inputmode="decimal" placeholder="0,00">
+            </div>
+            <div class="modal-row">
+                <div class="modal-field">
+                    <label>Pago Thiago (R$)</label>
+                    <input type="text" id="casFldThiago" inputmode="decimal" placeholder="0,00">
+                </div>
+                <div class="modal-field">
+                    <label>Pago Vanessa (R$)</label>
+                    <input type="text" id="casFldVanessa" inputmode="decimal" placeholder="0,00">
+                </div>
+            </div>
+            <div class="calc-hint" id="casCalcHint">—</div>
+            <div class="modal-field" style="margin-top:.85rem">
+                <label>Comentário</label>
+                <textarea id="casFldComent" placeholder="Ex.: Vanessa adiantou a parcela de dez/26"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn-cancel" onclick="casCloseModal()">Cancelar</button>
+                <button class="modal-btn-cancel" id="casBtnZerar" onclick="casZerarCelula()">Limpar</button>
+                <button class="modal-btn-confirm" onclick="casSalvarCelula()">Salvar</button>
             </div>
         </div>
     </div>
@@ -3267,7 +3423,7 @@
         // Tabela de detalhamento só aparece nas views de análise (exceto as que têm tabelas próprias)
         const detalhamento = document.getElementById('detalhamentoWrap');
         if (detalhamento) {
-            const semDetalhe = ['inputinv', 'movimentacoes', 'holerite', 'investimentos', 'ir', 'dolar', 'download', 'inputytd'];
+            const semDetalhe = ['inputinv', 'movimentacoes', 'holerite', 'investimentos', 'ir', 'dolar', 'download', 'inputytd', 'casamento'];
             detalhamento.style.display = semDetalhe.includes(viewName) ? 'none' : 'block';
         }
         // Em mobile, fecha a sidebar ao navegar
@@ -3280,6 +3436,7 @@
         if (viewName === 'dolar') { renderDolar(); return; }
         if (viewName === 'download') { renderDownload(); return; }
         if (viewName === 'inputytd') { renderInputYtd(); return; }
+        if (viewName === 'casamento') { renderCasamento(); return; }
         // Evolução (mobile): usa o mesmo pipeline da Carteira (popula byMonth e desenha
         // stack/rent, já realocados p/ os slots) e adiciona o gráfico de rendimento mensal.
         if (viewName === 'evolucao') { renderInvestimentos(); renderInvRendMesChart(); return; }
@@ -4240,20 +4397,45 @@
         updateResetChips();
     }
 
+    // Identifica lançamentos ligados ao casamento: o grupo CASAMENTO inteiro
+    // + o anel de noivado, que vive em PRESENTES › VANESSA › NOIVADO.
+    function isCasamentoRow(r) {
+        const g = String(r['GRUPO'] || '').trim().toUpperCase();
+        if (g === 'CASAMENTO') return true;
+        const s1 = String(r['SUBGRUPO 1'] || '').trim().toUpperCase();
+        const s2 = String(r['SUBGRUPO 2'] || '').trim().toUpperCase();
+        return g === 'PRESENTES' && s1 === 'VANESSA' && s2 === 'NOIVADO';
+    }
+
+    // Toggle do gráfico de evolução (afeta SÓ o gráfico, não os KPIs nem a tabela).
+    let excludeCasamento = false;
+    function toggleCasamentoChart() {
+        excludeCasamento = !excludeCasamento;
+        const sw  = document.getElementById('swCasamento');
+        const lbl = document.getElementById('swCasamentoLbl');
+        if (sw)  sw.classList.toggle('on', excludeCasamento);
+        if (lbl) lbl.classList.toggle('on', excludeCasamento);
+        renderMainChart();
+    }
+
     function renderMainChart() {
+        // Eixo X e marco do último realizado saem SEMPRE da base completa, para o
+        // gráfico não encolher quando o casamento é excluído.
         const allKeys=[...new Set([...realizadoData,...projecaoData].map(r=>r._k))].sort();
         const lastRealKey=[...new Set(realizadoData.map(r=>r._k))].sort().pop();
+        const cRealizado = excludeCasamento ? realizadoData.filter(r=>!isCasamentoRow(r)) : realizadoData;
+        const cProjecao  = excludeCasamento ? projecaoData.filter(r=>!isCasamentoRow(r))  : projecaoData;
 
         // Linha realizado (convertida pela PTAX do mês de cada ponto)
         const realLine=allKeys.map(k=>{
-            const val=realizadoData.filter(r=>r._k===k).reduce((a,b)=>a+b._v,0);
+            const val=cRealizado.filter(r=>r._k===k).reduce((a,b)=>a+b._v,0);
             return k<=lastRealKey ? convert(val,'BRL',k) : null;
         });
 
         // Linha projeção manual
         const projLine=allKeys.map(k=>{
-            const val=projecaoData.filter(r=>r._k===k).reduce((a,b)=>a+b._v,0);
-            if(k===lastRealKey) return convert(realizadoData.filter(r=>r._k===k).reduce((a,b)=>a+b._v,0),'BRL',k);
+            const val=cProjecao.filter(r=>r._k===k).reduce((a,b)=>a+b._v,0);
+            if(k===lastRealKey) return convert(cRealizado.filter(r=>r._k===k).reduce((a,b)=>a+b._v,0),'BRL',k);
             return k>=lastRealKey ? convert(val,'BRL',k) : null;
         });
 
@@ -4265,7 +4447,7 @@
         realizedKeys.forEach(k => {
             const [y] = k.split('-');
             if (!ytdByYear[y]) ytdByYear[y] = { sum: 0, count: 0 };
-            const val = realizadoData.filter(r=>r._k===k).reduce((a,b)=>a+b._v,0);
+            const val = cRealizado.filter(r=>r._k===k).reduce((a,b)=>a+b._v,0);
             ytdByYear[y].sum   += val;
             ytdByYear[y].count += 1;
         });
@@ -4279,7 +4461,7 @@
             if (k < lastRealKey) return null; // só exibe a partir do ponto de encontro
             if (k === lastRealKey) {
                 // ancora no valor real do último mês
-                return convert(realizadoData.filter(r=>r._k===k).reduce((a,b)=>a+b._v,0),'BRL',k);
+                return convert(cRealizado.filter(r=>r._k===k).reduce((a,b)=>a+b._v,0),'BRL',k);
             }
             return ytdAvg!=null ? convert(ytdAvg,'BRL',k) : null; // projeta a média (convertida) para meses futuros
         });
@@ -4364,6 +4546,242 @@
             }
         });
     }
+
+    /* ──────── CASAMENTO ────────
+       Modelo: casamento_custos (colunas) × casamento_celulas (mês × custo).
+       Cada célula guarda o planejado + quanto cada um pagou + comentário.
+       A grade mostra o planejado com uma barra de quitação; o detalhe fica no modal
+       para não espremer 4 números numa célula.                                     */
+    const CAS_MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    let casCustos  = [];
+    let casCelulas = [];
+    let casLoaded  = false;
+    let casEdit    = null;   // { custoId, mes }
+
+    function casMesLabel(mes) { const [y,m] = mes.split('-'); return `${CAS_MESES[Number(m)-1]}/${y.slice(2)}`; }
+    function casFmt(v) { return (Number(v)||0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' }); }
+    function casCel(custoId, mes) { return casCelulas.find(c => c.custo_id === custoId && c.mes === mes); }
+
+    async function casLoad(force) {
+        if (casLoaded && !force) return;
+        if (!sbClient) return;
+        const [rc, rl] = await Promise.all([
+            sbClient.from('casamento_custos').select('*').eq('ativo', true).order('ordem', { ascending:true }),
+            sbClient.from('casamento_celulas').select('*').order('mes', { ascending:true })
+        ]);
+        if (rc.error || rl.error) { console.error('casLoad', rc.error || rl.error); return; }
+        casCustos  = rc.data || [];
+        casCelulas = (rl.data || []).map(r => ({ ...r, mes: String(r.mes).slice(0,10) }));
+        casLoaded  = true;
+    }
+
+    function renderCasamento() { casLoad().then(casRenderAll); }
+    function casRenderAll() { casRenderKpis(); casRenderGrid(); }
+
+    // Meses da grade = união dos meses já lançados (ordenados).
+    function casMeses() { return [...new Set(casCelulas.map(c => c.mes))].sort(); }
+
+    function casRenderKpis() {
+        // Realidade: o que já saiu na fatura do cartão no grupo CASAMENTO.
+        const cartao = realizadoData
+            .filter(r => String(r['GRUPO']||'').trim().toUpperCase() === 'CASAMENTO'
+                      && String(r['TIPO'] ||'').trim().toUpperCase().startsWith('CARTÃO'))
+            .reduce((a,b) => a + (b._v||0), 0);
+        const geral = realizadoData
+            .filter(r => String(r['GRUPO']||'').trim().toUpperCase() === 'CASAMENTO')
+            .reduce((a,b) => a + (b._v||0), 0);
+
+        // Plano: o que está lançado nesta aba.
+        const plan = casCelulas.reduce((a,c) => a + Number(c.valor_planejado||0), 0);
+        const pt   = casCelulas.reduce((a,c) => a + Number(c.pago_thiago||0), 0);
+        const pv   = casCelulas.reduce((a,c) => a + Number(c.pago_vanessa||0), 0);
+        const pago = pt + pv;
+
+        document.getElementById('casKpiCartao').innerText    = casFmt(cartao);
+        document.getElementById('casKpiCartaoSub').innerText = `Total grupo (todos os meios): ${casFmt(geral)}`;
+        document.getElementById('casKpiPlan').innerText      = casFmt(plan);
+        document.getElementById('casKpiThiago').innerText    = casFmt(pt);
+        document.getElementById('casKpiVanessa').innerText   = casFmt(pv);
+        document.getElementById('casKpiSaldo').innerText     = casFmt(plan - pago);
+        document.getElementById('casKpiPerc').innerText      = plan > 0 ? ((pago/plan)*100).toFixed(1) + '%' : '—';
+    }
+
+    function casRenderGrid() {
+        const tbl   = document.getElementById('casGrid');
+        const empty = document.getElementById('casEmpty');
+        if (!casCustos.length) { tbl.innerHTML = ''; empty.style.display = 'block'; return; }
+        empty.style.display = 'none';
+
+        const meses  = casMeses();
+        const hojeMK = new Date().toISOString().slice(0,7);
+
+        let h = '<thead><tr><th class="cas-mes">Mês</th>';
+        casCustos.forEach(c => {
+            h += `<th class="cas-th-name" onclick="casEditarCusto('${c.id}')" title="Renomear ou excluir">${c.nome}</th>`;
+        });
+        h += '<th class="cas-sum">Total</th><th class="cas-sum">Pago T</th><th class="cas-sum">Pago V</th><th class="cas-sum">Saldo</th></tr></thead><tbody>';
+
+        const tot = { plan:0, t:0, v:0 };
+        const totCusto = {};
+        meses.forEach(mes => {
+            const isNow = mes.slice(0,7) === hojeMK;
+            h += `<tr class="${isNow ? 'cas-now' : ''}"><td class="cas-mes">${casMesLabel(mes)}</td>`;
+            let mPlan = 0, mT = 0, mV = 0;
+            casCustos.forEach(c => {
+                const cel  = casCel(c.id, mes);
+                const plan = Number(cel?.valor_planejado || 0);
+                const t    = Number(cel?.pago_thiago  || 0);
+                const v    = Number(cel?.pago_vanessa || 0);
+                const pago = t + v;
+                mPlan += plan; mT += t; mV += v;
+                totCusto[c.id] = (totCusto[c.id] || 0) + plan;
+
+                const perc = plan > 0 ? Math.min(100, (pago/plan)*100) : 0;
+                const cls  = [ 'cas-cell', plan === 0 ? 'zero' : '', (pago > 0 && pago < plan - 0.005) ? 'part' : '' ].filter(Boolean).join(' ');
+                const bar  = plan > 0 ? `<i class="cbar"><i style="width:${perc}%"></i></i>` : '';
+                const note = (cel?.comentario || '').trim() ? '<i class="cnote"></i>' : '';
+                const tip  = plan > 0 ? `Planejado ${casFmt(plan)} · Pago ${casFmt(pago)}` : 'Sem valor planejado';
+                h += `<td class="${cls}" title="${tip}" onclick="casAbrirCelula('${c.id}','${mes}')">`
+                   + `${note}<span class="cv">${plan ? casFmt(plan) : '—'}</span>${bar}</td>`;
+            });
+            tot.plan += mPlan; tot.t += mT; tot.v += mV;
+            h += `<td class="cas-sum">${casFmt(mPlan)}</td><td class="cas-sum">${casFmt(mT)}</td>`
+               + `<td class="cas-sum">${casFmt(mV)}</td><td class="cas-sum">${casFmt(mPlan - mT - mV)}</td></tr>`;
+        });
+
+        h += '</tbody><tfoot><tr class="cas-total"><td class="cas-mes">Total</td>';
+        casCustos.forEach(c => { h += `<td>${casFmt(totCusto[c.id] || 0)}</td>`; });
+        h += `<td class="cas-sum">${casFmt(tot.plan)}</td><td class="cas-sum">${casFmt(tot.t)}</td>`
+           + `<td class="cas-sum">${casFmt(tot.v)}</td><td class="cas-sum">${casFmt(tot.plan - tot.t - tot.v)}</td></tr></tfoot>`;
+        tbl.innerHTML = h;
+    }
+
+    /* ── Modal de célula ── */
+    function casAbrirCelula(custoId, mes) {
+        const custo = casCustos.find(c => c.id === custoId);
+        if (!custo) return;
+        const cel = casCel(custoId, mes);
+        casEdit = { custoId, mes };
+        document.getElementById('casModalTitle').innerText = custo.nome;
+        document.getElementById('casModalSub').innerText   = casMesLabel(mes);
+        document.getElementById('casFldPlan').value    = cel ? String(cel.valor_planejado).replace('.', ',') : '';
+        document.getElementById('casFldThiago').value  = cel && Number(cel.pago_thiago)  ? String(cel.pago_thiago).replace('.', ',')  : '';
+        document.getElementById('casFldVanessa').value = cel && Number(cel.pago_vanessa) ? String(cel.pago_vanessa).replace('.', ',') : '';
+        document.getElementById('casFldComent').value  = cel?.comentario || '';
+        casAtualizaHint();
+        document.getElementById('casModal').classList.add('open');
+    }
+    function casCloseModal() { document.getElementById('casModal').classList.remove('open'); casEdit = null; }
+
+    function casAtualizaHint() {
+        const p = iiParseNum(document.getElementById('casFldPlan').value);
+        const t = iiParseNum(document.getElementById('casFldThiago').value);
+        const v = iiParseNum(document.getElementById('casFldVanessa').value);
+        const saldo = p - t - v;
+        document.getElementById('casCalcHint').innerText =
+            `Pago ${casFmt(t+v)} de ${casFmt(p)} · saldo ${casFmt(saldo)}`
+            + (p > 0 ? ` (${(((t+v)/p)*100).toFixed(0)}%)` : '');
+    }
+
+    async function casSalvarCelula() {
+        if (!casEdit) return;
+        const uid = await iiCurrentUserId();
+        if (!uid) { alert('Sessão expirada. Faça login novamente.'); return; }
+        const payload = {
+            user_id: uid,
+            custo_id: casEdit.custoId,
+            mes: casEdit.mes,
+            valor_planejado: iiParseNum(document.getElementById('casFldPlan').value),
+            pago_thiago:     iiParseNum(document.getElementById('casFldThiago').value),
+            pago_vanessa:    iiParseNum(document.getElementById('casFldVanessa').value),
+            comentario:      document.getElementById('casFldComent').value.trim() || null,
+            updated_at:      new Date().toISOString()
+        };
+        const { error } = await sbClient.from('casamento_celulas')
+            .upsert(payload, { onConflict: 'user_id,custo_id,mes' });
+        if (error) { alert('Erro ao salvar: ' + error.message); return; }
+        casCloseModal();
+        await casLoad(true);
+        casRenderAll();
+    }
+
+    async function casZerarCelula() {
+        if (!casEdit) return;
+        if (!confirm('Limpar esta célula (planejado, pagamentos e comentário)?')) return;
+        const { error } = await sbClient.from('casamento_celulas')
+            .delete().eq('custo_id', casEdit.custoId).eq('mes', casEdit.mes);
+        if (error) { alert('Erro: ' + error.message); return; }
+        casCloseModal();
+        await casLoad(true);
+        casRenderAll();
+    }
+
+    /* ── Colunas (custos) ── */
+    async function casAddCusto() {
+        const nome = (prompt('Nome do custo (ex.: BUFFET):') || '').trim().toUpperCase();
+        if (!nome) return;
+        const uid = await iiCurrentUserId();
+        if (!uid) { alert('Sessão expirada.'); return; }
+        const ordem = casCustos.length ? Math.max(...casCustos.map(c => c.ordem || 0)) + 1 : 1;
+        const { error } = await sbClient.from('casamento_custos').insert({ user_id: uid, nome, ordem });
+        if (error) { alert(error.message.includes('duplicate') ? 'Já existe um custo com esse nome.' : 'Erro: ' + error.message); return; }
+        await casLoad(true);
+        casRenderAll();
+    }
+
+    async function casEditarCusto(custoId) {
+        const custo = casCustos.find(c => c.id === custoId);
+        if (!custo) return;
+        const novo = prompt(`Renomear "${custo.nome}" (deixe vazio para EXCLUIR a coluna e todos os seus lançamentos):`, custo.nome);
+        if (novo === null) return;
+        const nome = novo.trim().toUpperCase();
+        if (!nome) {
+            if (!confirm(`Excluir a coluna "${custo.nome}" e TODOS os lançamentos dela? Isso não pode ser desfeito.`)) return;
+            const { error } = await sbClient.from('casamento_custos').delete().eq('id', custoId);
+            if (error) { alert('Erro: ' + error.message); return; }
+        } else if (nome !== custo.nome) {
+            const { error } = await sbClient.from('casamento_custos').update({ nome }).eq('id', custoId);
+            if (error) { alert('Erro: ' + error.message); return; }
+        } else { return; }
+        await casLoad(true);
+        casRenderAll();
+    }
+
+    /* ── Linhas (meses) ── */
+    async function casAddMes() {
+        if (!casCustos.length) { alert('Cadastre pelo menos um custo antes.'); return; }
+        const meses = casMeses();
+        const sug   = meses.length ? casProxMes(meses[meses.length-1]) : new Date().toISOString().slice(0,7);
+        const inp   = (prompt('Mês a adicionar (AAAA-MM):', sug) || '').trim();
+        if (!/^\d{4}-\d{2}$/.test(inp)) { if (inp) alert('Formato inválido. Use AAAA-MM.'); return; }
+        const mes = inp + '-01';
+        if (meses.includes(mes)) { alert('Esse mês já está na grade.'); return; }
+        const uid = await iiCurrentUserId();
+        if (!uid) { alert('Sessão expirada.'); return; }
+        // Cria a linha com a primeira coluna zerada; o resto aparece vazio e é editável.
+        const { error } = await sbClient.from('casamento_celulas')
+            .upsert({ user_id: uid, custo_id: casCustos[0].id, mes, valor_planejado: 0 },
+                    { onConflict: 'user_id,custo_id,mes' });
+        if (error) { alert('Erro: ' + error.message); return; }
+        await casLoad(true);
+        casRenderAll();
+    }
+
+    function casProxMes(mes) {
+        const d = new Date(mes + 'T00:00:00');
+        d.setMonth(d.getMonth() + 1);
+        return d.toISOString().slice(0,7);
+    }
+
+    // Recalcula o resumo do modal enquanto o usuário digita.
+    ['casFldPlan','casFldThiago','casFldVanessa'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', casAtualizaHint);
+    });
+    (function(){
+        const ov = document.getElementById('casModal');
+        if (ov) ov.addEventListener('click', e => { if (e.target === ov) casCloseModal(); });
+    })();
 
     /* ──────── HOLERITE ──────── */
     function renderHolerite(key) {
