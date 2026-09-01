@@ -4556,6 +4556,7 @@
     let casCustos  = [];
     let casCelulas = [];
     let casLoaded  = false;
+    let casErro    = null;
     let casEdit    = null;   // { custoId, mes }
 
     function casMesLabel(mes) { const [y,m] = mes.split('-'); return `${CAS_MESES[Number(m)-1]}/${y.slice(2)}`; }
@@ -4569,7 +4570,14 @@
             sbClient.from('casamento_custos').select('*').eq('ativo', true).order('ordem', { ascending:true }),
             sbClient.from('casamento_celulas').select('*').order('mes', { ascending:true })
         ]);
-        if (rc.error || rl.error) { console.error('casLoad', rc.error || rl.error); return; }
+        const err = rc.error || rl.error;
+        if (err) {
+            // Falha de leitura ≠ "sem dados". Mostra na tela em vez de renderizar grade vazia.
+            console.error('casLoad', err);
+            casErro = err.message || 'Falha ao ler os dados do casamento.';
+            return;
+        }
+        casErro    = null;
         casCustos  = rc.data || [];
         casCelulas = (rl.data || []).map(r => ({ ...r, mes: String(r.mes).slice(0,10) }));
         casLoaded  = true;
@@ -4609,7 +4617,18 @@
     function casRenderGrid() {
         const tbl   = document.getElementById('casGrid');
         const empty = document.getElementById('casEmpty');
-        if (!casCustos.length) { tbl.innerHTML = ''; empty.style.display = 'block'; return; }
+        if (casErro) {
+            tbl.innerHTML = '';
+            empty.style.display = 'block';
+            empty.innerHTML = `<b style="color:#DC2626">Não foi possível carregar</b><br>${casErro}`;
+            return;
+        }
+        if (!casCustos.length) {
+            tbl.innerHTML = '';
+            empty.style.display = 'block';
+            empty.innerHTML = 'Nenhum custo cadastrado. Use <b>+ Custo</b> para começar.';
+            return;
+        }
         empty.style.display = 'none';
 
         const meses  = casMeses();
