@@ -2669,15 +2669,18 @@
                 // BR: 1.234.567 → remove pontos
                 return parseFloat(s.replace(/\./g, '')) || 0;
             } else {
-                // Ponto seguido de exatamente 3 dígitos no fim → milhar BR (5.000 = 5000)
-                if (/\.\d{3}$/.test(s)) {
-                    return parseFloat(s.replace('.', '')) || 0;
-                }
                 // US: 1234.56 → direto
                 return parseFloat(s) || 0;
             }
         }
         return parseFloat(s) || 0;
+    }
+
+    // Formato BR puro (CSV de despesas): ponto = milhar, vírgula = decimal
+    function parseBRL(val) {
+        const s = String(val ?? '').trim().replace(/[R$\s]/g, '');
+        if (!s) return 0;
+        return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
     }
 
     /* ════════════════ CONVERSÃO DE MOEDA (BRL ⇄ USD) ════════════════
@@ -7455,7 +7458,7 @@
             data: brToIsoFlexible(getVal(r,'DATA')),
             data_competencia: brToIsoFlexible(getVal(r,'DATA COMPETENCIA')),
             lancamento: String(getVal(r,'LANÇAMENTO') || '').trim(),
-            valor_brl: parseNumber(getVal(r,'VALOR BRL')),
+            valor_brl: parseBRL(getVal(r,'VALOR BRL')),
             origem_da_compra: String(getVal(r,'ORIGEM DA COMPRA') || '').trim(),
             evento: String(getVal(r,'EVENTO') || '').trim(),
             grupo: String(getVal(r,'GRUPO') || '').trim(),
