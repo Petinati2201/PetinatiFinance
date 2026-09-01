@@ -2669,6 +2669,10 @@
                 // BR: 1.234.567 → remove pontos
                 return parseFloat(s.replace(/\./g, '')) || 0;
             } else {
+                // Ponto seguido de exatamente 3 dígitos no fim → milhar BR (5.000 = 5000)
+                if (/\.\d{3}$/.test(s)) {
+                    return parseFloat(s.replace('.', '')) || 0;
+                }
                 // US: 1234.56 → direto
                 return parseFloat(s) || 0;
             }
