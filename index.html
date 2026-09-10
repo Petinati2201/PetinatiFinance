@@ -5486,7 +5486,7 @@
     // Seletor de janela do gráfico de Rentabilidade
     document.getElementById('invRentJanela').addEventListener('change', e => {
         invRentJanela = e.target.value;
-        if (currentView === 'investimentos') renderInvestimentos(true, true);
+        if (currentView === 'investimentos' || currentView === 'evolucao') renderInvestimentos(true, true);
     });
 
     // Gráfico (aba Evolução): rendimento em VALOR de cada mês vs. mês anterior.
