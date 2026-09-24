@@ -7490,10 +7490,27 @@
         const moeda = lastMov.moeda || (existing && existing.moeda) || (prevSnap && prevSnap.moeda) || 'BRL';
         // Preserva a capitalização do código existente (snapshot anterior > existente > nova mov)
         const codigoFinal = (prevSnap && prevSnap.codigo) || (existing && existing.codigo) || codigo;
+        // Qtde/preço coerentes com o bruto, para o Input Investimentos (que exibe
+        // qtde × preço fora de RF) não mostrar o ativo zerado:
+        // • RF: convenção qtde=1, preço=saldo
+        // • Demais (Moeda, Imóvel, Veículo…): mantém o último preço unitário > 0
+        //   do ativo (ex.: DÓLAR p=1, APTO p=valor do imóvel) e ajusta a qtde;
+        //   sem histórico de preço → qtde=1, preço=saldo
+        let qtdeNQ, precoNQ;
+        if (String(tipo).toUpperCase().trim() === 'RENDA FIXA') {
+            qtdeNQ = 1; precoNQ = newBruto;
+        } else {
+            const refPreco = [existing, ...iiRows
+                .filter(r => eqCod(r.codigo) && r._k <= mk)
+                .sort((a,b) => b._k.localeCompare(a._k))]
+                .map(r => r && Number(r.preco)).find(v => v > 0);
+            if (refPreco) { precoNQ = refPreco; qtdeNQ = newBruto / refPreco; }
+            else { qtdeNQ = 1; precoNQ = newBruto; }
+        }
         const payload = {
             user_id: uid, data_ref: `${mk}-01`, codigo: codigoFinal,
             tipo_investimento: tipo, moeda,
-            qtde: 0, preco_unit: 0,
+            qtde: qtdeNQ, preco_unit: precoNQ,
             valor_bruto: newBruto,
             div_jcp: existing ? (existing.divJcp || 0) : 0
         };
