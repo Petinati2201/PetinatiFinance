@@ -6920,7 +6920,7 @@
         }
         const btn = document.getElementById('iiBtnQuotes'); btn.disabled = true;
         iiSetStatus('Buscando cotações…');
-        const ok = [], fail = [];
+        const ok = [], fail = [], atualizadas = [];
         try {
             for (const row of rows) {
                 const cod = (row.codigo || '').trim();
@@ -6937,7 +6937,7 @@
                 }
                 if (price == null) { fail.push(cod); continue; }
                 row.preco = price; row.brutoManual = false; row._dirty = true;
-                ok.push(cod);
+                ok.push(cod); atualizadas.push(row);
             }
         } catch (e) {
             iiSetStatus('Erro ao buscar cotações: ' + e.message, 'err');
@@ -6945,6 +6945,11 @@
             btn.disabled = false;
         }
         renderInputInv();
+        // Destaca em verde o Preço Unit. atualizado (igual à edição manual)
+        atualizadas.forEach(r => {
+            const inp = document.querySelector(`#iiBody input[data-key="preco"][data-id="${r.id || r._tmp}"]`);
+            if (inp) inp.classList.add('changed');
+        });
         iiUpdateSaveBtn();
         if (ok.length || fail.length) {
             iiSetStatus(`${ok.length} cotação(ões) atualizada(s) — clique em Gravar para salvar.` + (fail.length ? ` Sem cotação: ${fail.join(', ')}.` : ''), fail.length && !ok.length ? 'err' : 'ok');
