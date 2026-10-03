@@ -1516,6 +1516,10 @@
                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:4px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                 Duplicar do mês anterior
             </button>
+            <button id="iiBtnQuotes" title="Busca a cotação mais recente (ações US via Finnhub, cripto via CoinGecko) e preenche o Preço Unit. do mês">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:4px"><path d="M21 12a9 9 0 11-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+                Atualizar cotação
+            </button>
             <div class="spacer"></div>
             <button id="iiBtnAdd">+ Adicionar ativo</button>
             <button id="iiBtnSave" class="primary" disabled>Gravar</button>
@@ -6859,6 +6863,93 @@
     function iiUpdateSaveBtn() {
         document.getElementById('iiBtnSave').disabled = (iiRows.filter(r=>r._dirty||r._new).length + iiDeleted.length) === 0;
     }
+    // ─── Atualizar cotação (ações US via Finnhub, cripto via CoinGecko) ───
+    // Token da Finnhub fica na tabela config_usuario (RLS) com cache no localStorage; nunca no código (repo é público).
+    const LS_FINNHUB_TOKEN = 'petinati_finnhub_token';
+    const LS_QUOTE_MAP     = 'petinati_quote_map';
+    const CRIPTO_IDS_DEFAULT = { BTC:'bitcoin', BITCOIN:'bitcoin', ETH:'ethereum', ETHEREUM:'ethereum', SOL:'solana' };
+    function iiQuoteMapGet() { try { return JSON.parse(localStorage.getItem(LS_QUOTE_MAP) || '{}'); } catch (e) { return {}; } }
+    function iiQuoteMapSet(codigo, sym) {
+        const m = iiQuoteMapGet(); m[codigo.toUpperCase()] = sym;
+        try { localStorage.setItem(LS_QUOTE_MAP, JSON.stringify(m)); } catch (e) {}
+    }
+    async function iiFetchStock(sym, token) {
+        const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(sym)}&token=${encodeURIComponent(token)}`);
+        if (r.status === 401 || r.status === 403) throw new Error('Token da Finnhub inválido');
+        if (!r.ok) throw new Error('Finnhub HTTP ' + r.status);
+        const j = await r.json();
+        return j && j.c > 0 ? j.c : null;
+    }
+    async function iiFetchCripto(id) {
+        const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(id)}&vs_currencies=usd`);
+        if (!r.ok) throw new Error('CoinGecko HTTP ' + r.status);
+        const j = await r.json();
+        return j && j[id] && j[id].usd > 0 ? j[id].usd : null;
+    }
+    // Token: cache no localStorage → tabela config_usuario (RLS, por usuário) → pergunta e grava nos dois.
+    async function iiGetFinnhubToken() {
+        try { const t = localStorage.getItem(LS_FINNHUB_TOKEN); if (t) return t; } catch (e) {}
+        const uid = await iiCurrentUserId();
+        if (uid) {
+            try {
+                const { data } = await sbClient.from('config_usuario').select('finnhub_token').eq('user_id', uid).maybeSingle();
+                if (data && data.finnhub_token) {
+                    try { localStorage.setItem(LS_FINNHUB_TOKEN, data.finnhub_token); } catch (e) {}
+                    return data.finnhub_token;
+                }
+            } catch (e) { console.warn('Leitura do token no Supabase falhou:', e); }
+        }
+        const token = (prompt('Cole seu token gratuito da Finnhub (finnhub.io → Dashboard → API key).\nFica salvo na sua conta, então vale para qualquer máquina:') || '').trim();
+        if (!token) return '';
+        try { localStorage.setItem(LS_FINNHUB_TOKEN, token); } catch (e) {}
+        if (uid) {
+            const { error } = await sbClient.from('config_usuario').upsert({ user_id: uid, finnhub_token: token, updated_at: new Date().toISOString() });
+            if (error) console.warn('Não consegui salvar o token no Supabase:', error);
+        }
+        return token;
+    }
+    async function iiUpdateQuotes() {
+        const key = document.getElementById('iiMonth').value;
+        const rows = iiRows.filter(r => r._k === key && tipoRegistry.isQtyBased(r.tipo));
+        if (!rows.length) { iiSetStatus('Nenhum ativo de ações/cripto neste mês para atualizar.', 'err'); return; }
+        const needsToken = rows.some(r => String(r.tipo||'').toUpperCase().trim() !== 'CRIPTO');
+        let token = '';
+        if (needsToken) {
+            token = await iiGetFinnhubToken();
+            if (!token) return;
+        }
+        const btn = document.getElementById('iiBtnQuotes'); btn.disabled = true;
+        iiSetStatus('Buscando cotações…');
+        const ok = [], fail = [];
+        try {
+            for (const row of rows) {
+                const cod = (row.codigo || '').trim();
+                if (row.moeda !== 'USD') { fail.push(`${cod} (moeda ${row.moeda}, só USD é atualizado)`); continue; }
+                const isCripto = String(row.tipo||'').toUpperCase().trim() === 'CRIPTO';
+                const map = iiQuoteMapGet();
+                let sym = map[cod.toUpperCase()] || (isCripto ? (CRIPTO_IDS_DEFAULT[cod.toUpperCase()] || cod.toLowerCase()) : cod.toUpperCase());
+                const get = s => isCripto ? iiFetchCripto(s) : iiFetchStock(s, token);
+                let price = null;
+                try { price = await get(sym); } catch (e) { if (/Token/.test(e.message)) { try { localStorage.removeItem(LS_FINNHUB_TOKEN); } catch (_) {} const u = await iiCurrentUserId(); if (u) await sbClient.from('config_usuario').delete().eq('user_id', u); } throw e; }
+                if (price == null) {
+                    const alt = (prompt(`Não achei cotação para "${cod}" como "${sym}".\n` + (isCripto ? 'Informe o id do CoinGecko (ex: bitcoin):' : 'Informe o ticker US (ex: AAPL):') + '\n(Cancelar pula este ativo)') || '').trim();
+                    if (alt) { price = await get(alt); if (price != null) iiQuoteMapSet(cod, alt); }
+                }
+                if (price == null) { fail.push(cod); continue; }
+                row.preco = price; row.brutoManual = false; row._dirty = true;
+                ok.push(cod);
+            }
+        } catch (e) {
+            iiSetStatus('Erro ao buscar cotações: ' + e.message, 'err');
+        } finally {
+            btn.disabled = false;
+        }
+        renderInputInv();
+        iiUpdateSaveBtn();
+        if (ok.length || fail.length) {
+            iiSetStatus(`${ok.length} cotação(ões) atualizada(s) — clique em Gravar para salvar.` + (fail.length ? ` Sem cotação: ${fail.join(', ')}.` : ''), fail.length && !ok.length ? 'err' : 'ok');
+        }
+    }
     function iiSetStatus(msg, type) {
         const el = document.getElementById('iiStatus');
         el.textContent = msg; el.className = 'ii-status' + (type?' '+type:'');
@@ -8797,6 +8888,7 @@
     document.getElementById('iiBtnAdd').addEventListener('click', iiAddRow);
     document.getElementById('iiBtnDuplicate').addEventListener('click', iiDuplicateMonth);
     document.getElementById('iiBtnSave').addEventListener('click', iiSave);
+    document.getElementById('iiBtnQuotes').addEventListener('click', iiUpdateQuotes);
     document.getElementById('iiTipoFilter').addEventListener('change', function(){
         document.getElementById('iiAtivoFilter').value = '';
         renderInputInv();
