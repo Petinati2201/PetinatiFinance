@@ -2320,6 +2320,13 @@
                 <div style="height:300px;margin-top:.5rem"><canvas id="invRentChart"></canvas></div>
             </div>
 
+            <!-- Desktop: rendimento mês a mês (no mobile, vive na aba Evolução) -->
+            <div class="card mb2 mobile-hide" id="invRendMesCartCard">
+                <div class="card-title">Rendimento por mês</div>
+                <div class="card-sub">Quanto a carteira rendeu em cada mês (vs. mês anterior), já descontando aportes</div>
+                <div style="height:320px"><canvas id="invRendMesCartChart"></canvas></div>
+            </div>
+
             <div class="section-label" id="invCompLabel">Composição da carteira</div>
             <div class="g2 mb2" id="invPieGrid">
                 <div class="pie-wrap" id="invTypeWrap">
@@ -2599,6 +2606,10 @@
     <button class="mbn-item" data-view="visao" onclick="switchView('visao')" aria-label="Despesas">
         <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
         <span>Despesas</span>
+    </button>
+    <button class="mbn-item" data-view="analise" onclick="switchView('analise')" aria-label="Análise de carteira">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        <span>Análise</span>
     </button>
     <button class="mbn-item" data-view="movimentacoes" onclick="switchView('movimentacoes')" aria-label="Movimentações">
         <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
@@ -5387,6 +5398,7 @@
 
         renderInvStackChart(byMonth, fmtK, fmt);
         renderInvRentChart(byMonth);
+        renderInvRendMesChart();
         if (!skipPie) {
             const latestRowsAllTypes = investimentosData.filter(r => r._k === latestKey && r._dispBruto > 0 && !hiddenCodigos.has(r._codigo));
             renderInvTypePie(latestRowsAllTypes, '_dispInv', fmt);
@@ -5551,11 +5563,18 @@
     // Gráfico (aba Evolução): rendimento em VALOR de cada mês vs. mês anterior.
     // Usa _lastByMonth (populado por renderInvestimentos) → sem recálculo/duplicação.
     function renderInvRendMesChart() {
-        const canvas = document.getElementById('invRendMesChart');
-        if (!canvas || !_lastByMonth || _lastByMonth.length === 0) return;
+        if (!_lastByMonth || _lastByMonth.length === 0) return;
+        // Aba Evolução (mobile) e card da Carteira (desktop) usam a mesma série
+        [['invRendMesChart', 'invRendMes'], ['invRendMesCartChart', 'invRendMesCart']].forEach(([id, key]) => {
+            const canvas = document.getElementById(id);
+            if (canvas) desenharRendMes(canvas, key);
+        });
+    }
+
+    function desenharRendMes(canvas, key) {
         const tc = isDarkMode ? '#6B6966' : '#8A8880';
         const gc = isDarkMode ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
-        if (charts.invRendMes) charts.invRendMes.destroy();
+        if (charts[key]) charts[key].destroy();
 
         // pula o 1º mês (não tem "mês anterior" p/ comparar) — rendMes lá é 0 por definição
         const serie = _lastByMonth.slice(1);
@@ -5564,7 +5583,7 @@
         const pos = '#059669', neg = '#DC2626';
         const cores = vals.map(v => v < 0 ? neg : pos);
 
-        charts.invRendMes = new Chart(canvas, {
+        charts[key] = new Chart(canvas, {
             type: 'bar',
             data: { labels, datasets: [{ data: vals, backgroundColor: cores, borderRadius: 4, maxBarThickness: 28 }] },
             options: {
