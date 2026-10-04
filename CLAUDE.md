@@ -20,3 +20,9 @@ Dashboard financeiro pessoal em arquivo único: `index.html` (~8.800 linhas, HTM
 
 ## Dados sensíveis
 - Repo público: nunca coloque no arquivo dados financeiros reais, senhas, nem chaves privadas/service-role da Supabase. Só a chave pública (anon) pode existir no código.
+
+## Aba "Análise de carteira"
+- View `view-analise` (menu Investimentos), renderizada por `renderAnalise()` em `index.html`. Lê `public.relatorios_ia` com o login normal (chave anon): pega o `briefing` mais recente e os `ativo` com o mesmo `rodada_id`. Avisa se a rodada tiver mais de 10 dias.
+- Texto vem de notícias da web: só insere no DOM via `textContent` (helper `anEl`), nunca `innerHTML`. Nada da carteira fixo no código; a tela não usa as palavras comprar/vender.
+- Fluxo: agentes locais (`agente*.mjs`, ficam fora do git) → `npm run publicar` (`publicar-dashboard.mjs`, usa a service key do `.env`, grava 1 rodada) → dashboard. Atalhos: `npm run semanal`, `trimestral`, `tudo` (semanal + trimestral + final + publicar).
+- O formato do `conteudo` (briefing e ativo) está documentado no próprio `publicar-dashboard.mjs`; se mudar lá, ajuste `anBlocoBriefing`/`anDetalheAtivo`.

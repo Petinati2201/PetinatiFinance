@@ -733,6 +733,44 @@
         .app.collapsed #logoutBtn span { display: none; }
 
         /* views */
+        /* ── ANÁLISE DE CARTEIRA ── */
+        .an-aviso { font-size:12px; line-height:1.5; padding:.6rem .8rem; border-radius:8px; margin-bottom:1rem; border:1px solid var(--border); background:var(--bg); color:var(--muted); }
+        .an-aviso.warn { border-color:#D97706; color:#B45309; background:rgba(217,119,6,.08); }
+        .an-aviso.err { border-color:#DC2626; color:#DC2626; background:rgba(220,38,38,.07); }
+        .dark-mode .an-aviso.warn { color:#F59E0B; }
+        .dark-mode .an-aviso.err { color:#F87171; }
+        .an-manchete { font-family:'Instrument Serif', serif; font-size:1.35rem; line-height:1.35; margin-bottom:.4rem; }
+        .an-meta { font-size:11px; color:var(--muted); margin-bottom:1rem; }
+        .an-sec { margin-top:1.25rem; }
+        .an-sec:first-child { margin-top:0; }
+        .an-sec h4 { font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:.55rem; }
+        .an-sec p, .an-sec li { font-size:13px; line-height:1.6; }
+        .an-sec ul { padding-left:1.1rem; }
+        .an-sec li + li { margin-top:.25rem; }
+        .an-item { border:1px solid var(--border); border-radius:10px; padding:.75rem .9rem; margin-bottom:.6rem; background:var(--bg); }
+        .an-item-head { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; margin-bottom:.4rem; font-size:13px; font-weight:600; }
+        .an-lbl { font-size:11px; color:var(--muted); font-weight:600; margin-top:.45rem; }
+        .an-item p { font-size:13px; line-height:1.55; }
+        .an-tag { font-size:10px; font-weight:600; letter-spacing:.04em; padding:.12rem .5rem; border-radius:99px; border:1px solid var(--border); color:var(--muted); text-transform:uppercase; }
+        .an-farol { display:inline-flex; align-items:center; gap:.4rem; font-size:12px; font-weight:600; white-space:nowrap; }
+        .an-farol::before { content:''; width:10px; height:10px; border-radius:50%; background:var(--fc,#9CA3AF); }
+        .an-farol.alta { --fc:#DC2626; }
+        .an-farol.media { --fc:#EAB308; }
+        .an-farol.baixa { --fc:#059669; }
+        .an-farol.nenhum { --fc:#9CA3AF; color:var(--muted); }
+        .an-row { display:flex; align-items:center; gap:.9rem; width:100%; padding:.75rem .25rem; background:transparent; border:0; border-bottom:1px solid var(--line); color:var(--text); font-family:inherit; font-size:14px; cursor:pointer; text-align:left; }
+        .an-row:hover { background:var(--line); }
+        .an-row .an-tk { font-weight:700; min-width:4.5rem; }
+        .an-row .an-pw { color:var(--muted); font-size:13px; min-width:4rem; }
+        .an-row .an-chev { margin-left:auto; color:var(--muted); transition:transform .15s; }
+        .an-row[aria-expanded="true"] .an-chev { transform:rotate(180deg); }
+        .an-detail { padding:1rem .25rem 1.25rem; border-bottom:1px solid var(--border); }
+        .an-detail[hidden] { display:none; }
+        .an-tbl-wrap { overflow-x:auto; }
+        .an-tbl { width:100%; border-collapse:collapse; font-size:12px; }
+        .an-tbl th { text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); padding:.35rem .6rem; border-bottom:1px solid var(--border); }
+        .an-tbl td { padding:.4rem .6rem; border-bottom:1px solid var(--line); vertical-align:top; }
+        .an-foot { font-size:11px; color:var(--muted); text-align:center; margin:1.75rem 0 .5rem; line-height:1.5; }
         .view { display: none; }
         .view.active { display: block; animation: fadeUp .3s ease; }
         @keyframes fadeUp { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
@@ -1415,6 +1453,10 @@
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                     <span class="sb-link-label">Carteira</span>
                 </div>
+                <div class="sb-link" data-view="analise" onclick="switchView('analise')">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                    <span class="sb-link-label">Análise de carteira</span>
+                </div>
                 <div class="sb-link" data-view="ir" onclick="switchView('ir')">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>
                     <span class="sb-link-label">Imposto de Renda</span>
@@ -1497,6 +1539,18 @@
     <main class="main">
 
     <!-- VIEW: UPLOADS -->
+    <!-- VIEW: ANÁLISE DE CARTEIRA -->
+    <div id="view-analise" class="view">
+        <div class="view-header">
+            <div>
+                <h1 class="view-title">Análise de carteira</h1>
+                <div class="view-subtitle">Briefing e leitura por ativo gerados pelos agentes — lido de relatorios_ia</div>
+            </div>
+        </div>
+        <div id="analiseRoot"></div>
+        <div class="an-foot">Material de apoio gerado por IA a partir de notícias e relatórios públicos. Não é recomendação de investimento.</div>
+    </div>
+
     <!-- VIEW: INPUT INVESTIMENTOS -->
     <div id="view-inputinv" class="view">
         <div class="view-header">
@@ -3427,7 +3481,7 @@
         // Tabela de detalhamento só aparece nas views de análise (exceto as que têm tabelas próprias)
         const detalhamento = document.getElementById('detalhamentoWrap');
         if (detalhamento) {
-            const semDetalhe = ['inputinv', 'movimentacoes', 'holerite', 'investimentos', 'ir', 'dolar', 'download', 'inputytd', 'casamento'];
+            const semDetalhe = ['inputinv', 'movimentacoes', 'holerite', 'investimentos', 'ir', 'dolar', 'download', 'inputytd', 'casamento', 'analise'];
             detalhamento.style.display = semDetalhe.includes(viewName) ? 'none' : 'block';
         }
         // Em mobile, fecha a sidebar ao navegar
@@ -3441,6 +3495,7 @@
         if (viewName === 'download') { renderDownload(); return; }
         if (viewName === 'inputytd') { renderInputYtd(); return; }
         if (viewName === 'casamento') { renderCasamento(); return; }
+        if (viewName === 'analise') { renderAnalise(); return; }
         // Evolução (mobile): usa o mesmo pipeline da Carteira (popula byMonth e desenha
         // stack/rent, já realocados p/ os slots) e adiciona o gráfico de rendimento mensal.
         if (viewName === 'evolucao') { renderInvestimentos(); renderInvRendMesChart(); return; }
@@ -8683,6 +8738,316 @@
     }
 
     function renderDownload() { dlPopulateMonths(); }
+
+    // ─── Análise de carteira ─────────────────────────────────────────────────
+    // Lê public.relatorios_ia (gravada por publicar-dashboard.mjs). Todo texto vem de
+    // notícias da web: só entra no DOM via textContent (anEl), nunca innerHTML.
+    const AN_MAX_DIAS = 10;
+    let anToken = 0;
+
+    function anEl(tag, cls, texto) {
+        const e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (texto !== undefined && texto !== null) e.textContent = String(texto);
+        return e;
+    }
+    const anTemTexto = v => (typeof v === 'string' && v.trim() !== '') || typeof v === 'number';
+    const anFmtData = iso => {
+        const d = new Date(iso);
+        return isNaN(d) ? '—' : d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    };
+    const anFmtPeso = v => (typeof v === 'number' ? v.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%' : '—');
+    const anFmtNum = v => (typeof v === 'number' ? v.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) : (anTemTexto(v) ? String(v) : '—'));
+    const anRot = s => { const t = String(s || '').replace(/_/g, ' '); return t.charAt(0).toUpperCase() + t.slice(1); };
+
+    function anFarol(atencao) {
+        const mapa = { alta: ['alta', 'Atenção alta'], media: ['media', 'Atenção média'], baixa: ['baixa', 'Atenção baixa'] };
+        const [cls, txt] = mapa[atencao] || ['nenhum', 'Sem classificação'];
+        return anEl('span', 'an-farol ' + cls, txt);
+    }
+
+    // Seção com título; só entra no DOM se o corpo tiver conteúdo
+    function anSec(pai, titulo, corpo) {
+        if (!corpo) return null;
+        const s = anEl('div', 'an-sec');
+        s.appendChild(anEl('h4', '', titulo));
+        s.appendChild(corpo);
+        pai.appendChild(s);
+        return s;
+    }
+    const anPar = v => (anTemTexto(v) ? anEl('p', '', v) : null);
+    function anLista(arr) {
+        if (!Array.isArray(arr)) return null;
+        const itens = arr.filter(anTemTexto);
+        if (!itens.length) return null;
+        const ul = anEl('ul');
+        itens.forEach(t => ul.appendChild(anEl('li', '', t)));
+        return ul;
+    }
+    function anTabela(cabecalhos, linhas) {
+        if (!linhas.length) return null;
+        const wrap = anEl('div', 'an-tbl-wrap');
+        const t = anEl('table', 'an-tbl');
+        const tr = anEl('tr');
+        cabecalhos.forEach(h => tr.appendChild(anEl('th', '', h)));
+        t.appendChild(anEl('thead')).appendChild(tr);
+        const tb = anEl('tbody');
+        linhas.forEach(l => {
+            const r = anEl('tr');
+            l.forEach(c => r.appendChild(anEl('td', '', c)));
+            tb.appendChild(r);
+        });
+        t.appendChild(tb);
+        wrap.appendChild(t);
+        return wrap;
+    }
+    // Rótulo + texto dentro de um an-item
+    function anCampo(pai, rotulo, v) {
+        if (!anTemTexto(v)) return;
+        pai.appendChild(anEl('div', 'an-lbl', rotulo));
+        pai.appendChild(anEl('p', '', v));
+    }
+
+    function anBlocoBriefing(b, rodada) {
+        const card = anEl('div', 'card mb2');
+        card.appendChild(anEl('div', 'card-title', 'Briefing executivo'));
+        const idade = (Date.now() - new Date(rodada.gerado_em).getTime()) / 86400000;
+        if (idade > AN_MAX_DIAS) {
+            card.appendChild(anEl('div', 'an-aviso warn',
+                `Esta rodada foi gerada há ${Math.floor(idade)} dias. Rode os agentes e o "npm run publicar" para atualizar.`));
+        }
+        if (anTemTexto(b.manchete)) card.appendChild(anEl('div', 'an-manchete', b.manchete));
+        card.appendChild(anEl('div', 'an-meta', 'Gerado em ' + anFmtData(rodada.gerado_em)));
+
+        const prio = Array.isArray(b.prioridades) ? b.prioridades : [];
+        if (prio.length) {
+            const box = anEl('div');
+            prio.forEach(p => {
+                const it = anEl('div', 'an-item');
+                const h = anEl('div', 'an-item-head');
+                if (p.ordem != null) h.appendChild(anEl('span', '', p.ordem + '.'));
+                h.appendChild(anEl('span', '', p.ativo || '—'));
+                if (typeof p.peso_pct === 'number') h.appendChild(anEl('span', 'an-tag', anFmtPeso(p.peso_pct)));
+                h.appendChild(anFarol(p.atencao));
+                it.appendChild(h);
+                anCampo(it, 'O que aconteceu', p.o_que_aconteceu);
+                anCampo(it, 'O que mostram os números', p.o_que_mostram_os_numeros);
+                anCampo(it, 'Por que importa para você', p.por_que_importa_para_voce);
+                anCampo(it, 'O que verificar', p.o_que_verificar);
+                box.appendChild(it);
+            });
+            anSec(card, 'Prioridades', box);
+        }
+
+        const div = Array.isArray(b.onde_noticias_e_numeros_divergem) ? b.onde_noticias_e_numeros_divergem : [];
+        if (div.length) {
+            const box = anEl('div');
+            div.forEach(d => {
+                const it = anEl('div', 'an-item');
+                const h = anEl('div', 'an-item-head');
+                h.appendChild(anEl('span', '', d.ativo || '—'));
+                if (d.tipo) h.appendChild(anEl('span', 'an-tag', anRot(d.tipo)));
+                it.appendChild(h);
+                if (anTemTexto(d.texto)) it.appendChild(anEl('p', '', d.texto));
+                box.appendChild(it);
+            });
+            anSec(card, 'Onde notícias e números divergem', box);
+        }
+
+        anSec(card, 'Macro que pesa', anPar(b.macro_que_pesa));
+
+        const ign = Array.isArray(b.pode_ignorar) ? b.pode_ignorar : [];
+        if (ign.length) {
+            const box = anEl('div');
+            ign.forEach(d => {
+                const it = anEl('div', 'an-item');
+                const h = anEl('div', 'an-item-head');
+                h.appendChild(anEl('span', '', d.ativo || '—'));
+                if (typeof d.peso_pct === 'number') h.appendChild(anEl('span', 'an-tag', anFmtPeso(d.peso_pct)));
+                it.appendChild(h);
+                if (anTemTexto(d.motivo)) it.appendChild(anEl('p', '', d.motivo));
+                box.appendChild(it);
+            });
+            anSec(card, 'Pode ignorar', box);
+        }
+
+        anSec(card, 'Radar', anLista(b.radar));
+        anSec(card, 'Limitações', anPar(b.limitacoes));
+        return card;
+    }
+
+    function anDetalheAtivo(c) {
+        const box = anEl('div');
+
+        // Indicadores (ETFs podem vir sem valores)
+        const ind = c.indicadores && typeof c.indicadores === 'object' ? c.indicadores : null;
+        const valores = ind && ind.indicadores && typeof ind.indicadores === 'object' ? Object.entries(ind.indicadores) : [];
+        const corpoInd = anEl('div');
+        const tabInd = anTabela(['Indicador', 'Valor'], valores.map(([k, v]) => [k, anFmtNum(v)]));
+        corpoInd.appendChild(tabInd || anEl('p', '', 'Sem indicadores'));
+        const sur = Array.isArray(ind && ind.surpresas) ? ind.surpresas : [];
+        if (sur.length) {
+            const t = anTabela(['Período', 'LPA real', 'LPA estimado', 'Surpresa (%)'],
+                sur.map(x => [x.periodo || '—', anFmtNum(x.lpa_real), anFmtNum(x.lpa_estimado), anFmtNum(x.surpresa_pct)]));
+            if (t) { t.style.marginTop = '.75rem'; corpoInd.appendChild(t); }
+        }
+        anSec(box, 'Indicadores', corpoInd);
+
+        // Notícias
+        const n = c.noticias && typeof c.noticias === 'object' ? c.noticias : null;
+        if (n) {
+            const corpo = anEl('div');
+            if (anTemTexto(n.resumo)) corpo.appendChild(anEl('p', '', n.resumo));
+            if (anTemTexto(n.sentimento)) {
+                const p = anEl('p'); p.style.marginTop = '.5rem';
+                p.appendChild(anEl('span', 'an-tag', 'Sentimento: ' + n.sentimento));
+                corpo.appendChild(p);
+            }
+            [['Fatores-chave', n.fatores_chave], ['Riscos', n.riscos]].forEach(([t, arr]) => {
+                const l = anLista(arr);
+                if (l) { corpo.appendChild(anEl('div', 'an-lbl', t)); corpo.appendChild(l); }
+            });
+            anCampo(corpo, 'Influência macro e setor', n.influencia_macro_setor);
+            if (corpo.childNodes.length) anSec(box, 'Resumo das notícias', corpo);
+        }
+
+        // Cruzamento notícias × números
+        const x = c.cruzamento && typeof c.cruzamento === 'object' ? c.cruzamento : null;
+        if (x) {
+            const corpo = anEl('div');
+            if (anTemTexto(x.alinhamento)) {
+                const p = anEl('p'); p.appendChild(anEl('span', 'an-tag', 'Alinhamento: ' + x.alinhamento));
+                p.style.marginBottom = '.5rem'; corpo.appendChild(p);
+            }
+            if (anTemTexto(x.leitura_geral)) corpo.appendChild(anEl('p', '', x.leitura_geral));
+            (Array.isArray(x.pontos) ? x.pontos : []).forEach(pt => {
+                const it = anEl('div', 'an-item'); it.style.marginTop = '.6rem';
+                const h = anEl('div', 'an-item-head');
+                h.appendChild(anEl('span', '', pt.tema || 'Ponto'));
+                if (pt.veredito) h.appendChild(anEl('span', 'an-tag', anRot(pt.veredito)));
+                it.appendChild(h);
+                anCampo(it, 'O que dizem as notícias', pt.o_que_dizem_as_noticias);
+                anCampo(it, 'O que mostram os números', pt.o_que_mostram_os_numeros);
+                anCampo(it, 'Observação', pt.observacao);
+                corpo.appendChild(it);
+            });
+            anCampo(corpo, 'Valuation e mercado', x.valuation_e_mercado);
+            anCampo(corpo, 'Descompasso temporal', x.descompasso_temporal);
+            anCampo(corpo, 'Contra-argumento', x.contra_argumento);
+            [['O que mudaria a leitura', x.o_que_mudaria_a_leitura], ['Perguntas em aberto', x.perguntas_em_aberto]].forEach(([t, arr]) => {
+                const l = anLista(arr);
+                if (l) { corpo.appendChild(anEl('div', 'an-lbl', t)); corpo.appendChild(l); }
+            });
+            if (corpo.childNodes.length) anSec(box, 'Cruzamento notícias × números', corpo);
+        }
+
+        // Demonstrativos
+        const fin = c.financeiro && typeof c.financeiro === 'object' ? c.financeiro : null;
+        const r = fin ? (fin.resumo && typeof fin.resumo === 'object' ? fin.resumo : fin) : null;
+        if (r) {
+            const corpo = anEl('div');
+            if (fin.gerado_em) corpo.appendChild(anEl('div', 'an-meta', 'Resumo gerado em ' + anFmtData(fin.gerado_em)));
+            const av = anLista(fin.avisos);
+            if (av) { const a = anEl('div', 'an-aviso warn'); a.appendChild(av); corpo.appendChild(a); }
+            anCampo(corpo, 'Período analisado', r.periodo_analisado);
+            anCampo(corpo, 'Síntese', r.sintese);
+            const nk = Array.isArray(r.numeros_chave) ? r.numeros_chave : [];
+            const tab = anTabela(['Indicador', 'Atual', 'Anterior', 'Variação', 'Fonte'],
+                nk.map(k => [k.indicador, k.atual, k.anterior, k.variacao, k.fonte].map(v => (anTemTexto(v) ? v : '—'))));
+            if (tab) { corpo.appendChild(anEl('div', 'an-lbl', 'Números-chave')); corpo.appendChild(tab); }
+            const om = Array.isArray(r.o_que_mudou) ? r.o_que_mudou : [];
+            if (om.length) {
+                corpo.appendChild(anEl('div', 'an-lbl', 'O que mudou e por quê'));
+                om.forEach(m => {
+                    const it = anEl('div', 'an-item'); it.style.marginTop = '.4rem';
+                    it.appendChild(anEl('div', 'an-item-head', m.tema || 'Mudança'));
+                    if (anTemTexto(m.descricao)) it.appendChild(anEl('p', '', m.descricao));
+                    anCampo(it, 'Por quê', m.motivo);
+                    corpo.appendChild(it);
+                });
+            }
+            [['Pontos positivos', r.pontos_positivos], ['Pontos de atenção', r.pontos_de_atencao]].forEach(([t, arr]) => {
+                const l = anLista(arr);
+                if (l) { corpo.appendChild(anEl('div', 'an-lbl', t)); corpo.appendChild(l); }
+            });
+            anCampo(corpo, 'Perspectivas', r.perspectivas);
+            const ac = anLista(r.o_que_acompanhar);
+            if (ac) { corpo.appendChild(anEl('div', 'an-lbl', 'O que acompanhar')); corpo.appendChild(ac); }
+            anCampo(corpo, 'Limitações', r.limitacoes);
+            if (corpo.childNodes.length) anSec(box, 'Demonstrativos', corpo);
+        }
+        return box;
+    }
+
+    function anBlocoAtivos(linhas) {
+        const card = anEl('div', 'card mb2');
+        card.appendChild(anEl('div', 'card-title', 'Ativos'));
+        card.appendChild(anEl('div', 'card-sub', 'Ordenados por peso na carteira — clique no ticker para abrir a análise'));
+        const ord = linhas.slice().sort((a, b) => {
+            const pa = a.conteudo && typeof a.conteudo.peso_pct === 'number' ? a.conteudo.peso_pct : -Infinity;
+            const pb = b.conteudo && typeof b.conteudo.peso_pct === 'number' ? b.conteudo.peso_pct : -Infinity;
+            return pb - pa;
+        });
+        if (!ord.length) {
+            card.appendChild(anEl('p', 'an-meta', 'Nenhum ativo nesta rodada.'));
+            return card;
+        }
+        ord.forEach((l, i) => {
+            const c = l.conteudo && typeof l.conteudo === 'object' ? l.conteudo : {};
+            const det = anEl('div', 'an-detail');
+            det.id = 'anDet' + i;
+            det.hidden = true;
+            const row = anEl('button', 'an-row');
+            row.type = 'button';
+            row.setAttribute('aria-expanded', 'false');
+            row.setAttribute('aria-controls', det.id);
+            row.appendChild(anEl('span', 'an-tk', l.ticker || '—'));
+            row.appendChild(anEl('span', 'an-pw', anFmtPeso(c.peso_pct)));
+            row.appendChild(anFarol(c.atencao));
+            row.appendChild(anEl('span', 'an-chev', '▾'));
+            row.onclick = () => {
+                const abrir = det.hidden;
+                if (abrir && !det.childNodes.length) det.appendChild(anDetalheAtivo(c));
+                det.hidden = !abrir;
+                row.setAttribute('aria-expanded', String(abrir));
+            };
+            card.appendChild(row);
+            card.appendChild(det);
+        });
+        return card;
+    }
+
+    async function renderAnalise() {
+        const root = document.getElementById('analiseRoot');
+        if (!root) return;
+        const meu = ++anToken;
+        const msg = (txt, cls) => { root.replaceChildren(anEl('div', 'an-aviso ' + (cls || ''), txt)); };
+        msg('Carregando…');
+        try {
+            const { data: { session } } = await sbClient.auth.getSession();
+            if (meu !== anToken) return;
+            if (!session) return msg('Faça login para ver a análise de carteira.', 'warn');
+
+            const { data: bri, error: e1 } = await sbClient.from('relatorios_ia').select('*')
+                .eq('tipo', 'briefing').order('gerado_em', { ascending: false }).limit(1);
+            if (e1) throw e1;
+            if (meu !== anToken) return;
+            if (!bri || !bri.length) return msg('Ainda não há análise publicada. Rode os agentes e o "npm run publicar".');
+
+            const rodada = bri[0];
+            const { data: ativos, error: e2 } = await sbClient.from('relatorios_ia').select('*')
+                .eq('rodada_id', rodada.rodada_id).eq('tipo', 'ativo');
+            if (e2) throw e2;
+            if (meu !== anToken) return;
+
+            const b = rodada.conteudo && typeof rodada.conteudo === 'object' ? rodada.conteudo : {};
+            root.replaceChildren(anBlocoBriefing(b, rodada), anBlocoAtivos(ativos || []));
+        } catch (err) {
+            if (meu !== anToken) return;
+            console.error('Análise de carteira:', err);
+            msg('Não foi possível carregar a análise: ' + (err && err.message ? err.message : 'erro desconhecido'), 'err');
+        }
+    }
 
     async function dlExport() {
         const status = document.getElementById('dlStatus');
