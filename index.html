@@ -770,6 +770,17 @@
         .an-tbl { width:100%; border-collapse:collapse; font-size:12px; }
         .an-tbl th { text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); padding:.35rem .6rem; border-bottom:1px solid var(--border); }
         .an-tbl td { padding:.4rem .6rem; border-bottom:1px solid var(--line); vertical-align:top; }
+        #gestorRoot[hidden] { display:none; }
+        .an-sev { margin-bottom:.4rem; }
+        .an-item.sev-alta { border-left:3px solid #DC2626; }
+        .an-item.sev-media { border-left:3px solid #EAB308; }
+        .an-item.sev-baixa { border-left:3px solid #059669; }
+        .an-det { border:1px solid var(--border); border-radius:10px; background:var(--surface); margin-bottom:1.5rem; }
+        .an-det > summary { cursor:pointer; padding:.9rem 1.1rem; font-family:'Instrument Serif', serif; font-size:14px; list-style:none; }
+        .an-det > summary::-webkit-details-marker { display:none; }
+        .an-det > summary::before { content:'▸ '; color:var(--muted); }
+        .an-det[open] > summary::before { content:'▾ '; }
+        .an-det-body { padding:0 1.1rem 1rem; }
         .an-foot { font-size:11px; color:var(--muted); text-align:center; margin:1.75rem 0 .5rem; line-height:1.5; }
         .view { display: none; }
         .view.active { display: block; animation: fadeUp .3s ease; }
@@ -1547,7 +1558,12 @@
                 <div class="view-subtitle">Briefing e leitura por ativo gerados pelos agentes — lido de relatorios_ia</div>
             </div>
         </div>
+        <div class="pill-toggle" id="anSubTabs" style="margin-bottom:1.25rem">
+            <button type="button" class="active" data-sub="noticias" onclick="anSub('noticias')">Notícias</button>
+            <button type="button" data-sub="gestor" onclick="anSub('gestor')">Seu gestor</button>
+        </div>
         <div id="analiseRoot"></div>
+        <div id="gestorRoot" hidden></div>
         <div class="an-foot">Material de apoio gerado por IA a partir de notícias e relatórios públicos. Não é recomendação de investimento.</div>
     </div>
 
@@ -9034,6 +9050,223 @@
             card.appendChild(det);
         });
         return card;
+    }
+
+    // ─── Análise de carteira › Seu gestor ────────────────────────────────────
+    // Lê a linha tipo 'gestor' mais recente de relatorios_ia (gerada por agente7-gestor.mjs).
+    // Carrega só no primeiro clique da sub-aba; texto de IA entra apenas via textContent (anEl).
+    const AN_GESTOR_MAX_DIAS = 14;
+    let anGestorCarregado = false;
+    let anGestorToken = 0;
+
+    function anSub(nome) {
+        document.querySelectorAll('#anSubTabs button').forEach(b => b.classList.toggle('active', b.dataset.sub === nome));
+        document.getElementById('analiseRoot').hidden = nome !== 'noticias';
+        document.getElementById('gestorRoot').hidden = nome !== 'gestor';
+        if (nome === 'gestor' && !anGestorCarregado) carregarGestor();
+    }
+
+    function anSev(sev) {
+        const mapa = { alta: 'Severidade alta', media: 'Severidade média', baixa: 'Severidade baixa' };
+        const e = anEl('span', 'an-farol ' + (mapa[sev] ? sev : 'nenhum'), mapa[sev] || 'Sem severidade');
+        return e;
+    }
+    function anCardG(titulo, corpo) {
+        if (!corpo || !corpo.childNodes.length) return null;
+        const c = anEl('div', 'card mb2');
+        c.appendChild(anEl('div', 'card-title', titulo));
+        const w = anEl('div'); w.style.marginTop = '.6rem'; w.appendChild(corpo);
+        c.appendChild(w);
+        return c;
+    }
+    const anArr = v => (Array.isArray(v) ? v : []);
+    const anObj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+    const anVal = v => (typeof v === 'number' ? anFmtNum(v) : (anTemTexto(v) ? v : '—'));
+
+    function anGCandidato(x) {
+        const it = anEl('div', 'an-item');
+        const h = anEl('div', 'an-item-head');
+        h.appendChild(anEl('span', '', x.ticker || '—'));
+        if (x.tipo) h.appendChild(anEl('span', 'an-tag', x.tipo === 'etf' ? 'ETF' : anRot(x.tipo)));
+        if (x.ja_na_carteira) h.appendChild(anEl('span', 'an-tag', 'já está na carteira'));
+        it.appendChild(h);
+        anCampo(it, 'Lacuna que preenche', x.lacuna_que_preenche);
+        anCampo(it, 'Racional', x.racional);
+        anCampo(it, 'Riscos', x.riscos);
+        const v = anObj(x.validacao);
+        let dados;
+        if (v.encontrado && anTemTexto(v.nome)) {
+            dados = [v.nome, v.setor, v.bolsa].filter(anTemTexto);
+            if (typeof v.pl_12m === 'number') dados.push('P/L ' + anFmtNum(v.pl_12m));
+            if (typeof v.beta === 'number') dados.push('beta ' + anFmtNum(v.beta));
+            dados = dados.join(' | ');
+        } else if (v.encontrado) {
+            // ETFs: a Finnhub devolve cotação, mas não perfil de empresa
+            const preco = typeof v.preco_usd === 'number' ? ': US$ ' + anFmtNum(v.preco_usd) : '';
+            dados = `Cotação encontrada${preco} (sem perfil de empresa, comum em ETFs; bolsa não confirmada)`;
+        } else {
+            dados = 'Não encontrado na Finnhub';
+        }
+        anCampo(it, 'Dados', dados);
+        return it;
+    }
+
+    function anGestorHtml(g) {
+        const frag = document.createDocumentFragment();
+        const r = anObj(g.analise), c = g.carteira && typeof g.carteira === 'object' ? g.carteira : null;
+
+        frag.appendChild(anEl('div', 'an-aviso',
+            'Material de apoio gerado por IA, com base em dados do seu dashboard, notícias e relatórios públicos. Não é recomendação de investimento personalizada nem substitui um assessor licenciado. Rentabilidade passada não garante rentabilidade futura. Recomendações de ativos se restringem ao mercado americano.'));
+
+        const idade = (Date.now() - new Date(g.gerado_em).getTime()) / 86400000;
+        if (idade > AN_GESTOR_MAX_DIAS) {
+            frag.appendChild(anEl('div', 'an-aviso warn',
+                `Esta análise foi gerada há ${Math.floor(idade)} dias. Rode "npm run gestor" e "npm run publicar" para atualizar.`));
+        }
+        frag.appendChild(anEl('div', 'an-meta', 'Gerado em ' + anFmtData(g.gerado_em)));
+
+        const add = x => { if (x) frag.appendChild(x); };
+        add(anCardG('Resumo', anPar(r.resumo_executivo)));
+
+        // Perfil aparente
+        const p = anObj(r.perfil_aparente);
+        const cp = anEl('div');
+        if (anTemTexto(p.descricao)) cp.appendChild(anEl('p', '', p.descricao));
+        if (anTemTexto(p.confianca)) { const q = anEl('p'); q.style.marginTop = '.4rem'; q.appendChild(anEl('span', 'an-tag', 'Confiança ' + p.confianca)); cp.appendChild(q); }
+        [['Sinais na carteira', p.sinais_na_carteira], ['O que a carteira não revela', p.o_que_nao_da_para_inferir]].forEach(([t, arr]) => {
+            const l = anLista(arr);
+            if (l) { cp.appendChild(anEl('div', 'an-lbl', t)); cp.appendChild(l); }
+        });
+        add(anCardG('Perfil aparente (hipótese a partir da composição)', cp));
+
+        // Composição atual
+        if (c) {
+            const cc = anEl('div');
+            if (anTemTexto(c.aviso_cambio)) cc.appendChild(anEl('div', 'an-aviso warn', c.aviso_cambio));
+            const tc = anTabela(['Classe', 'Posições', '% do patrimônio'],
+                anArr(c.classes).map(x => [anVal(x.classe), anVal(x.posicoes), anVal(x.pct_do_patrimonio)]));
+            if (tc) cc.appendChild(tc);
+            if (c.exposicao_cambial_pct_em_usd != null) {
+                const q = anEl('p', '', `Exposição em dólar: ${anVal(c.exposicao_cambial_pct_em_usd)}% do patrimônio.`);
+                q.style.margin = '.6rem 0'; cc.appendChild(q);
+            }
+            const ta = anTabela(['Ativo', '% do bloco de ações', 'Setor', 'Beta'],
+                anArr(c.acoes_e_etfs).map(a => [anVal(a.ticker), anVal(a.pct_do_bloco_de_acoes), anVal(a.setor), anVal(a.beta)]));
+            if (ta) cc.appendChild(ta);
+            const k = anObj(c.concentracao);
+            if (k.maior_posicao_pct != null) {
+                const q = anEl('p', '', `Concentração: maior posição ${anVal(k.maior_posicao_pct)}%, três maiores ${anVal(k.tres_maiores_pct)}%, equivalente a ${anVal(k.numero_efetivo_de_posicoes)} posições de mesmo tamanho (de ${anVal(k.posicoes)}). Beta ponderado: ${anVal(c.beta_ponderado_do_bloco)} (cobre ${anVal(c.cobertura_do_beta_pct)}% do bloco).`);
+                q.style.marginTop = '.6rem'; cc.appendChild(q);
+            }
+            add(anCardG('Composição atual', cc));
+        }
+
+        // Diagnóstico
+        const d = anObj(r.diagnostico), cd = anEl('div');
+        if (anTemTexto(d.composicao)) cd.appendChild(anEl('p', '', d.composicao));
+        const grupo = (titulo, arr, montar) => {
+            if (!arr.length) return;
+            const box = anEl('div'); box.style.marginTop = '.9rem';
+            box.appendChild(anEl('div', 'an-lbl', titulo));
+            arr.forEach(x => box.appendChild(montar(x)));
+            cd.appendChild(box);
+        };
+        grupo('Sobreexposição', anArr(d.sobreexposicoes), x => {
+            const it = anEl('div', 'an-item sev-' + (['alta', 'media', 'baixa'].includes(x.severidade) ? x.severidade : ''));
+            const h = anEl('div', 'an-item-head');
+            h.appendChild(anEl('span', '', x.item || '—'));
+            if (x.tipo) h.appendChild(anEl('span', 'an-tag', x.tipo));
+            h.appendChild(anSev(x.severidade)); it.appendChild(h);
+            anCampo(it, 'Evidência', x.evidencia); anCampo(it, 'Por que é risco', x.por_que_e_risco);
+            return it;
+        });
+        grupo('Subexposição', anArr(d.subexposicoes), x => {
+            const it = anEl('div', 'an-item');
+            it.appendChild(anEl('div', 'an-item-head', x.item || '—'));
+            anCampo(it, 'Evidência', x.evidencia); anCampo(it, 'Por que importa', x.por_que_importa);
+            return it;
+        });
+        grupo('Riscos', anArr(d.riscos), x => {
+            const it = anEl('div', 'an-item sev-' + (['alta', 'media', 'baixa'].includes(x.severidade) ? x.severidade : ''));
+            const h = anEl('div', 'an-item-head');
+            h.appendChild(anEl('span', '', x.risco || '—'));
+            if (x.origem) h.appendChild(anEl('span', 'an-tag', x.origem));
+            h.appendChild(anSev(x.severidade)); it.appendChild(h);
+            if (anTemTexto(x.descricao)) it.appendChild(anEl('p', '', x.descricao));
+            return it;
+        });
+        add(anCardG('Diagnóstico', cd));
+
+        add(anCardG('Cenário de mercado', anPar(r.cenario_de_mercado)));
+
+        // Ideias de ajuste
+        const ideias = anArr(r.ideias_de_ajuste);
+        if (ideias.length) {
+            const ci = anEl('div');
+            ideias.forEach(i => {
+                const it = anEl('div', 'an-item');
+                const h = anEl('div', 'an-item-head');
+                h.appendChild(anEl('span', '', `${i.ordem != null ? i.ordem + '. ' : ''}${anRot(i.tipo)}: ${anTemTexto(i.alvo) ? i.alvo : '—'}`));
+                if (anTemTexto(i.confianca)) h.appendChild(anEl('span', 'an-tag', 'Confiança ' + i.confianca));
+                it.appendChild(h);
+                if (anTemTexto(i.racional)) it.appendChild(anEl('p', '', i.racional));
+                anCampo(it, 'Faz sentido se', i.condicao);
+                anCampo(it, 'O que troca', i.o_que_troca);
+                anCampo(it, 'Custos e fricções', i.custos_e_friccoes);
+                anCampo(it, 'Verificar antes', i.o_que_verificar_antes);
+                ci.appendChild(it);
+            });
+            add(anCardG('Ideias de ajuste a avaliar (mercado americano)', ci));
+        }
+
+        // Candidatos (recolhido)
+        const cands = anArr(g.candidatos_validados);
+        if (cands.length) {
+            const det = anEl('details', 'an-det');
+            det.appendChild(anEl('summary', '', 'Candidatos para pesquisar (pontos de partida, não recomendações)'));
+            const body = anEl('div', 'an-det-body');
+            const conf = cands.filter(x => x.mercado_eua === true);
+            const semConf = cands.filter(x => x.mercado_eua !== true && x.mercado_eua !== false);
+            const fora = cands.filter(x => x.mercado_eua === false);
+            if (conf.length) { body.appendChild(anEl('div', 'an-lbl', 'Confirmados no mercado americano')); conf.forEach(x => body.appendChild(anGCandidato(x))); }
+            if (semConf.length) { body.appendChild(anEl('div', 'an-lbl', 'Sem confirmação de bolsa: verifique manualmente')); semConf.forEach(x => body.appendChild(anGCandidato(x))); }
+            if (fora.length) {
+                const q = anEl('p', 'an-meta', 'Descartados por estarem listados fora dos EUA: ' + fora.map(x => x.ticker || '—').join(', ') + '.');
+                q.style.marginTop = '.6rem'; body.appendChild(q);
+            }
+            det.appendChild(body);
+            frag.appendChild(det);
+        }
+
+        add(anCardG('O que este agente não sabe', anLista(r.o_que_eu_nao_sei)));
+        add(anCardG('Premissas assumidas', anLista(r.premissas_assumidas)));
+        add(anCardG('Verificar antes de agir', anLista(r.verificacoes_recomendadas)));
+        return frag;
+    }
+
+    async function carregarGestor() {
+        const root = document.getElementById('gestorRoot');
+        const meu = ++anGestorToken;
+        const msg = (txt, cls) => { root.replaceChildren(anEl('div', 'an-aviso ' + (cls || ''), txt)); };
+        msg('Carregando…');
+        try {
+            const { data: { session } } = await sbClient.auth.getSession();
+            if (meu !== anGestorToken) return;
+            if (!session) return msg('Faça login para ver a análise do gestor.', 'warn');
+            const { data, error } = await sbClient.from('relatorios_ia').select('*')
+                .eq('tipo', 'gestor').order('gerado_em', { ascending: false }).limit(1);
+            if (error) throw error;
+            if (meu !== anGestorToken) return;
+            if (!data || !data.length) return msg('Nenhuma análise do gestor publicada ainda. Rode npm run gestor e depois npm run publicar.');
+            const g = anObj(data[0].conteudo);
+            if (!g.gerado_em) g.gerado_em = data[0].gerado_em;
+            root.replaceChildren(anGestorHtml(g));
+            anGestorCarregado = true;
+        } catch (err) {
+            if (meu !== anGestorToken) return;
+            console.error('Seu gestor:', err);
+            msg('Não foi possível carregar a análise do gestor: ' + (err && err.message ? err.message : 'erro desconhecido'), 'err');
+        }
     }
 
     async function renderAnalise() {
