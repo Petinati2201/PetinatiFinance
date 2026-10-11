@@ -781,6 +781,9 @@
         .an-det > summary::before { content:'▸ '; color:var(--muted); }
         .an-det[open] > summary::before { content:'▾ '; }
         .an-det-body { padding:0 1.1rem 1rem; }
+        .an-txt p, .an-txt li { font-size:13px; line-height:1.6; }
+        .an-txt ul { padding-left:1.1rem; margin:0; }
+        .an-txt li + li { margin-top:.25rem; }
         .an-foot { font-size:11px; color:var(--muted); text-align:center; margin:1.75rem 0 .5rem; line-height:1.5; }
         .view { display: none; }
         .view.active { display: block; animation: fadeUp .3s ease; }
@@ -9385,7 +9388,7 @@
         if (typeof am.posts_x === 'number') partes.push(`${am.posts_x} posts do X`);
         frag.appendChild(anEl('div', 'an-meta', partes.join(' · ')));
 
-        const add = x => { if (x) frag.appendChild(x); };
+        const add = x => { if (x) { x.classList.add('an-txt'); frag.appendChild(x); } };
         add(anCardG('Resumo', anPar(br.resumo)));
 
         const noticias = anArr(br.noticias_relevantes).map(anObj);
@@ -9405,7 +9408,7 @@
         if (lim) {
             const det = anEl('details', 'an-det');
             det.appendChild(anEl('summary', '', 'Limitações'));
-            const corpo = anEl('div', 'an-det-body'); corpo.appendChild(lim);
+            const corpo = anEl('div', 'an-det-body an-txt'); corpo.appendChild(lim);
             det.appendChild(corpo);
             frag.appendChild(det);
         }
