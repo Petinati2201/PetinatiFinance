@@ -1561,9 +1561,11 @@
         <div class="pill-toggle" id="anSubTabs" style="margin-bottom:1.25rem">
             <button type="button" class="active" data-sub="noticias" onclick="anSub('noticias')">Notícias</button>
             <button type="button" data-sub="gestor" onclick="anSub('gestor')">Seu gestor</button>
+            <button type="button" data-sub="semana" onclick="anSub('semana')">Termômetro Semanal</button>
         </div>
         <div id="analiseRoot"></div>
         <div id="gestorRoot" hidden></div>
+        <div id="semanaRoot" hidden></div>
         <div class="an-foot">Material de apoio gerado por IA a partir de notícias e relatórios públicos. Não é recomendação de investimento.</div>
     </div>
 
@@ -9058,12 +9060,16 @@
     const AN_GESTOR_MAX_DIAS = 14;
     let anGestorCarregado = false;
     let anGestorToken = 0;
+    let anSemanaCarregado = false;
+    let anSemanaToken = 0;
 
     function anSub(nome) {
         document.querySelectorAll('#anSubTabs button').forEach(b => b.classList.toggle('active', b.dataset.sub === nome));
         document.getElementById('analiseRoot').hidden = nome !== 'noticias';
         document.getElementById('gestorRoot').hidden = nome !== 'gestor';
+        document.getElementById('semanaRoot').hidden = nome !== 'semana';
         if (nome === 'gestor' && !anGestorCarregado) carregarGestor();
+        if (nome === 'semana' && !anSemanaCarregado) carregarSemana();
     }
 
     function anSev(sev) {
@@ -9266,6 +9272,167 @@
             if (meu !== anGestorToken) return;
             console.error('Seu gestor:', err);
             msg('Não foi possível carregar a análise do gestor: ' + (err && err.message ? err.message : 'erro desconhecido'), 'err');
+        }
+    }
+
+    // ─── Análise de carteira › Termômetro Semanal ────────────────────────────
+    // Lê a linha tipo 'semana' mais recente de relatorios_ia. Carrega só no primeiro clique.
+    // Texto e links vêm de notícias/redes: textContent (anEl) e só URLs http(s) viram link.
+    const AN_SEMANA_MAX_DIAS = 10;
+    const anUrlOk = u => typeof u === 'string' && /^https?:\/\//i.test(u.trim());
+    const anPct = v => (typeof v === 'number' ? Math.round(v) + '%' : '—');
+
+    // Chips de fontes: link seguro quando a url é http(s); senão, texto simples
+    function anFontes(ids) {
+        const lista = anArr(ids).map(anObj).filter(i => anTemTexto(i.fonte) || anTemTexto(i.titulo));
+        if (!lista.length) return null;
+        const box = anEl('div'); box.style.cssText = 'display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.55rem';
+        lista.forEach(i => {
+            const txt = anTemTexto(i.fonte) ? i.fonte : i.titulo;
+            if (anUrlOk(i.url)) {
+                const a = anEl('a', 'an-tag', txt);
+                a.href = i.url.trim(); a.target = '_blank'; a.rel = 'noopener noreferrer';
+                a.style.cssText = 'text-decoration:none;color:var(--text)';
+                if (anTemTexto(i.titulo)) a.title = String(i.titulo);
+                box.appendChild(a);
+            } else {
+                box.appendChild(anEl('span', 'an-tag', txt));
+            }
+        });
+        return box;
+    }
+
+    function anSemNoticia(n) {
+        const it = anEl('div', 'an-item');
+        it.appendChild(anEl('div', 'an-item-head', anTemTexto(n.titulo) ? n.titulo : 'Sem título'));
+        anCampo(it, 'O que aconteceu', n.o_que_aconteceu);
+        anCampo(it, 'Por que importa', n.por_que_importa);
+        const f = anFontes(n.ids);
+        if (f) it.appendChild(f);
+        const temX = anArr(n.ids).some(i => typeof anObj(i).id === 'string' && /^X/.test(anObj(i).id.trim()));
+        const perc = anTemTexto(n.percepcao_dos_comentarios) ? n.percepcao_dos_comentarios
+            : (temX ? 'Sem comentários coletados para esta notícia' : null);
+        if (perc) {
+            const b = anEl('div'); b.style.cssText = 'margin-top:.6rem;padding:.5rem .7rem;border-left:2px solid var(--border);';
+            b.appendChild(anEl('div', 'an-lbl', 'Percepção dos comentários'));
+            const p = anEl('p', '', perc); p.style.color = 'var(--muted)';
+            b.appendChild(p);
+            it.appendChild(b);
+        }
+        return it;
+    }
+
+    function anSemMudancas(m, comp) {
+        const frag = document.createDocumentFragment();
+        const dir = { mais_positivo: ['baixa', 'Mais positivo'], mais_negativo: ['alta', 'Mais negativo'], estavel: ['nenhum', 'Estável'], misto: ['media', 'Misto'] }[m.direcao];
+        const topo = anEl('div', 'an-item-head');
+        topo.appendChild(anEl('span', 'an-farol ' + (dir ? dir[0] : 'nenhum'), dir ? dir[1] : 'Sem classificação'));
+        if (anTemTexto(m.confianca)) topo.appendChild(anEl('span', 'an-tag', 'Confiança ' + m.confianca));
+        frag.appendChild(topo);
+        if (anTemTexto(m.temperatura)) frag.appendChild(anEl('p', '', m.temperatura));
+
+        // Tabela por tema: semana passada, ou mês anterior quando não houver
+        const vsSemana = Array.isArray(comp.semana);
+        const base = vsSemana ? comp.semana : anArr(comp.mes);
+        const linhas = base.map(anObj).filter(t => anTemTexto(t.tema)).map(t => {
+            const s = anObj(t.semana), a = anObj(t.anteriores);
+            const par = o => (Object.keys(o).length ? anPct(o.pct_pos) + ' / ' + anPct(o.pct_neg) : '—');
+            const v = t.amostra_pequena ? 'amostra pequena'
+                : (typeof t.variacao_saldo === 'number' ? (t.variacao_saldo > 0 ? '+' : '') + t.variacao_saldo.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' p.p.' : '—');
+            return [t.tema, par(s), par(a), v];
+        });
+        const tb = anTabela(['Tema', 'Semana (% pos / % neg)', vsSemana ? 'Antes (% pos / % neg)' : 'Mês anterior (% pos / % neg)', 'Variação do saldo'], linhas);
+        if (tb) {
+            const bloco = anEl('div'); bloco.style.marginTop = '.8rem';
+            bloco.appendChild(anEl('div', 'an-lbl', vsSemana ? 'Tom por tema, vs semana passada' : 'Tom por tema, vs mês anterior'));
+            bloco.appendChild(tb);
+            frag.appendChild(bloco);
+        }
+
+        anArr(m.mudancas).map(anObj).forEach(x => {
+            const it = anEl('div', 'an-item'); it.style.marginTop = '.8rem';
+            it.appendChild(anEl('div', 'an-item-head', anTemTexto(x.tema) ? x.tema : 'Tema'));
+            anCampo(it, 'Antes', x.antes);
+            anCampo(it, 'Agora', x.agora);
+            anCampo(it, 'O que mudou', x.o_que_mudou);
+            const f = anFontes(x.ids);
+            if (f) it.appendChild(f);
+            frag.appendChild(it);
+        });
+        [['Novo nesta semana', m.novos], ['Arrefeceu', m.arrefeceram]].forEach(([t, arr]) => {
+            const l = anLista(arr);
+            if (l) { const b = anEl('div'); b.style.marginTop = '.8rem'; b.appendChild(anEl('div', 'an-lbl', t)); b.appendChild(l); frag.appendChild(b); }
+        });
+        if (anTemTexto(m.clima_nas_redes)) {
+            const b = anEl('div'); b.style.marginTop = '.8rem';
+            b.appendChild(anEl('div', 'an-lbl', 'Clima nas redes (X)'));
+            b.appendChild(anEl('p', '', m.clima_nas_redes));
+            frag.appendChild(b);
+        }
+        return frag;
+    }
+
+    function anSemanaHtml(c, geradoEm) {
+        const frag = document.createDocumentFragment();
+        const br = anObj(c.briefing), am = anObj(c.amostra);
+        const idade = (Date.now() - new Date(geradoEm).getTime()) / 86400000;
+        if (idade > AN_SEMANA_MAX_DIAS) {
+            frag.appendChild(anEl('div', 'an-aviso warn',
+                `Este termômetro foi gerado há ${Math.floor(idade)} dias. Rode "npm run semana:completa" e "npm run publicar:semana" para atualizar.`));
+        }
+        const partes = ['Gerado em ' + anFmtData(geradoEm)];
+        if (typeof am.semana === 'number') partes.push(`${am.semana} manchetes da semana`);
+        if (typeof am.posts_x === 'number') partes.push(`${am.posts_x} posts do X`);
+        frag.appendChild(anEl('div', 'an-meta', partes.join(' · ')));
+
+        const add = x => { if (x) frag.appendChild(x); };
+        add(anCardG('Resumo', anPar(br.resumo)));
+
+        const noticias = anArr(br.noticias_relevantes).map(anObj);
+        if (noticias.length) {
+            const box = anEl('div');
+            noticias.forEach(n => box.appendChild(anSemNoticia(n)));
+            add(anCardG('Notícias relevantes', box));
+        }
+
+        const m = anObj(br.mudancas_importantes);
+        if (Object.keys(m).length || Array.isArray(c.comparativo_tom_mes)) {
+            add(anCardG('Mudanças importantes', anSemMudancas(m, { semana: c.comparativo_tom_semana_passada, mes: c.comparativo_tom_mes })));
+        }
+
+        const acomp = anLista(br.observar_proxima_semana), lim = anLista(br.limitacoes);
+        add(anCardG('Para acompanhar', acomp));
+        if (lim) {
+            const det = anEl('details', 'an-det');
+            det.appendChild(anEl('summary', '', 'Limitações'));
+            const corpo = anEl('div', 'an-det-body'); corpo.appendChild(lim);
+            det.appendChild(corpo);
+            frag.appendChild(det);
+        }
+        return frag;
+    }
+
+    async function carregarSemana() {
+        const root = document.getElementById('semanaRoot');
+        const meu = ++anSemanaToken;
+        const msg = (txt, cls) => { root.replaceChildren(anEl('div', 'an-aviso ' + (cls || ''), txt)); };
+        msg('Carregando…');
+        try {
+            const { data: { session } } = await sbClient.auth.getSession();
+            if (meu !== anSemanaToken) return;
+            if (!session) return msg('Faça login para ver o termômetro semanal.', 'warn');
+            const { data, error } = await sbClient.from('relatorios_ia').select('*')
+                .eq('tipo', 'semana').order('gerado_em', { ascending: false }).limit(1);
+            if (error) throw error;
+            if (meu !== anSemanaToken) return;
+            if (!data || !data.length) return msg('Nenhum termômetro semanal publicado ainda. Rode npm run semana:completa e depois npm run publicar:semana.');
+            const c = anObj(data[0].conteudo);
+            root.replaceChildren(anSemanaHtml(c, data[0].gerado_em || c.gerado_em));
+            anSemanaCarregado = true;
+        } catch (err) {
+            if (meu !== anSemanaToken) return;
+            console.error('Termômetro Semanal:', err);
+            msg('Não foi possível carregar o termômetro semanal: ' + (err && err.message ? err.message : 'erro desconhecido'), 'err');
         }
     }
 
