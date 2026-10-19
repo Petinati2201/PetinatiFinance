@@ -1386,7 +1386,7 @@
 
 <!-- LOGIN SCREEN -->
 <div id="loginScreen" class="splash">
-    <div class="login-card">
+    <form class="login-card" id="loginForm" autocomplete="on">
         <div class="login-brand">
             <span>Gestão financeira</span>
             <span>Petinati.</span>
@@ -1402,8 +1402,8 @@
             </label>
         </div>
         <p class="login-error" id="loginError"></p>
-        <button class="login-btn" id="loginBtn">Entrar</button>
-    </div>
+        <button type="submit" class="login-btn" id="loginBtn">Entrar</button>
+    </form>
 </div>
 
 <!-- MOBILE MENU BTN -->
@@ -6359,7 +6359,13 @@
         }
         
         console.log('✅ SDK Supabase carregado');
-        sbClient = sdk.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Sessão só em memória: todo carregamento da página pede login de novo
+        // (e-mail/senha ficam por conta do gerenciador de senhas do navegador).
+        sbClient = sdk.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+        // Remove tokens antigos que versões anteriores deixaram no localStorage
+        try {
+            Object.keys(localStorage).filter(k => /^sb-.*-auth-token/.test(k)).forEach(k => localStorage.removeItem(k));
+        } catch (e) {}
         initLogin();
     }
     
@@ -6425,10 +6431,8 @@
             }
         }
 
-        btnLogin.addEventListener('click', attempt);
-        [userInput, passInput].forEach(el =>
-            el.addEventListener('keydown', e => { if (e.key === 'Enter') attempt(); })
-        );
+        // Submit do <form> (clique ou Enter): permite ao navegador salvar/preencher a senha
+        document.getElementById('loginForm').addEventListener('submit', e => { e.preventDefault(); attempt(); });
 
         // Verifica se já está autenticado (ex: refresh da página)
         sbClient.auth.getSession().then(async ({ data: { session } }) => {
