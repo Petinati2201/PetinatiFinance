@@ -1364,9 +1364,14 @@
     .cas-cell { cursor:pointer; position:relative; }
     .cas-cell:hover { background:rgba(219,39,119,.08); }
     .cas-cell .cv { display:block; line-height:1.25; }
-    .cas-cell .cbar { display:block; height:3px; border-radius:2px; background:var(--border); margin-top:3px; overflow:hidden; }
-    .cas-cell .cbar i { display:block; height:100%; background:#059669; }
-    .cas-cell.part .cbar i { background:#D97706; }
+    /* Barra de pagamento: largura fixa (igual em todas as colunas), alinhada à direita.
+       Verde = pago pelo Thiago, rosa pastel = pago pela Vanessa, cinza = falta pagar. */
+    .cas-cell .cbar { display:flex; width:80px; margin:3px 0 0 auto; height:3px; border-radius:2px; background:var(--border); overflow:hidden; }
+    .cas-cell .cbar i { display:block; height:100%; }
+    .cas-cell .cbar i.t { background:#059669; }
+    .cas-cell .cbar i.v { background:#F4A6C6; }
+    td.cas-pt { color:#059669; }
+    td.cas-pv { color:#DB6FA0; }
     .cas-cell.zero .cv { color:var(--muted); opacity:.45; }
     .cas-cell .cnote { position:absolute; top:2px; right:2px; width:0; height:0; border-top:6px solid #DB2777; border-left:6px solid transparent; }
     .cas-th-name { cursor:pointer; }
@@ -4750,23 +4755,26 @@
                 mPlan += plan; mT += t; mV += v;
                 totCusto[c.id] = (totCusto[c.id] || 0) + plan;
 
-                const perc = plan > 0 ? Math.min(100, (pago/plan)*100) : 0;
-                const cls  = [ 'cas-cell', plan === 0 ? 'zero' : '', (pago > 0 && pago < plan - 0.005) ? 'part' : '' ].filter(Boolean).join(' ');
-                const bar  = plan > 0 ? `<i class="cbar"><i style="width:${perc}%"></i></i>` : '';
+                // Partes da barra: Thiago e Vanessa; se pagou além do planejado, escala para caber em 100%
+                const base  = Math.max(plan, pago);
+                const percT = base > 0 ? (t/base)*100 : 0;
+                const percV = base > 0 ? (v/base)*100 : 0;
+                const cls  = [ 'cas-cell', plan === 0 ? 'zero' : '' ].filter(Boolean).join(' ');
+                const bar  = plan > 0 ? `<i class="cbar"><i class="t" style="width:${percT}%"></i><i class="v" style="width:${percV}%"></i></i>` : '';
                 const note = (cel?.comentario || '').trim() ? '<i class="cnote"></i>' : '';
-                const tip  = plan > 0 ? `Planejado ${casFmt(plan)} · Pago ${casFmt(pago)}` : 'Sem valor planejado';
+                const tip  = plan > 0 ? `Planejado ${casFmt(plan)} · Pago T ${casFmt(t)} · Pago V ${casFmt(v)}` : 'Sem valor planejado';
                 h += `<td class="${cls}" title="${tip}" onclick="casAbrirCelula('${c.id}','${mes}')">`
                    + `${note}<span class="cv">${plan ? casFmt(plan) : '—'}</span>${bar}</td>`;
             });
             tot.plan += mPlan; tot.t += mT; tot.v += mV;
-            h += `<td class="cas-sum">${casFmt(mPlan)}</td><td class="cas-sum">${casFmt(mT)}</td>`
-               + `<td class="cas-sum">${casFmt(mV)}</td><td class="cas-sum">${casFmt(mPlan - mT - mV)}</td></tr>`;
+            h += `<td class="cas-sum">${casFmt(mPlan)}</td><td class="cas-sum${mT ? ' cas-pt' : ''}">${casFmt(mT)}</td>`
+               + `<td class="cas-sum${mV ? ' cas-pv' : ''}">${casFmt(mV)}</td><td class="cas-sum">${casFmt(mPlan - mT - mV)}</td></tr>`;
         });
 
         h += '</tbody><tfoot><tr class="cas-total"><td class="cas-mes">Total</td>';
         casCustos.forEach(c => { h += `<td>${casFmt(totCusto[c.id] || 0)}</td>`; });
-        h += `<td class="cas-sum">${casFmt(tot.plan)}</td><td class="cas-sum">${casFmt(tot.t)}</td>`
-           + `<td class="cas-sum">${casFmt(tot.v)}</td><td class="cas-sum">${casFmt(tot.plan - tot.t - tot.v)}</td></tr></tfoot>`;
+        h += `<td class="cas-sum">${casFmt(tot.plan)}</td><td class="cas-sum${tot.t ? ' cas-pt' : ''}">${casFmt(tot.t)}</td>`
+           + `<td class="cas-sum${tot.v ? ' cas-pv' : ''}">${casFmt(tot.v)}</td><td class="cas-sum">${casFmt(tot.plan - tot.t - tot.v)}</td></tr></tfoot>`;
         tbl.innerHTML = h;
     }
 
