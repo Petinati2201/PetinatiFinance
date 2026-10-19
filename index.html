@@ -1281,6 +1281,10 @@
     }
     .modal-overlay.open .modal-box { transform:translateY(0); }
     .modal-title { font-family:'Newsreader',serif; font-size:1.35rem; font-weight:600; color:var(--text); margin:0 0 .2rem; }
+    /* Modal arrastável pelo título (só desktop; no mobile fica centralizado) */
+    @media (min-width: 861px) {
+        .modal-box.modal-drag .modal-title { cursor:move; user-select:none; touch-action:none; }
+    }
     .modal-sub { font-size:12px; color:var(--muted); margin-bottom:1.1rem; }
     .modal-tipo-toggle { display:flex; gap:.5rem; margin-bottom:1.1rem; }
     .modal-tipo-toggle button {
@@ -2640,7 +2644,7 @@
 
 <!-- MODAL: Nova Movimentação -->
 <div class="modal-overlay" id="modalMovOverlay">
-    <div class="modal-box">
+    <div class="modal-box modal-drag">
         <h2 class="modal-title">Nova Movimentação</h2>
         <div class="modal-sub">Registre uma compra ou venda de ativo</div>
 
@@ -7376,9 +7380,49 @@
         document.getElementById('modalTipo').value=''; document.getElementById('modalMoeda').value='BRL';
         document.getElementById('modalPtaxWrap').style.display='none';
         onModalTipoChange(); // garante o estado não-RF (mostra Qtde/Preço, Montante calculado)
+        modalMovResetPos(); // sempre reabre centralizado
         document.getElementById('modalMovOverlay').classList.add('open');
     }
     function closeModal(){ document.getElementById('modalMovOverlay').classList.remove('open'); }
+
+    // ─── Arrastar o modal de movimentação pelo título (desktop) ───
+    // Desloca a caixa com a propriedade CSS `translate` (não briga com o
+    // transform da animação de abertura) e limita o movimento à viewport.
+    let modalMovPos = { x: 0, y: 0 }, modalMovDrag = null, modalMovJustDragged = false;
+    function modalMovResetPos() {
+        modalMovPos = { x: 0, y: 0 };
+        document.querySelector('#modalMovOverlay .modal-box').style.translate = '';
+    }
+    function setupModalMovDrag() {
+        const box = document.querySelector('#modalMovOverlay .modal-box');
+        const handle = box.querySelector('.modal-title');
+        handle.addEventListener('pointerdown', e => {
+            if (e.button !== 0 || window.matchMedia('(max-width: 860px)').matches) return;
+            const r = box.getBoundingClientRect();
+            // Retângulo "base" (sem deslocamento) para calcular os limites
+            modalMovDrag = { sx: e.clientX - modalMovPos.x, sy: e.clientY - modalMovPos.y,
+                left: r.left - modalMovPos.x, top: r.top - modalMovPos.y, w: r.width, h: r.height };
+            handle.setPointerCapture(e.pointerId);
+            e.preventDefault();
+        });
+        handle.addEventListener('pointermove', e => {
+            if (!modalMovDrag) return;
+            const d = modalMovDrag;
+            const x = Math.min(Math.max(e.clientX - d.sx, -d.left), window.innerWidth - d.left - d.w);
+            const y = Math.min(Math.max(e.clientY - d.sy, -d.top), window.innerHeight - d.top - Math.min(d.h, 60));
+            modalMovPos = { x, y };
+            box.style.translate = `${x}px ${y}px`;
+        });
+        const end = () => {
+            if (!modalMovDrag) return;
+            modalMovDrag = null;
+            // Evita que o clique que encerra o arraste feche o modal pelo overlay
+            modalMovJustDragged = true;
+            setTimeout(() => { modalMovJustDragged = false; }, 0);
+        };
+        handle.addEventListener('pointerup', end);
+        handle.addEventListener('pointercancel', end);
+    }
     function onModalMoedaChange() {
         document.getElementById('modalPtaxWrap').style.display = document.getElementById('modalMoeda').value==='USD'?'':'none';
         updateModalMontante();
@@ -9738,7 +9782,8 @@
         else if(v.length>2)v=v.slice(0,2)+'/'+v.slice(2);
         e.target.value=v;
     });
-    document.getElementById('modalMovOverlay').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+    document.getElementById('modalMovOverlay').addEventListener('click', function(e){ if(e.target===this && !modalMovJustDragged) closeModal(); });
+    setupModalMovDrag();
     // Listeners da aba Input Despesas & Renda (YTD/YTG/holerite)
     // (ytdConfirmBtn e ytdMonth são ligados dentro de setupYtdUpload, com guard)
     document.getElementById('ytgBtnAdd').addEventListener('click', ytgAddRow);
