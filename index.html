@@ -2196,6 +2196,7 @@
             <div class="kpi-cell c-amber">
                 <span class="kpi-label">Saldo a Pagar</span>
                 <span id="casKpiSaldo" class="kpi-value">R$ 0,00</span>
+                <span id="casKpiSaldoSub" class="kpi-label" style="letter-spacing:.04em;text-transform:none;margin-top:.25rem"></span>
             </div>
             <div class="kpi-cell c-emerald">
                 <span class="kpi-label">Quitado</span>
@@ -4711,6 +4712,11 @@
         document.getElementById('casKpiThiago').innerText    = casFmt(pt);
         document.getElementById('casKpiVanessa').innerText   = casFmt(pv);
         document.getElementById('casKpiSaldo').innerText     = casFmt(plan - pago);
+        // Divisão 50/50 do total planejado, descontando o que cada um já pagou
+        // Trunca nos centavos (73.445,625 → 73.445,62), para a soma não passar do saldo
+        const fmtN = n => (Math.trunc(Math.round(n * 1000) / 10) / 100).toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+        document.getElementById('casKpiSaldoSub').innerHTML =
+            `<span style="color:#059669">${fmtN(plan/2 - pt)} T</span> / <span style="color:#DB6FA0">${fmtN(plan/2 - pv)} V</span>`;
         document.getElementById('casKpiPerc').innerText      = plan > 0 ? ((pago/plan)*100).toFixed(1) + '%' : '—';
     }
 
