@@ -6714,8 +6714,8 @@
     function iiFmtQtde(v) {
         if (!v && v !== 0) return '';
         const n = Number(v);
-        // Formata com até 5 casas, depois remove zeros à direita e vírgula órfã
-        const s = n.toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:5});
+        // Formata com até 8 casas, depois remove zeros à direita e vírgula órfã
+        const s = n.toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:8});
         return s;
     }
 
@@ -6892,8 +6892,9 @@
                     inp.value = f.type==='num' ? (f.key==='qtde' ? iiFmtQtde(row[f.key]) : iiFmtInput(row[f.key])) : (f.type==='date' ? isoToBR(row[f.key]) : (row[f.key]||''));
                     inp.style.textAlign = f.type==='num' ? 'right' : 'left';
                     inp.dataset.id=row.id||row._tmp; inp.dataset.key=f.key; inp.dataset.kind=f.type;
+                    // Máscara antes do listener: o handler precisa ler o valor já formatado
+                    if (f.type==='num') iiMaskNumeric(inp, f.key==='qtde' ? 8 : 2);
                     inp.addEventListener('input', iiOnField);
-                    if (f.type==='num') iiMaskNumeric(inp, f.key==='qtde' ? 5 : 2);
                     td.appendChild(inp);
                 }
                 tr.appendChild(td);
@@ -7282,7 +7283,7 @@
                     : '—'}</td>
                 <td class="row-actions"></td>`;
             // Listeners de edição inline para qtde/preco/ptax/montante
-            tr.querySelectorAll('input[data-key]').forEach(inp => { inp.addEventListener('input', movOnEdit); iiMaskNumeric(inp, inp.dataset.key==='qtde' ? 5 : 2); });
+            tr.querySelectorAll('input[data-key]').forEach(inp => { iiMaskNumeric(inp, inp.dataset.key==='qtde' ? 8 : 2); inp.addEventListener('input', movOnEdit); });
             // Botão excluir
             const tdAct = tr.querySelector('.row-actions');
             const btn = document.createElement('button'); btn.className='act-discard'; btn.textContent='✕'; btn.title='Excluir';
@@ -7365,7 +7366,8 @@
         }
     }
     function openModal() {
-        modalCompraSub = 'NOVO';
+        // Mantém a última sub-opção (Novo/Reinv) e reaplica botões + campo Código
+        setModalCompraSub(modalCompraSub);
         setModalOp('COMPRA');
         ['modalData','modalCodigo','modalQtde','modalPreco','modalMontante','modalPtax'].forEach(id=>document.getElementById(id).value='');
         document.getElementById('modalCodigoSelect').innerHTML = '';
@@ -9712,8 +9714,6 @@
     document.getElementById('dolarInputPtax').addEventListener('keydown', function(e){
         if (e.key === 'Enter') dolarAddOrUpdate();
     });
-    document.getElementById('modalQtde').addEventListener('input', updateModalMontante);
-    document.getElementById('modalPreco').addEventListener('input', updateModalMontante);
     document.getElementById('modalCodigoSelect').addEventListener('change', function(){
         // Quando um ativo existente é escolhido, preenche moeda automaticamente.
         const cod = this.value; if (!cod) return;
@@ -9727,8 +9727,11 @@
     // Máscaras numéricas nos inputs estáticos
     ['modalQtde','modalPreco','modalMontante','modalPtax','dolarInputPtax'].forEach(id => {
         const el = document.getElementById(id);
-        iiMaskNumeric(el, id === 'modalQtde' ? 5 : 2);
+        iiMaskNumeric(el, id === 'modalQtde' ? 8 : 2);
     });
+    // Depois da máscara: o cálculo lê o valor já formatado (senão "5.2000" vira 5,2)
+    document.getElementById('modalQtde').addEventListener('input', updateModalMontante);
+    document.getElementById('modalPreco').addEventListener('input', updateModalMontante);
     document.getElementById('modalData').addEventListener('input', function(e){
         let v=e.target.value.replace(/\D/g,''); if(v.length>8)v=v.slice(0,8);
         if(v.length>4)v=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4);
